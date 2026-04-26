@@ -24,9 +24,13 @@ type FetchResult struct {
 	Reachable bool
 	URL       string
 	Status    int
-	Headers   http.Header
-	Body      []byte
-	Err       error
+	// ProtoMajor / ProtoMinor capture the negotiated HTTP version
+	// (e.g. 2/0 for HTTP/2). resp.Proto contains a "HTTP/2.0" string.
+	ProtoMajor int
+	ProtoMinor int
+	Headers    http.Header
+	Body       []byte
+	Err        error
 }
 
 // Header returns the first value of name (case-insensitive) or "".
@@ -75,8 +79,14 @@ func doFetch(ctx context.Context, t *checks.Target) *FetchResult {
 
 	client := t.Client()
 	if client == http.DefaultClient {
+		// Disable transparent gzip decoding so HTTP-COMPRESSION-NONE can
+		// observe the original Content-Encoding header. The default
+		// Transport sets Accept-Encoding for us and decodes silently.
+		tr := http.DefaultTransport.(*http.Transport).Clone()
+		tr.DisableCompression = true
 		client = &http.Client{
-			Timeout: totalTO,
+			Timeout:   totalTO,
+			Transport: tr,
 			CheckRedirect: func(_ *http.Request, via []*http.Request) error {
 				if len(via) >= maxRedirs {
 					return http.ErrUseLastResponse
@@ -93,6 +103,9 @@ func doFetch(ctx context.Context, t *checks.Target) *FetchResult {
 	}
 	req.Header.Set("User-Agent", t.UA())
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,*/*;q=0.5")
+	// Explicit Accept-Encoding so servers compress and DisableCompression
+	// (set above) keeps the Content-Encoding header visible to us.
+	req.Header.Set("Accept-Encoding", "gzip, br, deflate")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -105,6 +118,8 @@ func doFetch(ctx context.Context, t *checks.Target) *FetchResult {
 
 	res.Reachable = true
 	res.Status = resp.StatusCode
+	res.ProtoMajor = resp.ProtoMajor
+	res.ProtoMinor = resp.ProtoMinor
 	res.Headers = resp.Header
 	res.Body = body
 	if resp.Request != nil && resp.Request.URL != nil {
