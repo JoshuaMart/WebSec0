@@ -17,30 +17,32 @@ func (s *stubResolver) LookupIPAddr(_ context.Context, _ string) ([]net.IPAddr, 
 	return s.ips, nil
 }
 
-func TestParseHost(t *testing.T) {
+func TestParseHostWithPort(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		in, want string
-		wantErr  bool
+		in, host, hostPort string
+		wantErr            bool
 	}{
-		{"example.com", "example.com", false},
-		{"Example.COM", "example.com", false},
-		{"https://example.com/path", "example.com", false},
-		{"https://example.com:8443/x", "example.com", false},
-		{"example.com:8443", "example.com", false},
-		{"example.com/foo", "example.com", false},
-		{"", "", true},
-		{"   ", "", true},
-		{"http://example.com\n", "", true},
+		{"example.com", "example.com", "example.com", false},
+		{"Example.COM", "example.com", "example.com", false},
+		{"https://example.com/path", "example.com", "example.com", false},
+		{"https://example.com:8443/x", "example.com", "example.com:8443", false},
+		{"example.com:8443", "example.com", "example.com:8443", false},
+		{"example.com/foo", "example.com", "example.com", false},
+		{"127.0.0.1:9090", "127.0.0.1", "127.0.0.1:9090", false},
+		{"", "", "", true},
+		{"   ", "", "", true},
+		{"http://example.com\n", "", "", true},
 	}
 	for _, c := range cases {
-		got, err := parseHost(c.in)
+		host, hostPort, err := parseHostWithPort(c.in)
 		if (err != nil) != c.wantErr {
-			t.Errorf("parseHost(%q) err=%v wantErr=%v", c.in, err, c.wantErr)
+			t.Errorf("parseHostWithPort(%q) err=%v wantErr=%v", c.in, err, c.wantErr)
 			continue
 		}
-		if got != c.want {
-			t.Errorf("parseHost(%q) = %q, want %q", c.in, got, c.want)
+		if host != c.host || hostPort != c.hostPort {
+			t.Errorf("parseHostWithPort(%q) = (%q, %q), want (%q, %q)",
+				c.in, host, hostPort, c.host, c.hostPort)
 		}
 	}
 }

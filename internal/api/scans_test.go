@@ -17,6 +17,7 @@ import (
 	"github.com/Jomar/websec101/internal/api"
 	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/scanner"
+	"github.com/Jomar/websec101/internal/scanner/wellknown"
 	"github.com/Jomar/websec101/internal/storage/memory"
 )
 
@@ -269,6 +270,100 @@ func TestSSEReplayForFinishedScan(t *testing.T) {
 	}
 	if !bytes.Contains(body, []byte("event: finding")) {
 		t.Errorf("replay missing finding event:\n%s", body)
+	}
+}
+
+// Milestone 1: a real check (security.txt MISSING) reaches the API client
+// after a POST /scans / poll-until-completed roundtrip.
+func TestE2EWellKnownSecurityTxtMissing(t *testing.T) {
+	t.Parallel()
+
+	// Fixture: web root that 404s on every well-known path.
+	fixture := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(fixture.Close)
+	targetHost := strings.TrimPrefix(fixture.URL, "http://")
+
+	// API server with the security.txt checks registered.
+	store := memory.New(time.Minute)
+	registry := checks.NewRegistry()
+	wellknown.Register(registry)
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	mgr := scanner.NewManager(store, registry, scanner.ManagerConfig{
+		PerCheckTimeout: 3 * time.Second,
+		PerScanTimeout:  10 * time.Second,
+	}, logger)
+	apiHandler, err := api.NewServer(api.Options{
+		Logger: logger, Store: store, Registry: registry, Scans: mgr,
+		PerScanTimeout: 10 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	srv := httptest.NewServer(apiHandler)
+	t.Cleanup(srv.Close)
+
+	body := `{"target":"` + targetHost + `","options":{"wait_seconds":10}}`
+	resp, err := http.Post(srv.URL+"/api/v1/scans", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		out, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, out)
+	}
+
+	var sc struct {
+		ID    string `json:"id"`
+		Links struct {
+			Self string `json:"self"`
+		} `json:"links"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&sc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	gr, err := http.Get(srv.URL + sc.Links.Self)
+	if err != nil {
+		t.Fatalf("GET self: %v", err)
+	}
+	defer gr.Body.Close()
+	var got struct {
+		Status   string `json:"status"`
+		Findings []struct {
+			ID       string `json:"id"`
+			Family   string `json:"family"`
+			Severity string `json:"severity"`
+			Status   string `json:"status"`
+		} `json:"findings"`
+	}
+	if err := json.NewDecoder(gr.Body).Decode(&got); err != nil {
+		t.Fatalf("decode self: %v", err)
+	}
+	if got.Status != "completed" {
+		t.Fatalf("status = %q", got.Status)
+	}
+	if len(got.Findings) != 6 {
+		t.Errorf("findings = %d, want 6 (one per security.txt check)", len(got.Findings))
+	}
+
+	byID := map[string]string{}
+	for _, f := range got.Findings {
+		byID[f.ID] = f.Status
+		if f.Family != "wellknown" {
+			t.Errorf("%s family = %q, want wellknown", f.ID, f.Family)
+		}
+	}
+	if byID[wellknown.IDMissing] != "fail" {
+		t.Errorf("MISSING status = %q, want fail (no security.txt)", byID[wellknown.IDMissing])
+	}
+	// All dependent checks must skip gracefully when the file is absent.
+	for _, id := range []string{wellknown.IDExpired, wellknown.IDNoContact, wellknown.IDNoExpires, wellknown.IDNoSignature} {
+		if byID[id] != "skipped" {
+			t.Errorf("%s = %q, want skipped", id, byID[id])
+		}
 	}
 }
 
