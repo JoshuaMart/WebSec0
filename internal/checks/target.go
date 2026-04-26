@@ -41,6 +41,12 @@ type Target struct {
 	// (Cloudflare 1.1.1.1:53). Tests inject mock servers here.
 	DNSResolverAddr string
 
+	// PinnedIPs is the immutable set of IPs the SSRF gatekeeper resolved
+	// at admission. All outbound connections from the scanner must use
+	// one of these — see internal/scanner/safety. Empty in tests / CLI
+	// when running without a Policy.
+	PinnedIPs []net.IP
+
 	// resolver is the DNS lookup function. Tests may swap it; nil means
 	// net.DefaultResolver.
 	resolver Resolver
@@ -98,6 +104,32 @@ func (t *Target) Client() *http.Client {
 		return t.HTTPClient
 	}
 	return http.DefaultClient
+}
+
+// FirstPinnedIP returns the first IP captured at admission, or nil when
+// no policy was applied (tests / standalone CLI without --strict).
+func (t *Target) FirstPinnedIP() net.IP {
+	if len(t.PinnedIPs) == 0 {
+		return nil
+	}
+	return t.PinnedIPs[0]
+}
+
+// DialAddress returns the "host:port" string that outbound TCP dials
+// should use. When PinnedIPs is set, the hostname is replaced by the
+// pinned IP; otherwise the original hostname is used.
+func (t *Target) DialAddress(port string) string {
+	if ip := t.FirstPinnedIP(); ip != nil {
+		return net.JoinHostPort(ip.String(), port)
+	}
+	host := t.Host
+	if host == "" {
+		host = t.Hostname
+	}
+	if _, _, err := net.SplitHostPort(host); err == nil {
+		return host
+	}
+	return net.JoinHostPort(host, port)
 }
 
 // CacheValue runs factory at most once per key for the lifetime of the

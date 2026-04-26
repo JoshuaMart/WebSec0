@@ -15,6 +15,7 @@ import (
 	"github.com/Jomar/websec101/internal/api/spec"
 	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/scanner"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 	"github.com/Jomar/websec101/internal/storage"
 	client "github.com/Jomar/websec101/pkg/client"
 )
@@ -25,6 +26,7 @@ type Options struct {
 	Store          storage.ScanStore
 	Registry       *checks.Registry
 	Scans          *scanner.Manager
+	Policy         *safety.Policy
 	PerScanTimeout time.Duration
 	LogTargets     bool     // honour logging.log_targets
 	CORSOrigin     []string // CORS allowlist; nil → "https://*"
@@ -55,6 +57,7 @@ func NewServer(opts Options) (http.Handler, error) {
 		Store:          opts.Store,
 		Registry:       registry,
 		Scans:          opts.Scans,
+		Policy:         opts.Policy,
 		PerScanTimeout: opts.PerScanTimeout,
 	})
 

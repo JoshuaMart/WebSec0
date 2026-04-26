@@ -80,9 +80,18 @@ type PerTargetLimit struct {
 }
 
 type SecurityConfig struct {
-	RefusePrivateRanges bool     `koanf:"refuse_private_ranges"`
-	RefuseLoopback      bool     `koanf:"refuse_loopback"`
-	DomainBlocklist     []string `koanf:"domain_blocklist"`
+	RefusePrivateRanges bool `koanf:"refuse_private_ranges"`
+	RefuseLoopback      bool `koanf:"refuse_loopback"`
+	RefuseCGNAT         bool `koanf:"refuse_cgnat"`
+	RefuseLinkLocal     bool `koanf:"refuse_link_local"`
+	// RefuseMetadata is a separate hard-toggle from RefusePrivateRanges:
+	// disabling metadata blocking on a cloud host is essentially a
+	// pre-authorised IAM-credential heist, so we keep it default-true
+	// and log a WARN at startup if it's flipped off.
+	RefuseMetadata  bool     `koanf:"refuse_metadata"`
+	DomainBlocklist []string `koanf:"domain_blocklist"`
+	AllowedCIDRs    []string `koanf:"allowed_cidrs"`
+	AllowedHosts    []string `koanf:"allowed_hosts"`
 }
 
 type ReportsConfig struct {

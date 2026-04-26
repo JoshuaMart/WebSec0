@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/Jomar/websec101/internal/checks"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 )
 
 const (
@@ -118,7 +119,7 @@ func doFetch(ctx context.Context, t *checks.Target) *HandshakeResult {
 	}
 
 	for _, v := range versionsToProbe {
-		probe := handshakeOne(ctx, res.HostPort, t.Hostname, v)
+		probe := handshakeOne(ctx, t, res.HostPort, t.Hostname, v)
 		res.Probes[v] = probe
 		if probe.Supported {
 			res.AnySucceeded = true
@@ -135,7 +136,7 @@ func doFetch(ctx context.Context, t *checks.Target) *HandshakeResult {
 		// above intentionally drops connection state to keep VersionProbe
 		// small). For Phase 6 we accept the second handshake as the cost
 		// of a clean separation; CacheValue ensures it happens once.
-		if leaf, chain := getChain(ctx, res.HostPort, t.Hostname, v); leaf != nil {
+		if leaf, chain := getChain(ctx, t, res.HostPort, t.Hostname, v); leaf != nil {
 			res.Leaf = leaf
 			res.Chain = chain
 			break
@@ -160,14 +161,13 @@ func doFetch(ctx context.Context, t *checks.Target) *HandshakeResult {
 	return res
 }
 
-func handshakeOne(ctx context.Context, hostPort, sni string, version uint16) *VersionProbe {
+func handshakeOne(ctx context.Context, t *checks.Target, hostPort, sni string, version uint16) *VersionProbe {
 	probe := &VersionProbe{Version: version}
 
 	dctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 
-	dialer := &net.Dialer{}
-	rawConn, err := dialer.DialContext(dctx, "tcp", hostPort)
+	rawConn, err := dialTCP(dctx, t, hostPort)
 	if err != nil {
 		probe.HandshakeErr = err
 		return probe
@@ -200,12 +200,11 @@ func handshakeOne(ctx context.Context, hostPort, sni string, version uint16) *Ve
 	return probe
 }
 
-func getChain(ctx context.Context, hostPort, sni string, version uint16) (*x509.Certificate, []*x509.Certificate) {
+func getChain(ctx context.Context, t *checks.Target, hostPort, sni string, version uint16) (*x509.Certificate, []*x509.Certificate) {
 	dctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 
-	dialer := &net.Dialer{}
-	rawConn, err := dialer.DialContext(dctx, "tcp", hostPort)
+	rawConn, err := dialTCP(dctx, t, hostPort)
 	if err != nil {
 		return nil, nil
 	}
@@ -230,6 +229,18 @@ func getChain(ctx context.Context, hostPort, sni string, version uint16) (*x509.
 		return nil, nil
 	}
 	return st.PeerCertificates[0], st.PeerCertificates
+}
+
+// dialTCP routes through safety.PinnedDial when the target has pinned
+// IPs (production / API path). When PinnedIPs is empty (tests, CLI
+// without --strict) it falls back to a plain net.Dialer so existing
+// tests using httptest.NewUnstartedServer keep working.
+func dialTCP(ctx context.Context, t *checks.Target, hostPort string) (net.Conn, error) {
+	if len(t.PinnedIPs) > 0 {
+		return safety.PinnedDial(ctx, "tcp", hostPort, t.Hostname, t.PinnedIPs, nil)
+	}
+	d := &net.Dialer{}
+	return d.DialContext(ctx, "tcp", hostPort)
 }
 
 // verifyChain runs an ad-hoc x509 verification using the system trust

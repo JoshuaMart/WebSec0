@@ -17,6 +17,7 @@ import (
 	"github.com/Jomar/websec101/internal/api"
 	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/scanner"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 	"github.com/Jomar/websec101/internal/scanner/wellknown"
 	"github.com/Jomar/websec101/internal/storage/memory"
 )
@@ -59,6 +60,7 @@ func newScanServer(t *testing.T, registered ...checks.Check) (*httptest.Server, 
 		Store:          store,
 		Registry:       registry,
 		Scans:          mgr,
+		Policy:         safety.Permissive(),
 		PerScanTimeout: 10 * time.Second,
 	})
 	if err != nil {
@@ -296,6 +298,7 @@ func TestE2EWellKnownSecurityTxtMissing(t *testing.T) {
 	}, logger)
 	apiHandler, err := api.NewServer(api.Options{
 		Logger: logger, Store: store, Registry: registry, Scans: mgr,
+		Policy:         safety.Permissive(),
 		PerScanTimeout: 10 * time.Second,
 	})
 	if err != nil {

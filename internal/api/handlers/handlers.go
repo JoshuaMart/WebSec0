@@ -16,6 +16,7 @@ import (
 
 	"github.com/Jomar/websec101/internal/api/spec"
 	"github.com/Jomar/websec101/internal/checks"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 	"github.com/Jomar/websec101/internal/storage"
 	"github.com/Jomar/websec101/internal/version"
 	client "github.com/Jomar/websec101/pkg/client"
@@ -32,6 +33,7 @@ type Handler struct {
 	store          storage.ScanStore
 	registry       *checks.Registry
 	scans          ScanService
+	policy         *safety.Policy
 	perScanTimeout time.Duration
 	startedAt      time.Time
 }
@@ -41,6 +43,7 @@ type Options struct {
 	Store          storage.ScanStore
 	Registry       *checks.Registry
 	Scans          ScanService
+	Policy         *safety.Policy
 	PerScanTimeout time.Duration
 }
 
@@ -49,10 +52,14 @@ func New(opts Options) *Handler {
 	if opts.PerScanTimeout <= 0 {
 		opts.PerScanTimeout = 120 * time.Second
 	}
+	if opts.Policy == nil {
+		opts.Policy = safety.Default()
+	}
 	return &Handler{
 		store:          opts.Store,
 		registry:       opts.Registry,
 		scans:          opts.Scans,
+		policy:         opts.Policy,
 		perScanTimeout: opts.PerScanTimeout,
 		startedAt:      time.Now(),
 	}

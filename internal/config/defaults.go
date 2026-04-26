@@ -24,7 +24,12 @@ func Defaults() map[string]any {
 
 		"security.refuse_private_ranges": true,
 		"security.refuse_loopback":       true,
+		"security.refuse_cgnat":          true,
+		"security.refuse_link_local":     true,
+		"security.refuse_metadata":       true,
 		"security.domain_blocklist":      []string{".gov", ".mil", ".gouv.fr", ".gc.ca"},
+		"security.allowed_cidrs":         []string{},
+		"security.allowed_hosts":         []string{},
 
 		"reports.default_visibility":  "public",
 		"reports.private_token_bytes": 32,

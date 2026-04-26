@@ -25,6 +25,7 @@ import (
 	"github.com/Jomar/websec101/internal/scanner/email"
 	"github.com/Jomar/websec101/internal/scanner/headers"
 	scannerhttp "github.com/Jomar/websec101/internal/scanner/http"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 	scannertls "github.com/Jomar/websec101/internal/scanner/tls"
 	"github.com/Jomar/websec101/internal/scanner/wellknown"
 	"github.com/Jomar/websec101/internal/storage/memory"
@@ -90,6 +91,24 @@ func run(args []string, errOut *os.File) error {
 	scannerdns.Register(registry)
 	email.Register(registry)
 	scannerhttp.Register(registry)
+	policy, err := safety.FromConfig(safety.ConfigInput{
+		RefusePrivateRanges: cfg.Security.RefusePrivateRanges,
+		RefuseLoopback:      cfg.Security.RefuseLoopback,
+		RefuseCGNAT:         cfg.Security.RefuseCGNAT,
+		RefuseLinkLocal:     cfg.Security.RefuseLinkLocal,
+		RefuseMetadata:      cfg.Security.RefuseMetadata,
+		DomainBlocklist:     cfg.Security.DomainBlocklist,
+		AllowedCIDRs:        cfg.Security.AllowedCIDRs,
+		AllowedHosts:        cfg.Security.AllowedHosts,
+	})
+	if err != nil {
+		return fmt.Errorf("invalid security config: %w", err)
+	}
+	if !cfg.Security.RefuseMetadata {
+		log.Warn("security.refuse_metadata is FALSE — cloud-metadata endpoints can be reached. " +
+			"Disable only on lab/airgapped deployments.")
+	}
+
 	mgr := scanner.NewManager(store, registry, scanner.ManagerConfig{
 		MaxConcurrentScans:         cfg.Scanner.MaxConcurrentScans,
 		MaxConcurrentChecksPerScan: cfg.Scanner.MaxConcurrentChecksPerScan,
@@ -103,6 +122,7 @@ func run(args []string, errOut *os.File) error {
 		Store:          store,
 		Registry:       registry,
 		Scans:          mgr,
+		Policy:         policy,
 		PerScanTimeout: cfg.Scanner.PerScanTimeout,
 		LogTargets:     cfg.Logging.LogTargets,
 	})

@@ -23,6 +23,7 @@ import (
 	"github.com/Jomar/websec101/internal/scanner/email"
 	"github.com/Jomar/websec101/internal/scanner/headers"
 	scannerhttp "github.com/Jomar/websec101/internal/scanner/http"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 	scannertls "github.com/Jomar/websec101/internal/scanner/tls"
 	"github.com/Jomar/websec101/internal/scanner/wellknown"
 	"github.com/Jomar/websec101/internal/version"
@@ -36,6 +37,9 @@ type scanOpts struct {
 	formatSARIF bool
 	failOn      string
 	wait        int
+	// unsafe disables the SSRF gate's private/loopback/cgnat/link-local
+	// rejection. Cloud-metadata blocking always stays on.
+	unsafe bool
 }
 
 func scanCmd() *cobra.Command {
@@ -58,7 +62,7 @@ func scanCmd() *cobra.Command {
 			var rep *report.Report
 			var err error
 			if opts.standalone {
-				rep, err = runStandalone(ctx, target, opts.wait)
+				rep, err = runStandalone(ctx, target, opts.wait, opts.unsafe)
 			} else {
 				rep, err = runOnline(ctx, target, opts.wait)
 			}
@@ -88,6 +92,8 @@ func scanCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.failOn, "fail-on", "",
 		"Comma-separated severities (critical,high,medium,low,info) — exit 2 on match")
 	cmd.Flags().IntVar(&opts.wait, "wait", 120, "Max seconds to wait for completion")
+	cmd.Flags().BoolVar(&opts.unsafe, "unsafe", false,
+		"Standalone only: allow scanning private/loopback/CGNAT/link-local addresses (cloud-metadata stays blocked)")
 	return cmd
 }
 
@@ -107,12 +113,25 @@ func pickFormat(o scanOpts) string {
 }
 
 // runStandalone builds a private registry+manager, runs the scan, and
-// returns the rendered Report.
-func runStandalone(ctx context.Context, hostname string, waitSec int) (*report.Report, error) {
+// returns the rendered Report. The SSRF gate is applied unless --unsafe.
+func runStandalone(ctx context.Context, hostname string, waitSec int, unsafe bool) (*report.Report, error) {
 	tgt, err := checks.NewTarget(hostname, nil)
 	if err != nil {
 		return nil, fmt.Errorf("invalid target: %w", err)
 	}
+
+	// Apply the SSRF gate. Default = strict; --unsafe = permissive
+	// (metadata still blocked).
+	policy := safety.Default()
+	if unsafe {
+		policy = safety.Permissive()
+	}
+	pinned, decision := safety.ResolveAndValidate(ctx, tgt.Hostname, policy, nil)
+	if decision != nil {
+		return nil, fmt.Errorf("target blocked: %s", decision.HumanError())
+	}
+	tgt.PinnedIPs = pinned
+	tgt.HTTPClient = safety.HTTPClient(tgt.Hostname, pinned, policy)
 	r := checks.NewRegistry()
 	wellknown.Register(r)
 	scannertls.Register(r)

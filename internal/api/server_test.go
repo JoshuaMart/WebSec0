@@ -13,6 +13,7 @@ import (
 	"github.com/Jomar/websec101/internal/api"
 	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/scanner"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 	"github.com/Jomar/websec101/internal/storage/memory"
 	"github.com/Jomar/websec101/internal/version"
 )
@@ -28,6 +29,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 		Store:    store,
 		Registry: registry,
 		Scans:    mgr,
+		Policy:   safety.Permissive(),
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)

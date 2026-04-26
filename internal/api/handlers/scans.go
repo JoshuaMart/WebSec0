@@ -11,6 +11,7 @@ import (
 
 	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/scanner"
+	"github.com/Jomar/websec101/internal/scanner/safety"
 	"github.com/Jomar/websec101/internal/storage"
 	client "github.com/Jomar/websec101/pkg/client"
 )
@@ -35,6 +36,18 @@ func (h *Handler) CreateScan(ctx context.Context, req *client.ScanRequest) (clie
 	if err != nil {
 		return errEnvelope(422, "invalid_target", err.Error()), nil
 	}
+
+	// Anti-SSRF + DNS-rebinding gate: resolve once, pin the IP set.
+	pinned, decision := safety.ResolveAndValidate(ctx, target.Hostname, h.policy, nil)
+	if decision != nil {
+		status := 422
+		if decision.Reason == safety.ReasonDomainBlocked {
+			status = 451
+		}
+		return errEnvelope(status, "target_blocked", decision.HumanError()), nil
+	}
+	target.PinnedIPs = pinned
+	target.HTTPClient = safety.HTTPClient(target.Hostname, pinned, h.policy)
 
 	wait := 0
 	if opts, ok := req.Options.Get(); ok {
