@@ -22,6 +22,7 @@ import (
 	"github.com/Jomar/websec101/internal/scanner"
 	"github.com/Jomar/websec101/internal/scanner/cookies"
 	scannerdns "github.com/Jomar/websec101/internal/scanner/dns"
+	"github.com/Jomar/websec101/internal/scanner/email"
 	"github.com/Jomar/websec101/internal/scanner/headers"
 	scannertls "github.com/Jomar/websec101/internal/scanner/tls"
 	"github.com/Jomar/websec101/internal/scanner/wellknown"
@@ -86,6 +87,7 @@ func run(args []string, errOut *os.File) error {
 	headers.Register(registry)
 	cookies.Register(registry)
 	scannerdns.Register(registry)
+	email.Register(registry)
 	mgr := scanner.NewManager(store, registry, scanner.ManagerConfig{
 		MaxConcurrentScans:         cfg.Scanner.MaxConcurrentScans,
 		MaxConcurrentChecksPerScan: cfg.Scanner.MaxConcurrentChecksPerScan,
