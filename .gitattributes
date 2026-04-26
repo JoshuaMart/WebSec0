@@ -1,0 +1,38 @@
+# Auto-detect text files and normalize to LF on commit
+* text=auto eol=lf
+
+# Explicit text files
+*.go        text eol=lf
+*.md        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.json      text eol=lf
+*.toml      text eol=lf
+*.sh        text eol=lf
+*.mjs       text eol=lf
+*.js        text eol=lf
+*.ts        text eol=lf
+*.astro     text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+Makefile    text eol=lf
+Dockerfile  text eol=lf
+
+# Binary files
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.webp      binary
+*.woff      binary
+*.woff2     binary
+*.pdf       binary
+
+# Linguist hints
+api/openapi.yaml    linguist-detectable=true
+web/dist/**         linguist-generated=true
+internal/api/oas/** linguist-generated=true
+pkg/client/**       linguist-generated=true
+docs/**             linguist-documentation=true
+*.md                linguist-documentation=true
