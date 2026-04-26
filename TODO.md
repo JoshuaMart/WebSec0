@@ -74,7 +74,7 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 
 ## Phase 4 — Scanner orchestrator
 
-- [ ] `internal/checks/registry.go` : interface `Check` + registre central
+- [x] `internal/checks/registry.go` : interface `Check` + registre central
   ```go
   type Check interface {
     ID() string
@@ -83,16 +83,16 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
     Run(ctx context.Context, target *Target) (*Finding, error)
   }
   ```
-- [ ] `internal/checks/catalog.go` : alimente `GET /api/v1/checks`
-- [ ] `internal/scanner/runner.go` : orchestrateur avec semaphore global + errgroup intra-scan + per-check timeout (cf. §4.5)
-- [ ] `internal/scanner/target.go` : type `Target` + cache DNS partagé (`sync.Map`)
-- [ ] `internal/scanner/progress.go` : émetteur de progression typé pour SSE
-- [ ] `internal/api/handlers/scans.go` : implémenter `POST /scans` (génération GUIDv4, lancement async, retour 202)
-- [ ] Implémenter `GET /scans/{guid}` (toujours 200, status running/completed/failed)
-- [ ] `internal/api/sse/sse.go` : helper SSE avec `Last-Event-ID`, retry, heartbeat keepalive
-- [ ] Implémenter `GET /scans/{guid}/events` (SSE)
-- [ ] Mode `?wait=30s` synchrone bloquant
-- [ ] Test d'intégration : POST scan → GET → SSE → status completed
+- [x] `internal/checks/catalog.go` : alimente `GET /api/v1/checks`
+- [x] `internal/scanner/runner.go` : orchestrateur avec semaphore global + errgroup intra-scan + per-check timeout (cf. §4.5)
+- [x] ~~`internal/scanner/target.go`~~ → `internal/checks/target.go` : type `Target` + cache DNS partagé (déplacé dans `checks/` pour éviter le cycle d'import scanner ↔ checks)
+- [x] `internal/scanner/progress.go` : émetteur de progression typé pour SSE
+- [x] `internal/api/handlers/scans.go` : implémenter `POST /scans` (génération GUIDv4, lancement async, retour 202)
+- [x] Implémenter `GET /scans/{guid}` (toujours 200, status running/completed/failed)
+- [x] `internal/api/sse/sse.go` : helper SSE avec `Last-Event-ID`, retry, heartbeat keepalive
+- [x] Implémenter `GET /scans/{guid}/events` (SSE)
+- [x] Mode `?wait=30s` synchrone bloquant (via `options.wait_seconds` sur POST, plus simple que query GET)
+- [x] Test d'intégration : POST scan → GET → SSE → status completed
 
 ## Phase 5 — Premier check end-to-end (proof of orchestrator)
 
