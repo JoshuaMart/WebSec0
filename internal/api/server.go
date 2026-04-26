@@ -6,22 +6,28 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Jomar/websec101/internal/api/handlers"
 	mw "github.com/Jomar/websec101/internal/api/middleware"
 	"github.com/Jomar/websec101/internal/api/spec"
+	"github.com/Jomar/websec101/internal/checks"
+	"github.com/Jomar/websec101/internal/scanner"
 	"github.com/Jomar/websec101/internal/storage"
 	client "github.com/Jomar/websec101/pkg/client"
 )
 
 // Options configures NewServer.
 type Options struct {
-	Logger     *slog.Logger
-	Store      storage.ScanStore
-	LogTargets bool     // honour logging.log_targets
-	CORSOrigin []string // CORS allowlist; nil → "https://*"
+	Logger         *slog.Logger
+	Store          storage.ScanStore
+	Registry       *checks.Registry
+	Scans          *scanner.Manager
+	PerScanTimeout time.Duration
+	LogTargets     bool     // honour logging.log_targets
+	CORSOrigin     []string // CORS allowlist; nil → "https://*"
 }
 
 // NewServer returns the root http.Handler for the WebSec101 API.
@@ -29,13 +35,28 @@ type Options struct {
 // Layout:
 //
 //	chi.Router (request-id, recover, access-log, cors)
-//	└── ogen.Server (mounted at "/", spec paths already include /api/v1)
+//	├── GET /api/v1/scans/{guid}/events  — explicit SSE route
+//	└── *                                — ogen.Server (mounted at "/")
+//
+// The SSE endpoint is registered on chi directly (and matched first)
+// because it does not fit the OpenAPI request/response model: streaming,
+// long-lived, EventSource semantics.
 func NewServer(opts Options) (http.Handler, error) {
 	if opts.Logger == nil {
 		return nil, fmt.Errorf("api: Logger is required")
 	}
 
-	h := handlers.New(opts.Store)
+	registry := opts.Registry
+	if registry == nil {
+		registry = checks.NewRegistry()
+	}
+
+	h := handlers.New(handlers.Options{
+		Store:          opts.Store,
+		Registry:       registry,
+		Scans:          opts.Scans,
+		PerScanTimeout: opts.PerScanTimeout,
+	})
 
 	ogenServer, err := client.NewServer(h,
 		client.WithErrorHandler(handlers.ErrorHandler),
@@ -50,11 +71,12 @@ func NewServer(opts Options) (http.Handler, error) {
 	r.Use(mw.AccessLog(opts.Logger, opts.LogTargets))
 	r.Use(mw.CORS(mw.CORSOptions{AllowedOrigins: opts.CORSOrigin}))
 
-	// Sanity-check the embedded spec at startup so a broken openapi.yaml
-	// fails fast instead of surfacing on the first /openapi.json hit.
 	if _, err := spec.JSON(); err != nil {
 		return nil, fmt.Errorf("api: load embedded openapi: %w", err)
 	}
+
+	// Explicit SSE route — takes precedence over the ogen mount below.
+	r.Get("/api/v1/scans/{guid}/events", h.SSEHandler)
 
 	r.Mount("/", ogenServer)
 	return r, nil

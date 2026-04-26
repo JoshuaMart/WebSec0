@@ -11,15 +11,23 @@ import (
 	"time"
 
 	"github.com/Jomar/websec101/internal/api"
+	"github.com/Jomar/websec101/internal/checks"
+	"github.com/Jomar/websec101/internal/scanner"
 	"github.com/Jomar/websec101/internal/storage/memory"
 	"github.com/Jomar/websec101/internal/version"
 )
 
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
+	store := memory.New(time.Minute)
+	registry := checks.NewRegistry()
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	mgr := scanner.NewManager(store, registry, scanner.ManagerConfig{}, logger)
 	h, err := api.NewServer(api.Options{
-		Logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
-		Store:  memory.New(time.Minute),
+		Logger:   logger,
+		Store:    store,
+		Registry: registry,
+		Scans:    mgr,
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
@@ -146,11 +154,12 @@ func TestStubHandlersReturn501(t *testing.T) {
 	t.Parallel()
 	srv := newTestServer(t)
 
+	// Endpoints still left as 501 stubs at Phase 4 (Markdown/SARIF land in Phase 12).
 	cases := []struct {
 		name, path string
 	}{
-		{"listChecks", "/api/v1/checks"},
-		{"getCheck", "/api/v1/checks/TLS-CERT-EXPIRED"},
+		{"getScanMarkdown", "/api/v1/scans/00000000-0000-0000-0000-000000000000/markdown"},
+		{"getScanSARIF", "/api/v1/scans/00000000-0000-0000-0000-000000000000/sarif"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

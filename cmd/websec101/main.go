@@ -16,8 +16,10 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/Jomar/websec101/internal/api"
+	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/config"
 	"github.com/Jomar/websec101/internal/logging"
+	"github.com/Jomar/websec101/internal/scanner"
 	"github.com/Jomar/websec101/internal/storage/memory"
 	"github.com/Jomar/websec101/internal/version"
 )
@@ -73,11 +75,22 @@ func run(args []string, errOut *os.File) error {
 	slog.SetDefault(log)
 
 	store := memory.New(cfg.Storage.TTL)
+	registry := checks.Default()
+	mgr := scanner.NewManager(store, registry, scanner.ManagerConfig{
+		MaxConcurrentScans:         cfg.Scanner.MaxConcurrentScans,
+		MaxConcurrentChecksPerScan: cfg.Scanner.MaxConcurrentChecksPerScan,
+		PerCheckTimeout:            cfg.Scanner.PerCheckTimeout,
+		PerScanTimeout:             cfg.Scanner.PerScanTimeout,
+		StorageTTL:                 cfg.Storage.TTL,
+	}, log)
 
 	handler, err := api.NewServer(api.Options{
-		Logger:     log,
-		Store:      store,
-		LogTargets: cfg.Logging.LogTargets,
+		Logger:         log,
+		Store:          store,
+		Registry:       registry,
+		Scans:          mgr,
+		PerScanTimeout: cfg.Scanner.PerScanTimeout,
+		LogTargets:     cfg.Logging.LogTargets,
 	})
 	if err != nil {
 		return fmt.Errorf("build server: %w", err)

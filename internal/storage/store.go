@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/Jomar/websec101/internal/checks"
 )
 
 // ErrNotFound is returned by Get/Delete/UpdateStatus when the scan id
@@ -45,6 +47,10 @@ type Scan struct {
 	// PrivateToken is non-empty for private scans. Returned once on creation,
 	// never serialized via the public JSON path.
 	PrivateToken string `json:"-"`
+
+	// Findings is appended-to as checks complete. Order matches completion
+	// time, not check ID.
+	Findings []checks.Finding `json:"findings,omitempty"`
 
 	// Report holds the final report payload (set when Status == completed).
 	Report any `json:"report,omitempty"`

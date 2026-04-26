@@ -15,6 +15,7 @@ import (
 	ogenerrors "github.com/ogen-go/ogen/ogenerrors"
 
 	"github.com/Jomar/websec101/internal/api/spec"
+	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/storage"
 	"github.com/Jomar/websec101/internal/version"
 	client "github.com/Jomar/websec101/pkg/client"
@@ -28,15 +29,33 @@ import (
 type Handler struct {
 	client.UnimplementedHandler
 
-	store     storage.ScanStore
-	startedAt time.Time
+	store          storage.ScanStore
+	registry       *checks.Registry
+	scans          ScanService
+	perScanTimeout time.Duration
+	startedAt      time.Time
 }
 
-// New constructs a Handler. store is currently unused by Phase 3
-// endpoints but is kept on the struct so subsequent phases can wire it in
-// without changing the constructor signature.
-func New(store storage.ScanStore) *Handler {
-	return &Handler{store: store, startedAt: time.Now()}
+// Options aggregates the dependencies of a Handler.
+type Options struct {
+	Store          storage.ScanStore
+	Registry       *checks.Registry
+	Scans          ScanService
+	PerScanTimeout time.Duration
+}
+
+// New constructs a Handler.
+func New(opts Options) *Handler {
+	if opts.PerScanTimeout <= 0 {
+		opts.PerScanTimeout = 120 * time.Second
+	}
+	return &Handler{
+		store:          opts.Store,
+		registry:       opts.Registry,
+		scans:          opts.Scans,
+		perScanTimeout: opts.PerScanTimeout,
+		startedAt:      time.Now(),
+	}
 }
 
 // GetHealth implements GET /api/v1/health.

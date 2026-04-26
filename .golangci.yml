@@ -37,6 +37,9 @@ linters:
       confidence: low
       excludes:
         - G404
+        # G118 fires on long-lived background goroutines that intentionally
+        # outlive the request context (scan workers are async by design).
+        - G118
     revive:
       rules:
         - name: var-naming

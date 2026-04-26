@@ -31,6 +31,8 @@ func New(defaultTTL time.Duration) *Store {
 }
 
 // Put inserts or replaces the scan. A ttl of 0 falls back to the default.
+// The store keeps a private copy: callers may continue to mutate the
+// supplied *Scan after Put returns without affecting the stored entry.
 func (s *Store) Put(_ context.Context, scan *storage.Scan, ttl time.Duration) error {
 	if scan == nil || scan.ID == "" {
 		return errInvalidScan
@@ -39,11 +41,18 @@ func (s *Store) Put(_ context.Context, scan *storage.Scan, ttl time.Duration) er
 	if exp <= 0 {
 		exp = gocache.DefaultExpiration
 	}
-	s.c.Set(scan.ID, scan, exp)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.c.Set(scan.ID, cloneScan(scan), exp)
 	return nil
 }
 
 func (s *Store) Get(_ context.Context, id string) (*storage.Scan, error) {
+	// We hold the same mutex as UpdateStatus so callers always observe a
+	// consistent snapshot — the underlying *Scan is mutated in place by
+	// UpdateStatus, so we must clone before returning.
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	v, ok := s.c.Get(id)
 	if !ok {
 		return nil, storage.ErrNotFound
@@ -52,7 +61,7 @@ func (s *Store) Get(_ context.Context, id string) (*storage.Scan, error) {
 	if !ok {
 		return nil, errInvalidScan
 	}
-	return scan, nil
+	return cloneScan(scan), nil
 }
 
 func (s *Store) Delete(_ context.Context, id string) error {
