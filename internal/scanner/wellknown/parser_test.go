@@ -77,6 +77,26 @@ func TestParseEmptyRejects(t *testing.T) {
 	}
 }
 
+func TestParseExpiresAcceptsLowercaseZ(t *testing.T) {
+	t.Parallel()
+	// Real-world example: github.com/.well-known/security.txt at the time of
+	// writing emits "2026-05-26T17:21:49z" (lowercase z, technically not
+	// RFC 3339 compliant but widely tolerated).
+	got, err := ParseSecurityTxt([]byte("Contact: mailto:s@x.com\nExpires: 2026-05-26T17:21:49z\n"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got.Expires == nil {
+		t.Fatalf("Expires nil; warnings = %v", got.ParseWarnings)
+	}
+	if got.Expires.Year() != 2026 || got.Expires.Month() != 5 {
+		t.Errorf("Expires = %v", got.Expires)
+	}
+	if len(got.ParseWarnings) != 0 {
+		t.Errorf("unexpected warnings: %v", got.ParseWarnings)
+	}
+}
+
 func TestParseExpiredDocument(t *testing.T) {
 	t.Parallel()
 	in := "Contact: mailto:x@example.com\nExpires: 2000-01-01T00:00:00Z\n"

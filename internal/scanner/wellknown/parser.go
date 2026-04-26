@@ -130,7 +130,15 @@ func splitField(line string) (string, string, bool) {
 }
 
 // parseRFC3339 accepts the RFC 3339 / ISO 8601 forms permitted by RFC 9116.
+//
+// RFC 3339 §5.6 mandates uppercase "Z" for the UTC offset, but many
+// real-world generators emit lowercase "z" (e.g. github.com/.well-known/
+// security.txt at the time of writing). We normalise so a valid-in-spirit
+// document doesn't trigger a false NO-EXPIRES finding.
 func parseRFC3339(v string) (time.Time, error) {
+	if n := len(v); n > 0 && v[n-1] == 'z' {
+		v = v[:n-1] + "Z"
+	}
 	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04:05Z"} {
 		if t, err := time.Parse(layout, v); err == nil {
 			return t.UTC(), nil
