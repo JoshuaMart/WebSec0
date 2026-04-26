@@ -40,6 +40,9 @@ linters:
         # G118 fires on long-lived background goroutines that intentionally
         # outlive the request context (scan workers are async by design).
         - G118
+        # G101 false-positives on check-id constants whose names happen to
+        # contain words like "WILDCARD" or "SECRET".
+        - G101
     revive:
       rules:
         - name: var-naming
