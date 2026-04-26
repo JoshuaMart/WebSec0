@@ -9,6 +9,7 @@ import (
 	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 
+	"github.com/Jomar/websec101/internal/api/middleware"
 	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/scanner"
 	"github.com/Jomar/websec101/internal/scanner/safety"
@@ -37,9 +38,12 @@ func (h *Handler) CreateScan(ctx context.Context, req *client.ScanRequest) (clie
 		return errEnvelope(422, "invalid_target", err.Error()), nil
 	}
 
+	srcIP := middleware.SourceIPFromContext(ctx)
+
 	// Anti-SSRF + DNS-rebinding gate: resolve once, pin the IP set.
 	pinned, decision := safety.ResolveAndValidate(ctx, target.Hostname, h.policy, nil)
 	if decision != nil {
+		h.audit("blocked", srcIP, target.Hostname, "", string(decision.Reason))
 		status := 422
 		if decision.Reason == safety.ReasonDomainBlocked {
 			status = 451
@@ -48,6 +52,28 @@ func (h *Handler) CreateScan(ctx context.Context, req *client.ScanRequest) (clie
 	}
 	target.PinnedIPs = pinned
 	target.HTTPClient = safety.HTTPClient(target.Hostname, pinned, h.policy)
+
+	// Cooldown / cache / abuse pattern.
+	if h.tracker != nil {
+		dec := h.tracker.PreScan(srcIP, target.Hostname, false)
+		switch {
+		case dec.AbuseFlagged:
+			h.audit("abuse_flagged", srcIP, target.Hostname, "", "fanout_exceeded")
+			return errEnvelope(429, "abuse_flagged",
+				"too many distinct targets from this source — slow down"), nil
+		case dec.CachedScanID != "":
+			h.audit("cached", srcIP, target.Hostname, dec.CachedScanID, "")
+			cached, gerr := h.store.Get(ctx, dec.CachedScanID)
+			if gerr == nil {
+				return h.toScanCreated(cached), nil
+			}
+			// Cache pointed at a now-evicted scan; fall through and create.
+		case dec.CooldownLeft > 0:
+			h.audit("cooldown", srcIP, target.Hostname, "", "")
+			return errEnvelope(429, "cooldown",
+				"target was scanned recently; retry later"), nil
+		}
+	}
 
 	wait := 0
 	if opts, ok := req.Options.Get(); ok {
@@ -60,6 +86,10 @@ func (h *Handler) CreateScan(ctx context.Context, req *client.ScanRequest) (clie
 	if err != nil {
 		return errEnvelope(500, "internal_error", err.Error()), nil
 	}
+	if h.tracker != nil {
+		h.tracker.Record(target.Hostname, scan.ID)
+	}
+	h.audit("accepted", srcIP, target.Hostname, scan.ID, "")
 
 	if wait > 0 {
 		if w := time.Duration(wait) * time.Second; w > 0 {

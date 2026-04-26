@@ -16,9 +16,11 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/Jomar/websec101/internal/api"
+	"github.com/Jomar/websec101/internal/audit"
 	"github.com/Jomar/websec101/internal/checks"
 	"github.com/Jomar/websec101/internal/config"
 	"github.com/Jomar/websec101/internal/logging"
+	"github.com/Jomar/websec101/internal/ratelimit"
 	"github.com/Jomar/websec101/internal/scanner"
 	"github.com/Jomar/websec101/internal/scanner/cookies"
 	scannerdns "github.com/Jomar/websec101/internal/scanner/dns"
@@ -109,6 +111,17 @@ func run(args []string, errOut *os.File) error {
 			"Disable only on lab/airgapped deployments.")
 	}
 
+	ipLim := ratelimit.NewIPLimiter(cfg.RateLimit.PerIP.Rate, cfg.RateLimit.PerIP.Period)
+	tracker := ratelimit.NewTargetTracker(
+		cfg.RateLimit.PerTarget.Cooldown,
+		cfg.Storage.TTL,
+		5, 5*time.Minute, // abuse: 5 distinct hosts per 5 min per IP
+	)
+	auditLog, err := audit.FromPath("") // empty path → no audit; later wired to a config field
+	if err != nil {
+		return fmt.Errorf("audit: %w", err)
+	}
+
 	mgr := scanner.NewManager(store, registry, scanner.ManagerConfig{
 		MaxConcurrentScans:         cfg.Scanner.MaxConcurrentScans,
 		MaxConcurrentChecksPerScan: cfg.Scanner.MaxConcurrentChecksPerScan,
@@ -123,6 +136,9 @@ func run(args []string, errOut *os.File) error {
 		Registry:       registry,
 		Scans:          mgr,
 		Policy:         policy,
+		IPLimiter:      ipLim,
+		Tracker:        tracker,
+		AuditLog:       auditLog,
 		PerScanTimeout: cfg.Scanner.PerScanTimeout,
 		LogTargets:     cfg.Logging.LogTargets,
 	})

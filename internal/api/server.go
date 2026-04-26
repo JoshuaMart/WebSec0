@@ -13,7 +13,9 @@ import (
 	"github.com/Jomar/websec101/internal/api/handlers"
 	mw "github.com/Jomar/websec101/internal/api/middleware"
 	"github.com/Jomar/websec101/internal/api/spec"
+	"github.com/Jomar/websec101/internal/audit"
 	"github.com/Jomar/websec101/internal/checks"
+	"github.com/Jomar/websec101/internal/ratelimit"
 	"github.com/Jomar/websec101/internal/scanner"
 	"github.com/Jomar/websec101/internal/scanner/safety"
 	"github.com/Jomar/websec101/internal/storage"
@@ -27,6 +29,9 @@ type Options struct {
 	Registry       *checks.Registry
 	Scans          *scanner.Manager
 	Policy         *safety.Policy
+	IPLimiter      *ratelimit.IPLimiter     // optional; nil disables per-IP rate limiting
+	Tracker        *ratelimit.TargetTracker // optional; nil disables cooldown/cache/abuse
+	AuditLog       *audit.Logger            // optional; nil disables audit
 	PerScanTimeout time.Duration
 	LogTargets     bool     // honour logging.log_targets
 	CORSOrigin     []string // CORS allowlist; nil → "https://*"
@@ -58,6 +63,8 @@ func NewServer(opts Options) (http.Handler, error) {
 		Registry:       registry,
 		Scans:          opts.Scans,
 		Policy:         opts.Policy,
+		Tracker:        opts.Tracker,
+		AuditLog:       opts.AuditLog,
 		PerScanTimeout: opts.PerScanTimeout,
 	})
 
@@ -70,9 +77,13 @@ func NewServer(opts Options) (http.Handler, error) {
 
 	r := chi.NewRouter()
 	r.Use(mw.RequestID)
+	r.Use(mw.SourceIP)
 	r.Use(mw.Recover(opts.Logger))
 	r.Use(mw.AccessLog(opts.Logger, opts.LogTargets))
 	r.Use(mw.CORS(mw.CORSOptions{AllowedOrigins: opts.CORSOrigin}))
+	if opts.IPLimiter != nil {
+		r.Use(opts.IPLimiter.Middleware())
+	}
 
 	if _, err := spec.JSON(); err != nil {
 		return nil, fmt.Errorf("api: load embedded openapi: %w", err)

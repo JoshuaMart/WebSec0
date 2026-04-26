@@ -15,7 +15,9 @@ import (
 	ogenerrors "github.com/ogen-go/ogen/ogenerrors"
 
 	"github.com/Jomar/websec101/internal/api/spec"
+	"github.com/Jomar/websec101/internal/audit"
 	"github.com/Jomar/websec101/internal/checks"
+	"github.com/Jomar/websec101/internal/ratelimit"
 	"github.com/Jomar/websec101/internal/scanner/safety"
 	"github.com/Jomar/websec101/internal/storage"
 	"github.com/Jomar/websec101/internal/version"
@@ -34,6 +36,8 @@ type Handler struct {
 	registry       *checks.Registry
 	scans          ScanService
 	policy         *safety.Policy
+	tracker        *ratelimit.TargetTracker
+	auditLog       *audit.Logger
 	perScanTimeout time.Duration
 	startedAt      time.Time
 }
@@ -44,6 +48,8 @@ type Options struct {
 	Registry       *checks.Registry
 	Scans          ScanService
 	Policy         *safety.Policy
+	Tracker        *ratelimit.TargetTracker
+	AuditLog       *audit.Logger
 	PerScanTimeout time.Duration
 }
 
@@ -60,9 +66,26 @@ func New(opts Options) *Handler {
 		registry:       opts.Registry,
 		scans:          opts.Scans,
 		policy:         opts.Policy,
+		tracker:        opts.Tracker,
+		auditLog:       opts.AuditLog,
 		perScanTimeout: opts.PerScanTimeout,
 		startedAt:      time.Now(),
 	}
+}
+
+// audit forwards a scan event to the audit logger if one is configured.
+// Hostname is hashed; source IP is masked. No-op when h.auditLog is nil.
+func (h *Handler) audit(decision, srcIP, host, scanID, reason string) {
+	if h.auditLog == nil {
+		return
+	}
+	h.auditLog.Record(audit.Event{
+		Decision: decision,
+		HostHash: audit.HashHost(host),
+		IPMasked: audit.MaskIP(srcIP),
+		ScanID:   scanID,
+		Reason:   reason,
+	})
 }
 
 // GetHealth implements GET /api/v1/health.

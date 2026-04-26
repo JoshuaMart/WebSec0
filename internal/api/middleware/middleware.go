@@ -26,6 +26,51 @@ func RequestIDFromContext(ctx context.Context) string {
 	return v
 }
 
+// srcIPKey is the context key for the per-request source IP.
+type srcIPKey struct{}
+
+// SourceIP wraps next so the handler can read the (single-hop XFF aware)
+// source IP via SourceIPFromContext.
+func SourceIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := extractSourceIP(r)
+		ctx := context.WithValue(r.Context(), srcIPKey{}, ip)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// SourceIPFromContext returns the IP captured by SourceIP middleware.
+func SourceIPFromContext(ctx context.Context) string {
+	v, _ := ctx.Value(srcIPKey{}).(string)
+	return v
+}
+
+func extractSourceIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		first := xff
+		if comma := strings.IndexByte(xff, ','); comma >= 0 {
+			first = xff[:comma]
+		}
+		if ip := strings.TrimSpace(first); ip != "" {
+			return ip
+		}
+	}
+	if host, _, err := splitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+// splitHostPort wraps net.SplitHostPort without pulling net into the
+// public surface (helper kept here so this file's imports stay tight).
+func splitHostPort(addr string) (host, port string, err error) {
+	i := strings.LastIndex(addr, ":")
+	if i < 0 {
+		return addr, "", nil
+	}
+	return addr[:i], addr[i+1:], nil
+}
+
 // RequestID generates a 16-byte hex id for each incoming request, attaches
 // it to the request context, and echoes it on the response via the
 // X-Request-ID header. Any client-supplied X-Request-ID is honoured if it
