@@ -1,0 +1,95 @@
+run:
+  timeout: 5m
+  go: "1.23"
+  tests: true
+
+output:
+  formats:
+    - format: colored-line-number
+
+linters:
+  disable-all: true
+  enable:
+    # Defaults (kept explicit so config is self-describing)
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # Style / formatting
+    - gofmt
+    - goimports
+    - misspell
+    - revive
+    - unconvert
+    - whitespace
+    # Bugs / correctness
+    - bodyclose
+    - copyloopvar
+    - errorlint
+    - exhaustive
+    - nilerr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    # Performance
+    - prealloc
+    # Security
+    - gosec
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/Jomar/websec101
+  gosec:
+    severity: low
+    confidence: low
+    excludes:
+      # G404: weak random — we use crypto/rand where it matters; flag manually.
+      - G404
+  revive:
+    rules:
+      - name: var-naming
+      - name: exported
+        disabled: true # too noisy pre-1.0
+      - name: package-comments
+      - name: unused-parameter
+        disabled: true
+      - name: error-return
+      - name: error-naming
+      - name: if-return
+      - name: increment-decrement
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unreachable-code
+      - name: redefines-builtin-id
+  exhaustive:
+    default-signifies-exhaustive: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - errcheck
+        - bodyclose
+        - noctx
+    # Generated code from ogen / openapi pipeline
+    - path: internal/api/oas/
+      linters:
+        - revive
+        - gosec
+        - errcheck
+        - unused
+    - path: pkg/client/
+      linters:
+        - revive
+        - gosec
+        - errcheck
+        - unused
