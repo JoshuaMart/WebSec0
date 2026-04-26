@@ -20,6 +20,7 @@ import (
 	"github.com/Jomar/websec101/internal/config"
 	"github.com/Jomar/websec101/internal/logging"
 	"github.com/Jomar/websec101/internal/scanner"
+	scannertls "github.com/Jomar/websec101/internal/scanner/tls"
 	"github.com/Jomar/websec101/internal/scanner/wellknown"
 	"github.com/Jomar/websec101/internal/storage/memory"
 	"github.com/Jomar/websec101/internal/version"
@@ -78,6 +79,7 @@ func run(args []string, errOut *os.File) error {
 	store := memory.New(cfg.Storage.TTL)
 	registry := checks.Default()
 	wellknown.Register(registry)
+	scannertls.Register(registry)
 	mgr := scanner.NewManager(store, registry, scanner.ManagerConfig{
 		MaxConcurrentScans:         cfg.Scanner.MaxConcurrentScans,
 		MaxConcurrentChecksPerScan: cfg.Scanner.MaxConcurrentChecksPerScan,
