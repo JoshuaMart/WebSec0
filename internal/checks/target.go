@@ -36,6 +36,10 @@ type Target struct {
 	// HTTPClient is the HTTP client used by HTTP-based checks. nil means
 	// http.DefaultClient.
 	HTTPClient *http.Client
+	// DNSResolverAddr is the host:port of the resolver consulted by
+	// internal/scanner/dns. Empty means a sensible package default
+	// (Cloudflare 1.1.1.1:53). Tests inject mock servers here.
+	DNSResolverAddr string
 
 	// resolver is the DNS lookup function. Tests may swap it; nil means
 	// net.DefaultResolver.
