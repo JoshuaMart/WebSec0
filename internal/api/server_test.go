@@ -150,34 +150,20 @@ func TestRequestIDGeneratedWhenAbsent(t *testing.T) {
 	}
 }
 
-func TestStubHandlersReturn501(t *testing.T) {
+// TestMarkdownAndSARIFForUnknownScan covers the post-Phase 12 contract:
+// requests for /markdown and /sarif on a non-existent scan return a
+// 404 envelope (the previous 501 stub behaviour was retired once the
+// reports engine landed).
+func TestMarkdownAndSARIFForUnknownScan(t *testing.T) {
 	t.Parallel()
 	srv := newTestServer(t)
-
-	// Endpoints still left as 501 stubs at Phase 4 (Markdown/SARIF land in Phase 12).
-	cases := []struct {
-		name, path string
-	}{
-		{"getScanMarkdown", "/api/v1/scans/00000000-0000-0000-0000-000000000000/markdown"},
-		{"getScanSARIF", "/api/v1/scans/00000000-0000-0000-0000-000000000000/sarif"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			resp, body := get(t, srv.URL+tc.path)
-			if resp.StatusCode != http.StatusNotImplemented {
-				t.Fatalf("%s status = %d, body = %s", tc.path, resp.StatusCode, body)
-			}
-			var env struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
-			}
-			if err := json.Unmarshal(body, &env); err != nil {
-				t.Fatalf("decode error envelope: %v (body=%s)", err, body)
-			}
-			if env.Code != "not_implemented" {
-				t.Errorf("code = %q, want not_implemented", env.Code)
-			}
-		})
+	for _, path := range []string{
+		"/api/v1/scans/00000000-0000-0000-0000-000000000000/markdown",
+		"/api/v1/scans/00000000-0000-0000-0000-000000000000/sarif",
+	} {
+		resp, body := get(t, srv.URL+path)
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("%s status = %d, body = %s", path, resp.StatusCode, body)
+		}
 	}
 }

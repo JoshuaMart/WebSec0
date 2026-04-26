@@ -12,7 +12,9 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/Jomar/websec101/internal/checks"
+	"github.com/Jomar/websec101/internal/report"
 	"github.com/Jomar/websec101/internal/storage"
+	"github.com/Jomar/websec101/internal/version"
 )
 
 // Manager owns the asynchronous lifecycle of scans: creation, kickoff in
@@ -168,6 +170,10 @@ func (m *Manager) run(id string, target *checks.Target, br *broker, scanTimeout 
 			s.Error = err.Error()
 		} else {
 			s.Status = storage.StatusCompleted
+			s.Report = report.Build(
+				s.ID, s.Target, s.StartedAt, now, findings,
+				report.BuildOptions{ScannerVersion: version.Version},
+			)
 		}
 		return nil
 	}
