@@ -1,0 +1,22 @@
+extends:
+  - "spectral:oas"
+rules:
+  # Operations must be uniquely identifiable for codegen.
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-operationId-valid-in-url: error
+
+  # Tagging keeps the catalog browsable in Scalar/Swagger UI.
+  operation-tags: warn
+  operation-tag-defined: error
+
+  # Documentation hygiene.
+  operation-description: warn
+  operation-summary-formatted: warn
+  info-contact: off
+  info-description: warn
+  no-$ref-siblings: error
+  oas3-schema: error
+  oas3-valid-media-example: warn
+  no-eval-in-markdown: error
+  no-script-tags-in-markdown: error

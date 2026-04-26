@@ -1,18 +1,24 @@
-// Command websec101 is the WebSec101 server binary. It will host the HTTP
-// API and the embedded frontend. At Phase 2 it only loads configuration,
-// initialises logging, and exits — wiring is added in subsequent phases.
+// Command websec101 is the WebSec101 server binary. It hosts the HTTP API
+// (and, in later phases, the embedded frontend).
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/spf13/pflag"
 
+	"github.com/Jomar/websec101/internal/api"
 	"github.com/Jomar/websec101/internal/config"
 	"github.com/Jomar/websec101/internal/logging"
+	"github.com/Jomar/websec101/internal/storage/memory"
 	"github.com/Jomar/websec101/internal/version"
 )
 
@@ -30,8 +36,6 @@ func run(args []string, errOut *os.File) error {
 	configPath := flags.StringP("config", "c", "", "path to YAML config file (optional)")
 	showVersion := flags.BoolP("version", "v", false, "print version information and exit")
 
-	// Configuration overrides — flag names mirror the koanf keys so they
-	// flow straight through the posflag provider.
 	flags.String("server.listen", "", "HTTP listen address (e.g. :8080)")
 	flags.String("logging.level", "", "log level: debug|info|warn|error")
 	flags.String("logging.format", "", "log format: json|text")
@@ -68,12 +72,57 @@ func run(args []string, errOut *os.File) error {
 	}
 	slog.SetDefault(log)
 
-	log.Info("websec101 starting",
-		"version", version.Version,
-		"commit", version.Commit,
-		"listen", cfg.Server.Listen,
-		"storage", cfg.Storage.Backend,
-	)
-	log.Warn("server not yet implemented; exiting (Phase 2 skeleton)")
+	store := memory.New(cfg.Storage.TTL)
+
+	handler, err := api.NewServer(api.Options{
+		Logger:     log,
+		Store:      store,
+		LogTargets: cfg.Logging.LogTargets,
+	})
+	if err != nil {
+		return fmt.Errorf("build server: %w", err)
+	}
+
+	srv := &http.Server{
+		Addr:              cfg.Server.Listen,
+		Handler:           handler,
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		ReadHeaderTimeout: cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		IdleTimeout:       2 * cfg.Server.WriteTimeout,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		log.Info("websec101 listening",
+			"version", version.Version,
+			"commit", version.Commit,
+			"listen", cfg.Server.Listen,
+			"storage", cfg.Storage.Backend,
+		)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+		close(errCh)
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return fmt.Errorf("listen: %w", err)
+		}
+	case <-ctx.Done():
+		log.Info("shutdown signal received")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("shutdown: %w", err)
+	}
+	log.Info("server stopped")
 	return nil
 }

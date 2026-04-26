@@ -1,0 +1,42 @@
+name: verify-codegen
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'api/openapi.yaml'
+      - 'pkg/client/**'
+      - 'internal/api/spec/openapi.yaml'
+      - 'tools.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/verify-codegen.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: regenerate and diff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: regenerate
+        run: make gen
+
+      - name: detect drift
+        run: |
+          if ! git diff --exit-code -- pkg/client internal/api/spec/openapi.yaml; then
+            echo ""
+            echo "::error::Generated code is out of sync with api/openapi.yaml."
+            echo "::error::Run 'make gen' locally and commit the result."
+            exit 1
+          fi

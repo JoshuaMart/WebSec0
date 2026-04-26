@@ -1,0 +1,402 @@
+openapi: 3.0.3
+info:
+  title: WebSec101 API
+  version: 0.1.0
+  description: |
+    Open-source web security configuration scanner.
+
+    Asynchronous request-reply pattern: POST /api/v1/scans returns 202
+    immediately, GET /api/v1/scans/{guid} always returns 200 with a
+    structured `status` field (queued, running, completed, failed).
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: /
+    description: Same-origin
+
+tags:
+  - name: scans
+    description: Scan lifecycle (create, poll, fetch reports, delete)
+  - name: catalog
+    description: Static metadata about the supported checks
+  - name: ops
+    description: Health, version, and the OpenAPI document
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [ops]
+      operationId: getHealth
+      summary: Liveness/health probe
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /api/v1/version:
+    get:
+      tags: [ops]
+      operationId: getVersion
+      summary: Build metadata
+      responses:
+        '200':
+          description: Build metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+
+  /api/v1/openapi.json:
+    get:
+      tags: [ops]
+      operationId: getOpenAPI
+      summary: Embedded OpenAPI 3.0 specification
+      responses:
+        '200':
+          description: This very document, served as JSON
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /api/v1/scans:
+    post:
+      tags: [scans]
+      operationId: createScan
+      summary: Start a new scan
+      description: |
+        Always returns 202 with a freshly minted GUIDv4 and a `Location`
+        header. Use `options.wait_seconds` for short synchronous waits.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+      responses:
+        '202':
+          description: Scan accepted
+          headers:
+            Location:
+              description: Canonical URL of the new scan
+              schema:
+                type: string
+            Retry-After:
+              description: Recommended polling interval (seconds)
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanCreated'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /api/v1/scans/{guid}:
+    parameters:
+      - $ref: '#/components/parameters/Guid'
+    get:
+      tags: [scans]
+      operationId: getScan
+      summary: Fetch a scan (always 200)
+      responses:
+        '200':
+          description: Current state of the scan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [scans]
+      operationId: deleteScan
+      summary: Delete a scan (private mode requires token)
+      parameters:
+        - in: header
+          name: Authorization
+          required: false
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        default:
+          $ref: '#/components/responses/Error'
+
+  /api/v1/scans/{guid}/markdown:
+    parameters:
+      - $ref: '#/components/parameters/Guid'
+    get:
+      tags: [scans]
+      operationId: getScanMarkdown
+      summary: Markdown report
+      responses:
+        '200':
+          description: Markdown report
+          content:
+            text/markdown:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+
+  /api/v1/scans/{guid}/sarif:
+    parameters:
+      - $ref: '#/components/parameters/Guid'
+    get:
+      tags: [scans]
+      operationId: getScanSARIF
+      summary: SARIF 2.1.0 report
+      responses:
+        '200':
+          description: SARIF report
+          content:
+            application/sarif+json:
+              schema:
+                type: object
+                additionalProperties: true
+        default:
+          $ref: '#/components/responses/Error'
+
+  /api/v1/checks:
+    get:
+      tags: [catalog]
+      operationId: listChecks
+      summary: List all supported checks
+      responses:
+        '200':
+          description: Check catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Check'
+
+  /api/v1/checks/{check_id}:
+    parameters:
+      - in: path
+        name: check_id
+        required: true
+        schema:
+          type: string
+        description: Stable check identifier (SCREAMING-KEBAB-CASE)
+    get:
+      tags: [catalog]
+      operationId: getCheck
+      summary: Fetch a single check definition
+      responses:
+        '200':
+          description: Check definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Check'
+        default:
+          $ref: '#/components/responses/Error'
+
+components:
+  parameters:
+    Guid:
+      in: path
+      name: guid
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: GUIDv4 of the scan
+  responses:
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Health:
+      type: object
+      required: [status, uptime_seconds, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        uptime_seconds:
+          type: integer
+          format: int64
+        version:
+          type: string
+    Version:
+      type: object
+      required: [version, commit, build_date]
+      properties:
+        version:
+          type: string
+        commit:
+          type: string
+        build_date:
+          type: string
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: not_implemented
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    ScanRequest:
+      type: object
+      required: [target]
+      properties:
+        target:
+          type: string
+          example: example.com
+        options:
+          $ref: '#/components/schemas/ScanOptions'
+    ScanOptions:
+      type: object
+      properties:
+        skip_categories:
+          type: array
+          items:
+            type: string
+        private:
+          type: boolean
+          default: false
+        wait_seconds:
+          type: integer
+          minimum: 0
+          maximum: 120
+          default: 0
+    ScanCreated:
+      type: object
+      required: [id, status, target, links]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        target:
+          type: string
+        private_token:
+          type: string
+          description: Set only when options.private=true (returned once).
+        links:
+          $ref: '#/components/schemas/ScanLinks'
+    Scan:
+      type: object
+      required: [id, status, target, started_at, links]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        target:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        progress:
+          $ref: '#/components/schemas/Progress'
+        links:
+          $ref: '#/components/schemas/ScanLinks'
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+        grade:
+          type: string
+          example: A+
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        error:
+          type: string
+    ScanStatus:
+      type: string
+      enum: [queued, running, completed, failed]
+    Progress:
+      type: object
+      required: [total, completed]
+      properties:
+        total:
+          type: integer
+        completed:
+          type: integer
+        current_phase:
+          type: string
+    ScanLinks:
+      type: object
+      required: [self]
+      properties:
+        self:
+          type: string
+        events:
+          type: string
+        markdown:
+          type: string
+        sarif:
+          type: string
+    Severity:
+      type: string
+      enum: [info, low, medium, high, critical]
+    FindingStatus:
+      type: string
+      enum: [pass, fail, warn, error, skipped]
+    Finding:
+      type: object
+      required: [id, family, severity, status]
+      properties:
+        id:
+          type: string
+          example: TLS-PROTOCOL-LEGACY-SSL3
+        family:
+          type: string
+          example: tls
+        severity:
+          $ref: '#/components/schemas/Severity'
+        status:
+          $ref: '#/components/schemas/FindingStatus'
+        title:
+          type: string
+        description:
+          type: string
+        evidence:
+          type: object
+          additionalProperties: true
+        remediation:
+          type: object
+          additionalProperties: true
+    Check:
+      type: object
+      required: [id, family, default_severity]
+      properties:
+        id:
+          type: string
+        family:
+          type: string
+        default_severity:
+          $ref: '#/components/schemas/Severity'
+        title:
+          type: string
+        description:
+          type: string
+        rfc_refs:
+          type: array
+          items:
+            type: string

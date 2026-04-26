@@ -41,6 +41,7 @@ lint:
 	golangci-lint run ./...
 
 gen:
+	cp -f api/openapi.yaml internal/api/spec/openapi.yaml
 	go generate ./...
 
 clean:
