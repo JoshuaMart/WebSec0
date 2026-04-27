@@ -112,6 +112,13 @@ func Markdown(r *Report) string {
 		b.WriteString("\n")
 	}
 
+	b.WriteString("---\n\n")
+	b.WriteString("> **Disclaimer**: WebSec0 is a passive configuration scanner. " +
+		"Findings are based on observed configuration and known best practices; " +
+		"they are not a substitute for a full security assessment. " +
+		"WebSec0 makes no guarantee regarding the absence of vulnerabilities not covered by its checks. " +
+		"The user is responsible for ensuring they have authorization to scan the target.\n")
+
 	return b.String()
 }
 

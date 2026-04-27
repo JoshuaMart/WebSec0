@@ -1,0 +1,33 @@
+---
+interface Props {
+  wide?: boolean;
+}
+const { wide = false } = Astro.props;
+const innerClass = wide ? 'max-w-6xl' : 'max-w-2xl';
+---
+<footer class="py-7 px-6 border-t border-sand-200 bg-white">
+  <div class={`${innerClass} mx-auto space-y-4`}>
+    <p class="text-xs text-ink-faint leading-relaxed">
+      WebSec0 is a passive configuration scanner. Findings are based on observed configuration
+      and known best practices; they are not a substitute for a full security assessment.
+      WebSec0 makes no guarantee regarding the absence of vulnerabilities not covered by its
+      checks. The user is responsible for ensuring they have authorization to scan the target.
+    </p>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <span class="font-mono text-xs text-ink-faint">WebSec0 · MIT License</span>
+      <nav class="flex flex-wrap items-center gap-4" aria-label="Footer navigation">
+        {([
+          { href: '/checks/',        label: 'Checks'   },
+          { href: '/about/',         label: 'About'    },
+          { href: '/docs/api/',      label: 'API'      },
+          { href: '/legal/tos/',     label: 'Terms'    },
+          { href: '/legal/privacy/', label: 'Privacy'  },
+        ] as const).map(({ href, label }) => (
+          <a href={href} class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">
+            {label}
+          </a>
+        ))}
+      </nav>
+    </div>
+  </div>
+</footer>

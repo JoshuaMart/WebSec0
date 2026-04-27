@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import ScanForm from '../components/ScanForm.astro';
+import Footer from '../components/Footer.astro';
 
 const stats = [
   { value: '70+',  label: 'checks'            },
@@ -270,24 +271,6 @@ const features = [
 
   </main>
 
-  <!-- ── Footer ────────────────────────────────────────────── -->
-  <footer class="py-7 px-6 border-t border-sand-200 bg-white">
-    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-      <span class="font-mono text-xs text-ink-faint">WebSec0 · MIT License</span>
-      <nav class="flex items-center gap-5" aria-label="Footer">
-        {[
-          { href: '/checks/',       label: 'Checks'  },
-          { href: '/about/',        label: 'About'   },
-          { href: '/docs/api/',     label: 'API'     },
-          { href: '/legal/tos/',    label: 'Terms'   },
-          { href: '/legal/privacy/', label: 'Privacy' },
-        ].map(({ href, label }) => (
-          <a href={href} class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">
-            {label}
-          </a>
-        ))}
-      </nav>
-    </div>
-  </footer>
+  <Footer wide />
 
 </Base>

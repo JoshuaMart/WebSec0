@@ -1,6 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import Nav from '../../../components/Nav.astro';
+import Footer from '../../../components/Footer.astro';
 ---
 <Base title="Privacy Policy" description="WebSec0 Privacy Policy — what data is collected and how it is used.">
   <Nav />
@@ -89,10 +90,5 @@ import Nav from '../../../components/Nav.astro';
     </div>
   </main>
 
-  <footer class="py-7 px-6 border-t border-sand-200">
-    <div class="max-w-2xl mx-auto flex gap-4">
-      <a href="/legal/tos/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">Terms of Service</a>
-      <a href="/about/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">About</a>
-    </div>
-  </footer>
+  <Footer />
 </Base>

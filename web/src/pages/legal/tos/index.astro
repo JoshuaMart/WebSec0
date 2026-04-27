@@ -1,6 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import Nav from '../../../components/Nav.astro';
+import Footer from '../../../components/Footer.astro';
 ---
 <Base title="Terms of Service" description="WebSec0 Terms of Service.">
   <Nav />
@@ -44,11 +45,17 @@ import Nav from '../../../components/Nav.astro';
       </section>
 
       <section>
-        <h2 class="text-sm font-semibold text-ink mb-3">4. Rate limits</h2>
+        <h2 class="text-sm font-semibold text-ink mb-3">4. Passive nature and User-Agent</h2>
         <p>
-          The public instance enforces a limit of 10 scans per hour per IP address.
-          A minimum cooldown of 5 minutes applies between two scans of the same target.
-          Abuse patterns result in a temporary ban.
+          WebSec0 sends only standard HTTP/HTTPS requests and DNS queries — no payload injection,
+          no authentication attempts, no port scanning beyond 443 and the email ports listed in the
+          check catalog. Every request carries a clearly identifiable User-Agent:
+        </p>
+        <pre class="mt-3 px-3 py-2 bg-sand-50 border border-sand-200 rounded-lg font-mono text-[11px] text-ink-muted overflow-x-auto">WebSec0/&#123;version&#125; (+https://websec0.example/about; passive-scan)</pre>
+        <p class="mt-3">
+          Operators who do not wish to be scanned may add <code class="font-mono text-xs">Disallow: /</code> under
+          <code class="font-mono text-xs">User-agent: WebSec0</code> in their <code class="font-mono text-xs">robots.txt</code>.
+          WebSec0 respects explicit disallow rules and cancels the scan with an explanatory message.
         </p>
       </section>
 
@@ -80,20 +87,34 @@ import Nav from '../../../components/Nav.astro';
       </section>
 
       <section>
-        <h2 class="text-sm font-semibold text-ink mb-3">8. Contact</h2>
+        <h2 class="text-sm font-semibold text-ink mb-3">8. Termination</h2>
+        <p>
+          The operator may suspend or permanently block access without prior notice in cases of: violation of these
+          Terms; automated abuse patterns; or court order, law enforcement request, or regulatory requirement.
+          Blocked users may appeal by contacting <a href="mailto:abuse@websec0.example" class="text-accent hover:underline font-mono text-xs">abuse@websec0.example</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">9. Governing law</h2>
+        <p>
+          These Terms are governed by the law of the jurisdiction in which the deployer is established.
+          Any dispute shall be subject to the exclusive jurisdiction of the courts of that jurisdiction.
+          <em class="text-ink-faint">(Self-hosters must adapt this section to their legal domicile.)</em>
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">10. Contact</h2>
         <div class="flex flex-col gap-1 font-mono text-xs">
           <span>Abuse: <a href="mailto:abuse@websec0.example" class="text-accent hover:underline">abuse@websec0.example</a></span>
           <span>Security: <a href="mailto:security@websec0.example" class="text-accent hover:underline">security@websec0.example</a></span>
+          <span>Privacy: <a href="mailto:privacy@websec0.example" class="text-accent hover:underline">privacy@websec0.example</a></span>
         </div>
       </section>
 
     </div>
   </main>
 
-  <footer class="py-7 px-6 border-t border-sand-200">
-    <div class="max-w-2xl mx-auto flex gap-4">
-      <a href="/legal/privacy/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">Privacy Policy</a>
-      <a href="/about/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">About</a>
-    </div>
-  </footer>
+  <Footer />
 </Base>
