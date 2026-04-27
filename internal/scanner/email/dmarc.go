@@ -251,3 +251,89 @@ func (dmarcNoRUACheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 		"`rua=` tag present",
 		map[string]any{"rua": parsed.Tags["rua"]}), nil
 }
+
+// --- EMAIL-DMARC-MISALIGNED-SPF --------------------------------------
+
+type dmarcMisalignedSPFCheck struct{}
+
+func (dmarcMisalignedSPFCheck) ID() string                       { return IDDMARCMisalignedSPF }
+func (dmarcMisalignedSPFCheck) Family() checks.Family            { return checks.FamilyEmail }
+func (dmarcMisalignedSPFCheck) DefaultSeverity() checks.Severity { return checks.SeverityMedium }
+func (dmarcMisalignedSPFCheck) Title() string                    { return "DMARC SPF alignment is strict" }
+func (dmarcMisalignedSPFCheck) Description() string {
+	return "`aspf=s` requires the envelope sender domain to match the From domain exactly. The default `aspf=r` (relaxed) allows subdomain matches, which is weaker."
+}
+func (dmarcMisalignedSPFCheck) RFCRefs() []string { return []string{"RFC 7489 §6.3"} }
+
+func (dmarcMisalignedSPFCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, error) {
+	r, err := Fetch(ctx, t)
+	if err != nil {
+		return errFinding(IDDMARCMisalignedSPF, checks.SeverityMedium, err), nil
+	}
+	if g := gateOnMX(r, IDDMARCMisalignedSPF, checks.SeverityMedium); g != nil {
+		return g, nil
+	}
+	if r.DMARC == "" {
+		return skipped(IDDMARCMisalignedSPF, checks.SeverityMedium, "no DMARC record"), nil
+	}
+	parsed := ParseDMARC(r.DMARC)
+	if parsed == nil {
+		return skipped(IDDMARCMisalignedSPF, checks.SeverityMedium, "parse failed"), nil
+	}
+	aspf := strings.ToLower(strings.TrimSpace(parsed.Tags["aspf"]))
+	if aspf == "" {
+		aspf = "r" // RFC 7489 §6.3 default is relaxed
+	}
+	ev := map[string]any{"aspf": aspf}
+	if aspf == "s" {
+		return pass(IDDMARCMisalignedSPF, checks.SeverityMedium,
+			"DMARC SPF alignment is strict (`aspf=s`)", ev), nil
+	}
+	return fail(IDDMARCMisalignedSPF, checks.SeverityMedium,
+		"DMARC SPF alignment is relaxed (`aspf=r`)",
+		"Set `aspf=s` to require the RFC5321 envelope sender domain to exactly match the From header domain.",
+		ev), nil
+}
+
+// --- EMAIL-DMARC-MISALIGNED-DKIM -------------------------------------
+
+type dmarcMisalignedDKIMCheck struct{}
+
+func (dmarcMisalignedDKIMCheck) ID() string                       { return IDDMARCMisalignedDKIM }
+func (dmarcMisalignedDKIMCheck) Family() checks.Family            { return checks.FamilyEmail }
+func (dmarcMisalignedDKIMCheck) DefaultSeverity() checks.Severity { return checks.SeverityMedium }
+func (dmarcMisalignedDKIMCheck) Title() string                    { return "DMARC DKIM alignment is strict" }
+func (dmarcMisalignedDKIMCheck) Description() string {
+	return "`adkim=s` requires the DKIM `d=` signing domain to exactly match the From header domain. The default `adkim=r` (relaxed) allows subdomain matches."
+}
+func (dmarcMisalignedDKIMCheck) RFCRefs() []string { return []string{"RFC 7489 §6.3"} }
+
+func (dmarcMisalignedDKIMCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, error) {
+	r, err := Fetch(ctx, t)
+	if err != nil {
+		return errFinding(IDDMARCMisalignedDKIM, checks.SeverityMedium, err), nil
+	}
+	if g := gateOnMX(r, IDDMARCMisalignedDKIM, checks.SeverityMedium); g != nil {
+		return g, nil
+	}
+	if r.DMARC == "" {
+		return skipped(IDDMARCMisalignedDKIM, checks.SeverityMedium, "no DMARC record"), nil
+	}
+	parsed := ParseDMARC(r.DMARC)
+	if parsed == nil {
+		return skipped(IDDMARCMisalignedDKIM, checks.SeverityMedium, "parse failed"), nil
+	}
+	adkim := strings.ToLower(strings.TrimSpace(parsed.Tags["adkim"]))
+	if adkim == "" {
+		adkim = "r" // RFC 7489 §6.3 default is relaxed
+	}
+	ev := map[string]any{"adkim": adkim}
+	if adkim == "s" {
+		return pass(IDDMARCMisalignedDKIM, checks.SeverityMedium,
+			"DMARC DKIM alignment is strict (`adkim=s`)", ev), nil
+	}
+	return fail(IDDMARCMisalignedDKIM, checks.SeverityMedium,
+		"DMARC DKIM alignment is relaxed (`adkim=r`)",
+		"Set `adkim=s` to require the DKIM signing domain to exactly match the From header domain.",
+		ev), nil
+}

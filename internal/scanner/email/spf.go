@@ -323,3 +323,90 @@ func (spfPTRCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, 
 	return pass(IDSPFPTRMechanism, checks.SeverityMedium,
 		"no `ptr` mechanism", nil), nil
 }
+
+// --- EMAIL-SPF-TOO-MANY-LOOKUPS --------------------------------------
+
+const spfMaxLookups = 10
+
+// countSPFLookups recursively counts the DNS-requiring mechanisms in the
+// SPF record for domain (RFC 7208 §4.6.4: include, a, mx, ptr, exists,
+// redirect each count as one lookup, with recursive following of includes).
+// visited prevents infinite loops; depth limits recursion.
+func countSPFLookups(ctx context.Context, server, domain string, visited map[string]bool, depth int) int {
+	if depth > 12 || visited[domain] {
+		return 0
+	}
+	visited[domain] = true
+	txts, err := queryTXT(ctx, server, domain)
+	if err != nil {
+		return 0
+	}
+	var raw string
+	for _, txt := range txts {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(txt)), "v=spf1") {
+			raw = txt
+			break
+		}
+	}
+	if raw == "" {
+		return 0
+	}
+	spf, _ := ParseSPF(raw)
+	if spf == nil {
+		return 0
+	}
+	count := 0
+	for _, term := range spf.Terms {
+		switch term.Name {
+		case "include":
+			count++
+			if term.Value != "" {
+				count += countSPFLookups(ctx, server, term.Value, visited, depth+1)
+			}
+		case "redirect":
+			count++
+			if term.Value != "" {
+				count += countSPFLookups(ctx, server, term.Value, visited, depth+1)
+			}
+		case "a", "mx", "exists", "ptr":
+			count++
+		}
+	}
+	return count
+}
+
+type spfTooManyLookupsCheck struct{}
+
+func (spfTooManyLookupsCheck) ID() string                       { return IDSPFTooManyLookups }
+func (spfTooManyLookupsCheck) Family() checks.Family            { return checks.FamilyEmail }
+func (spfTooManyLookupsCheck) DefaultSeverity() checks.Severity { return checks.SeverityHigh }
+func (spfTooManyLookupsCheck) Title() string {
+	return "SPF evaluation stays within the 10-lookup limit"
+}
+func (spfTooManyLookupsCheck) Description() string {
+	return "RFC 7208 §4.6.4 caps SPF DNS lookups at 10 per evaluation. Exceeding it causes a PermError — receivers typically treat this as a fail, allowing spoofed mail to pass."
+}
+func (spfTooManyLookupsCheck) RFCRefs() []string { return []string{"RFC 7208 §4.6.4"} }
+
+func (spfTooManyLookupsCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, error) {
+	r, err := Fetch(ctx, t)
+	if err != nil {
+		return errFinding(IDSPFTooManyLookups, checks.SeverityHigh, err), nil
+	}
+	if g := gateOnMX(r, IDSPFTooManyLookups, checks.SeverityHigh); g != nil {
+		return g, nil
+	}
+	if len(r.SPF) == 0 {
+		return skipped(IDSPFTooManyLookups, checks.SeverityHigh, "no SPF record"), nil
+	}
+	count := countSPFLookups(ctx, resolverAddr(t), t.Hostname, map[string]bool{}, 0)
+	ev := map[string]any{"lookup_count": count, "limit": spfMaxLookups}
+	if count > spfMaxLookups {
+		return fail(IDSPFTooManyLookups, checks.SeverityHigh,
+			"SPF exceeds the 10-lookup limit",
+			"Flatten `include:` chains or replace them with `ip4:`/`ip6:` to reduce DNS lookups.",
+			ev), nil
+	}
+	return pass(IDSPFTooManyLookups, checks.SeverityHigh,
+		"SPF within lookup limit", ev), nil
+}

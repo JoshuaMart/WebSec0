@@ -1,7 +1,13 @@
 package email
 
 import (
+	"bytes"
 	"context"
+	"encoding/xml"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
 
 	"github.com/JoshuaMart/websec0/internal/checks"
 )
@@ -68,4 +74,149 @@ func (bimiMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 	return pass(IDBIMIMissing, checks.SeverityInfo,
 		"BIMI record present",
 		map[string]any{"raw": r.BIMI}), nil
+}
+
+// --- EMAIL-BIMI-INVALID-SVG ------------------------------------------
+
+type bimiInvalidSVGCheck struct{}
+
+func (bimiInvalidSVGCheck) ID() string                       { return IDBIMIInvalidSVG }
+func (bimiInvalidSVGCheck) Family() checks.Family            { return checks.FamilyEmail }
+func (bimiInvalidSVGCheck) DefaultSeverity() checks.Severity { return checks.SeverityLow }
+func (bimiInvalidSVGCheck) Title() string                    { return "BIMI logo is a valid SVG Tiny PS document" }
+func (bimiInvalidSVGCheck) Description() string {
+	return "BIMI logos must be SVG Tiny Portable/Secure (no scripts, correct SVG namespace, baseProfile='tiny-ps'). Non-compliant logos are rejected by Gmail, Apple Mail, and Yahoo."
+}
+func (bimiInvalidSVGCheck) RFCRefs() []string {
+	return []string{"draft-brand-indicators-for-message-identification"}
+}
+
+func (bimiInvalidSVGCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, error) {
+	r, err := Fetch(ctx, t)
+	if err != nil {
+		return errFinding(IDBIMIInvalidSVG, checks.SeverityLow, err), nil
+	}
+	if g := gateOnMX(r, IDBIMIInvalidSVG, checks.SeverityLow); g != nil {
+		return g, nil
+	}
+	if r.BIMI == "" {
+		return skipped(IDBIMIInvalidSVG, checks.SeverityLow, "no BIMI record"), nil
+	}
+
+	logoURL := parseBIMILogoURL(r.BIMI)
+	if logoURL == "" {
+		return skipped(IDBIMIInvalidSVG, checks.SeverityLow,
+			"no `l=` URL in BIMI record"), nil
+	}
+
+	issues := fetchAndValidateSVG(ctx, t, logoURL)
+	ev := map[string]any{"logo_url": logoURL}
+	if len(issues) > 0 {
+		ev["issues"] = issues
+		return fail(IDBIMIInvalidSVG, checks.SeverityLow,
+			"BIMI logo SVG validation failed",
+			strings.Join(issues, "; "),
+			ev), nil
+	}
+	return pass(IDBIMIInvalidSVG, checks.SeverityLow,
+		"BIMI logo passes SVG Tiny PS validation", ev), nil
+}
+
+// parseBIMILogoURL extracts the value of the `l=` tag from a BIMI record.
+func parseBIMILogoURL(raw string) string {
+	for _, part := range strings.Split(raw, ";") {
+		part = strings.TrimSpace(part)
+		k, v, ok := strings.Cut(part, "=")
+		if ok && strings.EqualFold(strings.TrimSpace(k), "l") {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+// fetchAndValidateSVG retrieves the SVG at url and performs a simplified
+// SVG Tiny PS structural check. Returns a list of issues (empty = valid).
+func fetchAndValidateSVG(ctx context.Context, t *checks.Target, url string) []string {
+	cctx, cancel := context.WithTimeout(ctx, httpsTO)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(cctx, http.MethodGet, url, nil)
+	if err != nil {
+		return []string{"invalid URL: " + err.Error()}
+	}
+	req.Header.Set("User-Agent", t.UA())
+
+	client := t.Client()
+	if client == http.DefaultClient {
+		client = &http.Client{Timeout: httpsTO}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return []string{"fetch error: " + err.Error()}
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return []string{fmt.Sprintf("HTTP %d", resp.StatusCode)}
+	}
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512<<10)) // 512 KB cap
+	return checkSVGTinyPS(body)
+}
+
+// checkSVGTinyPS performs structural SVG Tiny PS validation on raw SVG bytes.
+// Checks: no <script>, proper SVG namespace, baseProfile=tiny-ps.
+func checkSVGTinyPS(data []byte) []string {
+	var issues []string
+
+	lower := strings.ToLower(string(data))
+
+	// Fast pre-check: scripts forbidden in SVG Tiny PS.
+	if strings.Contains(lower, "<script") {
+		issues = append(issues, "contains <script> element (forbidden in SVG Tiny PS)")
+	}
+	if !strings.Contains(lower, "<svg") {
+		return append(issues, "not an SVG document (no <svg> root element)")
+	}
+
+	// Parse the first start element with xml.Decoder to extract namespace
+	// and baseProfile without loading the full document.
+	dec := xml.NewDecoder(bytes.NewReader(data))
+	dec.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return input, nil // accept any declared charset
+	}
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			issues = append(issues, "XML parse error: "+err.Error())
+			break
+		}
+		start, ok := tok.(xml.StartElement)
+		if !ok {
+			continue
+		}
+		// First element must be <svg> in the SVG namespace.
+		if start.Name.Local != "svg" {
+			issues = append(issues, "root element is not <svg>: "+start.Name.Local)
+			break
+		}
+		const svgNS = "http://www.w3.org/2000/svg"
+		if start.Name.Space != "" && start.Name.Space != svgNS {
+			issues = append(issues, "unexpected SVG namespace: "+start.Name.Space)
+		}
+		var baseProfile string
+		for _, attr := range start.Attr {
+			if attr.Name.Local == "baseProfile" {
+				baseProfile = attr.Value
+			}
+		}
+		if baseProfile != "tiny-ps" {
+			issues = append(issues,
+				fmt.Sprintf("baseProfile=%q, expected \"tiny-ps\"", baseProfile))
+		}
+		break
+	}
+	return issues
 }

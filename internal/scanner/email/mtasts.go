@@ -174,3 +174,77 @@ func (mtastsMaxAgeLowCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 	return pass(IDMTASTSMaxAgeLow, checks.SeverityLow,
 		"MTA-STS max_age ≥ 30 days", ev), nil
 }
+
+// --- EMAIL-MTASTS-MX-MISMATCH ----------------------------------------
+
+type mtastsMXMismatchCheck struct{}
+
+func (mtastsMXMismatchCheck) ID() string                       { return IDMTASTSMXMismatch }
+func (mtastsMXMismatchCheck) Family() checks.Family            { return checks.FamilyEmail }
+func (mtastsMXMismatchCheck) DefaultSeverity() checks.Severity { return checks.SeverityHigh }
+func (mtastsMXMismatchCheck) Title() string {
+	return "MTA-STS policy covers all DNS MX entries"
+}
+func (mtastsMXMismatchCheck) Description() string {
+	return "Every DNS MX hostname must match an `mx:` entry in the MTA-STS policy (exact or wildcard). Uncovered MX hosts bypass MTA-STS TLS enforcement entirely."
+}
+func (mtastsMXMismatchCheck) RFCRefs() []string { return []string{"RFC 8461 §4.1"} }
+
+func (mtastsMXMismatchCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, error) {
+	r, err := Fetch(ctx, t)
+	if err != nil {
+		return errFinding(IDMTASTSMXMismatch, checks.SeverityHigh, err), nil
+	}
+	if g := gateOnMX(r, IDMTASTSMXMismatch, checks.SeverityHigh); g != nil {
+		return g, nil
+	}
+	if r.MTASTSPolicy == "" {
+		return skipped(IDMTASTSMXMismatch, checks.SeverityHigh, "no MTA-STS policy"), nil
+	}
+	p := ParseMTASTSPolicy(r.MTASTSPolicy)
+	if p == nil || len(p.MX) == 0 {
+		return skipped(IDMTASTSMXMismatch, checks.SeverityHigh, "no mx: entries in policy"), nil
+	}
+
+	var uncovered []string
+	for _, mxHost := range r.MX {
+		if !mxCoveredByPolicy(mxHost, p.MX) {
+			uncovered = append(uncovered, mxHost)
+		}
+	}
+	ev := map[string]any{
+		"dns_mx_hosts":    r.MX,
+		"policy_mx_rules": p.MX,
+	}
+	if len(uncovered) > 0 {
+		ev["uncovered"] = uncovered
+		return fail(IDMTASTSMXMismatch, checks.SeverityHigh,
+			"MX host(s) not covered by MTA-STS policy",
+			"Add or update `mx:` entries in the MTA-STS policy file to cover every DNS MX record.",
+			ev), nil
+	}
+	return pass(IDMTASTSMXMismatch, checks.SeverityHigh,
+		"all DNS MX hosts covered by MTA-STS policy", ev), nil
+}
+
+// mxCoveredByPolicy reports whether mxHost is covered by any policyMXes entry.
+// Entries can be exact hostnames or `*.label.example.com` single-label wildcards
+// per RFC 8461 §4.1.
+func mxCoveredByPolicy(mxHost string, policyMXes []string) bool {
+	host := strings.ToLower(strings.TrimSuffix(mxHost, "."))
+	for _, pattern := range policyMXes {
+		pattern = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(pattern), "."))
+		if pattern == host {
+			return true
+		}
+		if strings.HasPrefix(pattern, "*.") {
+			suffix := pattern[1:] // e.g. ".example.com"
+			// Single-label wildcard: same depth and matching suffix.
+			if strings.HasSuffix(host, suffix) &&
+				strings.Count(host, ".") == strings.Count(pattern, ".") {
+				return true
+			}
+		}
+	}
+	return false
+}

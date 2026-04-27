@@ -25,6 +25,26 @@ const (
 	IDMTASTSMaxAgeLow    = "EMAIL-MTASTS-MAX-AGE-LOW"
 	IDTLSRPTMissing      = "EMAIL-TLSRPT-MISSING"
 	IDBIMIMissing        = "EMAIL-BIMI-MISSING"
+	IDBIMIInvalidSVG     = "EMAIL-BIMI-INVALID-SVG"
+
+	// SPF
+	IDSPFTooManyLookups = "EMAIL-SPF-TOO-MANY-LOOKUPS"
+
+	// DMARC alignment
+	IDDMARCMisalignedSPF  = "EMAIL-DMARC-MISALIGNED-SPF"
+	IDDMARCMisalignedDKIM = "EMAIL-DMARC-MISALIGNED-DKIM"
+
+	// MTA-STS
+	IDMTASTSMXMismatch = "EMAIL-MTASTS-MX-MISMATCH"
+
+	// STARTTLS (active SMTP port-25 probe)
+	IDSTARTTLSFail   = "EMAIL-STARTTLS-FAIL"
+	IDSTARTTLSWeakTLS = "EMAIL-STARTTLS-WEAK-TLS"
+
+	// DANE / TLSA
+	IDDANEMissing       = "EMAIL-DANE-MISSING"
+	IDDANEInvalidParams = "EMAIL-DANE-INVALID-PARAMS"
+	IDDANEMismatch      = "EMAIL-DANE-MISMATCH"
 )
 
 // gateOnMX returns a non-nil "skipped" finding when the domain has no MX

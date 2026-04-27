@@ -114,13 +114,25 @@ func TestRegisterAddsAllEmailChecks(t *testing.T) {
 	r := checks.NewRegistry()
 	email.Register(r)
 	want := []string{
+		// SPF
 		email.IDSPFMissing, email.IDSPFMultiple, email.IDSPFInvalidSyntax,
-		email.IDSPFNoAll, email.IDSPFPassAll, email.IDSPFSoftfailAll, email.IDSPFPTRMechanism,
+		email.IDSPFNoAll, email.IDSPFPassAll, email.IDSPFSoftfailAll,
+		email.IDSPFPTRMechanism, email.IDSPFTooManyLookups,
+		// DKIM
 		email.IDDKIMNoneFound, email.IDDKIMWeakKey, email.IDDKIMSHA1, email.IDDKIMTestMode,
+		// DMARC
 		email.IDDMARCMissing, email.IDDMARCInvalidSyntax, email.IDDMARCPolicyNone,
 		email.IDDMARCPolicyWeak, email.IDDMARCNoRUA,
+		email.IDDMARCMisalignedSPF, email.IDDMARCMisalignedDKIM,
+		// MTA-STS
 		email.IDMTASTSMissing, email.IDMTASTSModeTesting, email.IDMTASTSMaxAgeLow,
-		email.IDTLSRPTMissing, email.IDBIMIMissing,
+		email.IDMTASTSMXMismatch,
+		// TLS-RPT + BIMI
+		email.IDTLSRPTMissing, email.IDBIMIMissing, email.IDBIMIInvalidSVG,
+		// STARTTLS
+		email.IDSTARTTLSFail, email.IDSTARTTLSWeakTLS,
+		// DANE
+		email.IDDANEMissing, email.IDDANEInvalidParams, email.IDDANEMismatch,
 	}
 	for _, id := range want {
 		if _, ok := r.Get(id); !ok {
