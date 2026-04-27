@@ -254,6 +254,36 @@ import Nav from '../../components/Nav.astro';
                         <!-- Description (when distinct from title) -->
                         <p x-show="finding.title && finding.description" class="text-sm text-ink-muted leading-relaxed" x-text="finding.description"></p>
 
+                        <!-- Why it matters + Impact (2-col when both present) -->
+                        <div x-show="finding.remediation && (finding.remediation.why_it_matters || finding.remediation.impact)"
+                             class="grid sm:grid-cols-2 gap-5 pb-1">
+                          <div x-show="finding.remediation && finding.remediation.why_it_matters">
+                            <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">Why it matters</p>
+                            <p class="text-sm text-ink-muted leading-relaxed" x-text="finding.remediation && finding.remediation.why_it_matters"></p>
+                          </div>
+                          <div x-show="finding.remediation && finding.remediation.impact">
+                            <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">Impact</p>
+                            <p class="text-sm text-ink-muted leading-relaxed" x-text="finding.remediation && finding.remediation.impact"></p>
+                          </div>
+                        </div>
+
+                        <!-- References -->
+                        <div x-show="finding.remediation && finding.remediation.references && finding.remediation.references.length > 0">
+                          <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">References</p>
+                          <div class="space-y-1.5">
+                            <template x-for="ref in (finding.remediation && finding.remediation.references) || []" :key="ref.url || ref.title">
+                              <a :href="ref.url" target="_blank" rel="noopener noreferrer"
+                                 class="flex items-start gap-1.5 text-sm text-accent hover:underline">
+                                <svg class="w-3 h-3 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                  <path fill-rule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clip-rule="evenodd"/>
+                                  <path fill-rule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clip-rule="evenodd"/>
+                                </svg>
+                                <span x-text="ref.title"></span>
+                              </a>
+                            </template>
+                          </div>
+                        </div>
+
                         <!-- Evidence -->
                         <div x-show="finding.evidence && Object.keys(finding.evidence).length > 0" class="rounded-xl border border-sand-200 overflow-hidden">
                           <div class="px-4 py-2 bg-sand-50 border-b border-sand-200">
@@ -342,35 +372,37 @@ import Nav from '../../components/Nav.astro';
 
           <!-- ── Sidebar (1/3) ─────────────────────────────────── -->
           <div class="lg:col-span-1">
-            <div class="sticky top-[6.5rem] space-y-4">
+            <!-- No card wrapper — inline content aligns with section header on the left -->
+            <div class="sticky top-[6.5rem] space-y-6">
 
-              <!-- Family breakdown -->
-              <div class="bg-white border border-sand-200 rounded-xl p-4">
-                <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-4">Score breakdown</h3>
+              <!-- Score breakdown (inline, no card border) -->
+              <div>
+                <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Score breakdown</h3>
                 <div class="space-y-3">
                   <template x-for="item in familyBreakdown" :key="item.family">
                     <div>
                       <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-xs font-mono text-ink" x-text="item.family"></span>
-                        <span class="text-[10px] font-mono"
-                              :class="item.failed === 0 ? 'text-green-600' : item.failed <= 2 ? 'text-amber-600' : 'text-red-600'"
+                        <span class="text-sm font-mono text-ink" x-text="item.family"></span>
+                        <span class="text-xs font-mono"
+                              :class="item.failed === 0 ? 'text-green-600' : item.failureRate > 50 ? 'text-red-600' : 'text-amber-600'"
                               x-text="item.failed === 0 ? 'all pass' : item.failed + ' issue' + (item.failed > 1 ? 's' : '')"></span>
                       </div>
                       <div class="h-1.5 bg-sand-200 rounded-full overflow-hidden">
+                        <!-- Bar shows failure proportion — red when >50% fail, amber otherwise -->
                         <div class="h-full rounded-full transition-all duration-700"
-                             :class="item.failed === 0 ? 'bg-accent' : item.failed <= 2 ? 'bg-amber-500' : 'bg-red-500'"
-                             :style="'width:' + (item.rate) + '%'"></div>
+                             :class="item.failed === 0 ? 'bg-accent' : item.failureRate > 50 ? 'bg-red-500' : 'bg-amber-500'"
+                             :style="'width:' + (item.failed === 0 ? 100 : item.failureRate) + '%'"></div>
                       </div>
                     </div>
                   </template>
-                  <div x-show="familyBreakdown.length === 0" class="text-xs text-ink-faint text-center py-2">No data yet</div>
+                  <div x-show="familyBreakdown.length === 0" class="text-xs text-ink-faint py-2">No data yet</div>
                 </div>
               </div>
 
-              <!-- Scan metadata -->
-              <div class="bg-white border border-sand-200 rounded-xl p-4">
+              <!-- Scan metadata (separated by a subtle divider) -->
+              <div class="pt-4 border-t border-sand-200">
                 <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Scan metadata</h3>
-                <dl class="space-y-2">
+                <dl class="space-y-2.5">
                   <div class="flex items-center justify-between gap-4">
                     <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">target</dt>
                     <dd class="text-xs font-mono text-ink truncate" x-text="target"></dd>
@@ -383,9 +415,9 @@ import Nav from '../../components/Nav.astro';
                     <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">checks</dt>
                     <dd class="text-xs font-mono text-ink" x-text="findings.length + ' / 70'"></dd>
                   </div>
-                  <div class="flex items-center justify-between gap-4">
+                  <div class="flex items-start justify-between gap-4">
                     <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">scan id</dt>
-                    <dd class="text-[10px] font-mono text-ink-faint truncate" x-text="guid"></dd>
+                    <dd class="text-[10px] font-mono text-ink-faint break-all text-right" x-text="guid"></dd>
                   </div>
                 </dl>
               </div>
@@ -556,8 +588,8 @@ import Nav from '../../components/Nav.astro';
         }
         return Object.values(map).map(item => ({
           ...item,
-          rate: Math.round(item.passed / Math.max(1, item.passed + item.failed) * 100),
-        })).sort((a, b) => a.family.localeCompare(b.family));
+          failureRate: Math.round(item.failed / Math.max(1, item.passed + item.failed) * 100),
+        })).sort((a, b) => b.failed - a.failed); // worst first
       },
 
       get filteredFailedCount() {

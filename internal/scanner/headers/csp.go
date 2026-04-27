@@ -94,8 +94,25 @@ func (cspMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	}
 	raw := res.Header("Content-Security-Policy")
 	if raw == "" {
-		return failFinding(IDCSPMissing, checks.SeverityMedium,
-			"no Content-Security-Policy header", "", nil), nil
+		f := failFinding(IDCSPMissing, checks.SeverityMedium,
+			"no Content-Security-Policy header", "No Content-Security-Policy header was found in the HTTP response.", nil)
+		f.Remediation = map[string]any{
+			"why_it_matters": "Content-Security-Policy restricts the origins from which scripts, styles, fonts, and other resources can load. It is the primary browser-enforced defence against Cross-Site Scripting (XSS).",
+			"impact":         "Without CSP, any injected JavaScript executes with full page privileges — enabling session cookie theft, credential harvesting, cryptomining, and data exfiltration to attacker-controlled servers.",
+			"references": []map[string]any{
+				{"title": "MDN — Content-Security-Policy", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy"},
+				{"title": "CSP Evaluator — Google", "url": "https://csp-evaluator.withgoogle.com/"},
+				{"title": "OWASP CSP Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html"},
+			},
+			"snippets": map[string]any{
+				"nginx":   `add_header Content-Security-Policy "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none';" always;`,
+				"apache":  `Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none';"`,
+				"caddy":   `header Content-Security-Policy "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none';"`,
+				"express": `app.use(helmet.contentSecurityPolicy({ directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], objectSrc: ["'none'"], baseUri: ["'none'"] } }));`,
+			},
+			"verification": "curl -sI https://example.com | grep -i content-security-policy",
+		}
+		return f, nil
 	}
 	return passFinding(IDCSPMissing, checks.SeverityMedium,
 		"CSP present", map[string]any{"raw": raw}), nil

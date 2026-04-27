@@ -56,6 +56,21 @@ func (missingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding,
 			Title:       "No security.txt published",
 			Description: "Neither /.well-known/security.txt nor /security.txt could be retrieved.",
 			Evidence:    map[string]any{"attempts": res.FetchErrs},
+			Remediation: map[string]any{
+				"why_it_matters": "security.txt gives security researchers a standardized, discoverable channel to report vulnerabilities responsibly. Without it, researchers may resort to public disclosure or struggle to reach the right contact — widening your exposure window.",
+				"impact":         "Shortens time-to-response for vulnerability reports and signals security maturity to auditors, bug hunters, and enterprise customers.",
+				"references": []map[string]any{
+					{"title": "RFC 9116 — A File Format to Aid in Security Vulnerability Disclosure", "url": "https://www.rfc-editor.org/rfc/rfc9116"},
+					{"title": "securitytxt.org — Generator and validator", "url": "https://securitytxt.org/"},
+				},
+				"snippets": map[string]any{
+					"nginx":      "location = /.well-known/security.txt {\n    alias /var/www/.well-known/security.txt;\n    default_type text/plain;\n}",
+					"apache":     "Alias /.well-known/security.txt /var/www/security.txt\n<Location /.well-known/security.txt>\n    ForceType text/plain\n</Location>",
+					"caddy":      "handle /.well-known/security.txt {\n    header Content-Type text/plain\n    file_server\n}",
+					"cloudflare": "Use Pages or a Worker to serve a static text/plain response at /.well-known/security.txt",
+				},
+				"verification": "curl -s https://example.com/.well-known/security.txt",
+			},
 		}, nil
 	}
 	return passFinding(IDMissing, checks.FamilyWellKnown, "security.txt is published", res), nil

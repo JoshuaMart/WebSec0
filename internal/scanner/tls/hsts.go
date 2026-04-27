@@ -79,10 +79,27 @@ func (hstsMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 		return skippedFinding(IDHSTSMissing, checks.SeverityHigh, "HTTPS unreachable"), nil
 	}
 	if _, ok := ParseHSTS(res.HSTSHeader); !ok {
-		return failFinding(IDHSTSMissing, checks.SeverityHigh,
+		f := failFinding(IDHSTSMissing, checks.SeverityHigh,
 			"no Strict-Transport-Security header",
 			"The HTTPS root response did not include an HSTS header.",
-			map[string]any{"raw_header": res.HSTSHeader}), nil
+			map[string]any{"raw_header": res.HSTSHeader})
+		f.Remediation = map[string]any{
+			"why_it_matters": "HSTS instructs browsers to always connect via HTTPS for your domain, even if the user types http://. Without it, the first request can be unencrypted and vulnerable to SSL stripping — an attacker intercepts the HTTP request before any redirect.",
+			"impact":         "A network attacker can silently downgrade the initial connection to HTTP, intercepting session cookies, credentials, and sensitive data before the redirect to HTTPS occurs.",
+			"references": []map[string]any{
+				{"title": "RFC 6797 — HTTP Strict Transport Security", "url": "https://www.rfc-editor.org/rfc/rfc6797"},
+				{"title": "MDN — Strict-Transport-Security", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security"},
+			},
+			"snippets": map[string]any{
+				"nginx":      `add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`,
+				"apache":     `Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"`,
+				"caddy":      `header Strict-Transport-Security "max-age=31536000; includeSubDomains"`,
+				"cloudflare": "SSL/TLS → Edge Certificates → HTTP Strict Transport Security (HSTS) → Enable",
+				"haproxy":    `http-response set-header Strict-Transport-Security "max-age=31536000; includeSubDomains"`,
+			},
+			"verification": "curl -sI https://example.com | grep -i strict-transport",
+		}
+		return f, nil
 	}
 	return passFinding(IDHSTSMissing, checks.SeverityHigh,
 		"HSTS header present",

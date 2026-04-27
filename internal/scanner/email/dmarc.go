@@ -68,9 +68,22 @@ func (dmarcMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 		return g, nil
 	}
 	if r.DMARC == "" {
-		return fail(IDDMARCMissing, checks.SeverityHigh,
+		f := fail(IDDMARCMissing, checks.SeverityHigh,
 			"no DMARC record",
-			"Publish a TXT record `v=DMARC1; p=reject; rua=mailto:…` on `_dmarc.<domain>`.", nil), nil
+			"Publish a TXT record `v=DMARC1; p=reject; rua=mailto:…` on `_dmarc.<domain>`.", nil)
+		f.Remediation = map[string]any{
+			"why_it_matters": "DMARC tells receiving mail servers how to handle messages that fail SPF or DKIM checks. Without it, anyone can send email appearing to come from your domain, enabling phishing attacks against your users and partners.",
+			"impact":         "Enables impersonation of your brand in phishing campaigns. Also required by Google and Yahoo for bulk senders. No DMARC means no reporting visibility into who is sending on your behalf.",
+			"references": []map[string]any{
+				{"title": "RFC 7489 — DMARC", "url": "https://www.rfc-editor.org/rfc/rfc7489"},
+				{"title": "dmarc.org — Overview and tools", "url": "https://dmarc.org/"},
+			},
+			"snippets": map[string]any{
+				"dns": "# TXT record on _dmarc.example.com\nv=DMARC1; p=reject; rua=mailto:dmarc@example.com; adkim=s; aspf=s",
+			},
+			"verification": "dig TXT _dmarc.example.com +short",
+		}
+		return f, nil
 	}
 	return pass(IDDMARCMissing, checks.SeverityHigh,
 		"DMARC record present",

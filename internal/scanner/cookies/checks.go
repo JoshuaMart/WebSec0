@@ -110,10 +110,25 @@ func (secureMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 			}
 		}
 		if len(bad) > 0 {
-			return failF(IDSecureMissing, checks.SeverityMedium,
+			f := failF(IDSecureMissing, checks.SeverityMedium,
 				"cookies missing Secure flag",
 				"Add `Secure` to every Set-Cookie served on HTTPS.",
 				map[string]any{"names": bad})
+			f.Remediation = map[string]any{
+				"why_it_matters": "The Secure flag prevents cookies from being transmitted over unencrypted HTTP connections. Even on HTTPS-only sites, mixed-content or misconfigured redirects can expose cookies without this flag.",
+				"impact":         "Session cookies sent over HTTP can be intercepted by network attackers, enabling session hijacking and account takeover. Particularly dangerous on public Wi-Fi.",
+				"references": []map[string]any{
+					{"title": "MDN — Set-Cookie: Secure", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure"},
+					{"title": "OWASP — Session Management Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"},
+				},
+				"snippets": map[string]any{
+					"express": `res.cookie('session', value, { secure: true, httpOnly: true, sameSite: 'strict' });`,
+					"spring":  "server.servlet.session.cookie.secure=true",
+					"nginx":   "# Set the Secure flag in your application, not at the proxy level.",
+				},
+				"verification": "curl -sI https://example.com | grep -i set-cookie",
+			}
+			return f
 		}
 		return passF(IDSecureMissing, checks.SeverityMedium,
 			"every cookie has Secure",
@@ -188,10 +203,24 @@ func (sameSiteMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 			}
 		}
 		if len(bad) > 0 {
-			return failF(IDSameSiteMissing, checks.SeverityMedium,
+			f := failF(IDSameSiteMissing, checks.SeverityMedium,
 				"cookies missing SameSite attribute",
 				"Add `SameSite=Lax` (or `Strict`) to every cookie.",
 				map[string]any{"names": bad})
+			f.Remediation = map[string]any{
+				"why_it_matters": "SameSite controls whether cookies are sent with cross-site requests. Without it, browsers fall back to legacy behaviour that allows cookies on cross-origin navigations, enabling CSRF attacks.",
+				"impact":         "Attackers can trick authenticated users into performing unintended actions — fund transfers, password changes, settings modifications — by embedding cross-origin requests on attacker-controlled pages.",
+				"references": []map[string]any{
+					{"title": "MDN — SameSite cookies", "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite"},
+					{"title": "OWASP — CSRF Prevention Cheat Sheet", "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"},
+				},
+				"snippets": map[string]any{
+					"express": `res.cookie('session', value, { sameSite: 'strict' });`,
+					"spring":  "server.servlet.session.cookie.same-site=strict",
+				},
+				"verification": "curl -sI https://example.com | grep -i samesite",
+			}
+			return f
 		}
 		return passF(IDSameSiteMissing, checks.SeverityMedium,
 			"every cookie carries an explicit SameSite", nil)
@@ -263,10 +292,23 @@ func (noSecurityFlagsCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 			}
 		}
 		if len(bad) > 0 {
-			return failF(IDNoSecurityFlags, checks.SeverityMedium,
+			f := failF(IDNoSecurityFlags, checks.SeverityMedium,
 				"cookies with no security flags at all",
 				"Set at least Secure + SameSite, plus HttpOnly for sessions.",
 				map[string]any{"names": bad})
+			f.Remediation = map[string]any{
+				"why_it_matters": "A cookie with no security flags is simultaneously vulnerable to three attack classes: network interception (no Secure), JavaScript theft via XSS (no HttpOnly), and cross-site request forgery (no SameSite).",
+				"impact":         "Any single attack vector — XSS, man-in-the-middle, or CSRF — is sufficient to compromise the affected sessions. Combining all three makes exploitation trivial.",
+				"references": []map[string]any{
+					{"title": "OWASP — Testing for Cookies Attributes", "url": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/02-Testing_for_Cookies_Attributes"},
+				},
+				"snippets": map[string]any{
+					"express": `res.cookie('session', value, { secure: true, httpOnly: true, sameSite: 'strict' });`,
+					"spring":  "server.servlet.session.cookie.secure=true\nserver.servlet.session.cookie.http-only=true\nserver.servlet.session.cookie.same-site=strict",
+				},
+				"verification": "curl -sI https://example.com | grep -i set-cookie",
+			}
+			return f
 		}
 		return passF(IDNoSecurityFlags, checks.SeverityMedium,
 			"every cookie has at least one security flag",
