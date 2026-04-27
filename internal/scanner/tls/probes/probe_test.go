@@ -186,8 +186,18 @@ func TestProbeSSLv2_Accepted(t *testing.T) {
 }
 
 func TestProbeSSLv2_RejectedClose(t *testing.T) {
+	// The server reads the ClientHello to avoid ECONNRESET, then closes
+	// without sending any response → client gets a clean EOF → StatusRejected.
 	addr := serveTCP(t, func(conn net.Conn) {
-		conn.Close() // immediate close
+		defer conn.Close()
+		hdr := make([]byte, 2)
+		if _, err := io.ReadFull(conn, hdr); err != nil {
+			return
+		}
+		bodyLen := int(hdr[0]&0x7F)<<8 | int(hdr[1])
+		body := make([]byte, bodyLen)
+		_, _ = io.ReadFull(conn, body)
+		// defer conn.Close() sends FIN → EOF to client
 	})
 
 	status, _ := probes.ProbeSSLv2(context.Background(), addr)
@@ -533,5 +543,129 @@ func TestProbeDHKeySize_NoDHE(t *testing.T) {
 	}
 	if bits != 0 {
 		t.Errorf("got %d bits, want 0 (non-DHE cipher)", bits)
+	}
+}
+
+// ---- Heartbleed tests -------------------------------------------------------
+
+// serveHeartbleedVulnerable simulates a server vulnerable to CVE-2014-0160:
+// it sends ServerHello + Certificate + ServerHelloDone, reads the Heartbeat
+// request, then responds with a HeartbeatResponse containing extra bytes
+// (simulating heap memory leaked beyond the actual payload).
+func serveHeartbleedVulnerable(t *testing.T) string {
+	t.Helper()
+	return serveTCP(t, func(conn net.Conn) {
+		defer conn.Close()
+		discardClientHello(conn)
+		_, _ = conn.Write(buildServerHelloRecord(0x0303, 0x0303, 0xC02F))
+		_, _ = conn.Write(buildCertificateRecord())
+		_, _ = conn.Write(buildServerHelloDone())
+
+		// Read the HeartbeatRequest (record type 0x18).
+		hdr := make([]byte, 5)
+		if _, err := io.ReadFull(conn, hdr); err != nil {
+			return
+		}
+		recLen := int(binary.BigEndian.Uint16(hdr[3:5]))
+		reqBody := make([]byte, recLen)
+		_, _ = io.ReadFull(conn, reqBody)
+
+		// Build HeartbeatResponse with 1000 extra bytes ("leaked" heap data).
+		leaked := make([]byte, 1000)
+		_, _ = rand.Read(leaked)
+
+		var respBody []byte
+		respBody = append(respBody, 0x02)                          // type = response
+		respBody = binary.BigEndian.AppendUint16(respBody, 1)      // payload_length = 1
+		respBody = append(respBody, 0xAB)                          // 1-byte payload
+		respBody = append(respBody, leaked...)                      // extra "leaked" bytes
+
+		resp := []byte{0x18, 0x03, 0x02}
+		resp = binary.BigEndian.AppendUint16(resp, uint16(len(respBody)))
+		resp = append(resp, respBody...)
+		_, _ = conn.Write(resp)
+	})
+}
+
+// serveHeartbleedSafe simulates a patched server: it reads the Heartbeat
+// request but responds with an Alert instead of a HeartbeatResponse.
+func serveHeartbleedSafe(t *testing.T) string {
+	t.Helper()
+	return serveTCP(t, func(conn net.Conn) {
+		defer conn.Close()
+		discardClientHello(conn)
+		_, _ = conn.Write(buildServerHelloRecord(0x0303, 0x0303, 0xC02F))
+		_, _ = conn.Write(buildCertificateRecord())
+		_, _ = conn.Write(buildServerHelloDone())
+
+		// Read the HeartbeatRequest then reject it with an Alert.
+		hdr := make([]byte, 5)
+		if _, err := io.ReadFull(conn, hdr); err != nil {
+			return
+		}
+		recLen := int(binary.BigEndian.Uint16(hdr[3:5]))
+		body := make([]byte, recLen)
+		_, _ = io.ReadFull(conn, body)
+		_, _ = conn.Write(buildTLSAlert(0x0303))
+	})
+}
+
+func TestProbeHeartbleed_Vulnerable(t *testing.T) {
+	addr := serveHeartbleedVulnerable(t)
+	status, err := probes.ProbeHeartbleed(context.Background(), addr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if status != probes.HeartbleedVulnerable {
+		t.Errorf("got %v, want HeartbleedVulnerable", status)
+	}
+}
+
+func TestProbeHeartbleed_Safe_Alert(t *testing.T) {
+	addr := serveHeartbleedSafe(t)
+	status, err := probes.ProbeHeartbleed(context.Background(), addr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if status != probes.HeartbleedSafe {
+		t.Errorf("got %v, want HeartbleedSafe", status)
+	}
+}
+
+func TestProbeHeartbleed_Safe_MinimalResponse(t *testing.T) {
+	// Server responds with a HeartbeatResponse that is exactly 3 bytes
+	// (minimum valid response — 1 byte type + 2 bytes payload_length).
+	// This should NOT be flagged as vulnerable.
+	addr := serveTCP(t, func(conn net.Conn) {
+		defer conn.Close()
+		discardClientHello(conn)
+		_, _ = conn.Write(buildServerHelloRecord(0x0303, 0x0303, 0xC02F))
+		_, _ = conn.Write(buildCertificateRecord())
+		_, _ = conn.Write(buildServerHelloDone())
+
+		// Read HeartbeatRequest
+		hdr := make([]byte, 5)
+		if _, err := io.ReadFull(conn, hdr); err != nil {
+			return
+		}
+		recLen := int(binary.BigEndian.Uint16(hdr[3:5]))
+		body := make([]byte, recLen)
+		_, _ = io.ReadFull(conn, body)
+
+		// Respond with 3-byte HeartbeatResponse (exact boundary, not vulnerable)
+		resp := []byte{
+			0x18, 0x03, 0x02, // Heartbeat record
+			0x00, 0x03,       // length = 3
+			0x02, 0x00, 0x00, // type=response, payload_length=0
+		}
+		_, _ = conn.Write(resp)
+	})
+
+	status, err := probes.ProbeHeartbleed(context.Background(), addr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if status != probes.HeartbleedSafe {
+		t.Errorf("got %v, want HeartbleedSafe (3-byte response is not a leak)", status)
 	}
 }
