@@ -302,7 +302,7 @@ import Nav from '../../components/Nav.astro';
                         <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length > 0"
                              class="rounded-xl border border-sand-200 overflow-hidden">
                           <!-- Tab bar -->
-                          <div class="flex items-center bg-sand-50 border-b border-sand-200 overflow-x-auto scrollbar-none px-1">
+                          <div class="flex items-center bg-[#f8f6f4] border-b border-sand-200 overflow-x-auto scrollbar-none px-1">
                             <template x-for="s in Object.keys((finding.remediation && finding.remediation.snippets) || {})" :key="s">
                               <button @click="tab = s"
                                       :class="tab === s
@@ -328,7 +328,7 @@ import Nav from '../../components/Nav.astro';
                           </div>
                           <!-- Verify footer -->
                           <div x-show="finding.remediation && finding.remediation.verification"
-                               class="px-4 py-2.5 border-t border-sand-200 bg-sand-50">
+                               class="px-4 py-2.5 border-t border-sand-200 bg-[#f8f6f4]">
                             <p class="text-xs font-mono text-ink-faint"
                                x-text="'verify: ' + ((finding.remediation && finding.remediation.verification) || '')"></p>
                           </div>
