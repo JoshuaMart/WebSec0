@@ -2,11 +2,20 @@
 module.exports = {
   content: ['./src/**/*.{astro,html,js,ts,jsx,tsx,mdx}'],
   safelist: [
-    // Dynamic grade classes returned from Alpine JS functions
+    // Dynamic classes from Alpine JS (grade, severity, family sections)
     'text-accent', 'bg-accent', 'bg-accent-light', 'border-accent-border',
+    // Grade colors
     'text-amber-600', 'bg-amber-50', 'bg-amber-500', 'border-amber-200',
     'text-red-600',   'bg-red-50',   'bg-red-500',   'border-red-200',
     'bg-sand-100', 'border-sand-200', 'bg-sand-300',
+    // Severity section headers
+    'text-red-700',    'bg-red-200',
+    'text-orange-700', 'bg-orange-200',
+    'text-amber-700',  'bg-amber-200',
+    'text-blue-700',   'bg-blue-200',
+    'text-gray-500',   'bg-gray-200',
+    // Finding icon colors
+    'text-orange-600', 'text-green-600',
   ],
   theme: {
     extend: {

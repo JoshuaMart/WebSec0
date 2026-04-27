@@ -5,332 +5,375 @@ import Nav from '../../components/Nav.astro';
 <Base title="Scan Report">
   <Nav />
 
-  <main
-    x-data="scanPage"
-    x-cloak
-    class="max-w-5xl mx-auto px-6 py-10 min-h-[60vh]"
-  >
+  <main x-data="scanPage" x-cloak class="min-h-screen">
 
-    <!-- ── Loading ────────────────────────────────────────────── -->
-    <div x-show="status === 'loading'" class="flex items-center justify-center py-32">
-      <svg class="w-6 h-6 animate-spin text-ink-faint" viewBox="0 0 24 24" fill="none">
+    <!-- ── Loading ──────────────────────────────────────────── -->
+    <div x-show="status === 'loading'" class="flex items-center justify-center py-40">
+      <svg class="w-5 h-5 animate-spin text-ink-faint" viewBox="0 0 24 24" fill="none">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
       </svg>
     </div>
 
-    <!-- ── Not found ──────────────────────────────────────────── -->
-    <div x-show="status === 'not_found'" class="text-center py-32">
+    <!-- ── Not found ─────────────────────────────────────────── -->
+    <div x-show="status === 'not_found'" class="text-center py-40">
       <p class="font-mono text-sm text-ink-faint mb-1">scan not found or expired</p>
-      <p class="font-mono text-xs text-ink-faint mb-6" x-text="guid"></p>
+      <p class="font-mono text-xs text-ink-faint mb-6" x-text="guid || ''"></p>
       <a href="/" class="text-sm text-accent hover:underline font-mono">← Start a new scan</a>
     </div>
 
     <!-- ── Failed ─────────────────────────────────────────────── -->
-    <div x-show="status === 'failed'" class="text-center py-32">
+    <div x-show="status === 'failed'" class="text-center py-40">
       <p class="font-mono text-sm text-red-600 mb-4" x-text="error || 'Scan failed.'"></p>
-      <button @click="fetchScan()" class="text-sm text-accent hover:underline font-mono">Retry</button>
+      <button @click="fetchScan()" class="text-sm text-accent hover:underline font-mono" type="button">Retry</button>
     </div>
 
-    <!-- ── Active (queued / running / completed) ──────────────── -->
+    <!-- ── Active (queued / running / completed) ─────────────── -->
     <div x-show="['queued','running','completed'].includes(status)">
 
-      <!-- Page header: target + status + export buttons -->
-      <div class="flex items-start justify-between gap-4 mb-8">
-        <div>
-          <div class="flex items-center gap-2 mb-1.5 text-xs font-mono">
-            <!-- Running dot -->
-            <span x-show="status === 'running'" class="flex items-center gap-1.5 text-ink-faint">
-              <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
-              scanning
+      <!-- Sticky sub-header: breadcrumb + export -->
+      <div class="sticky top-14 z-40 bg-sand/95 backdrop-blur-sm border-b border-sand-200">
+        <div class="max-w-6xl mx-auto px-6 h-10 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-2 text-xs font-mono text-ink-faint min-w-0">
+            <a href="/" class="hover:text-ink flex-shrink-0 transition-colors">WebSec0</a>
+            <span class="flex-shrink-0 text-sand-300">›</span>
+            <span class="font-medium text-ink truncate" x-text="target || '…'"></span>
+            <span class="flex-shrink-0 text-green-600 hidden sm:inline" x-show="status === 'completed'">
+              · completed<span x-show="duration"> · <span x-text="duration"></span></span>
             </span>
-            <span x-show="status === 'queued'" class="text-ink-faint">queued…</span>
-            <span x-show="status === 'completed'" class="text-green-600 flex items-center gap-1">
-              <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/>
-              </svg>
-              completed
+            <span class="flex-shrink-0 hidden sm:flex items-center gap-1 text-accent" x-show="status === 'running' || status === 'queued'">
+              · <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span> scanning
             </span>
-            <!-- Duration -->
-            <span
-              x-show="status === 'completed' && duration"
-              class="text-ink-faint"
-              x-text="'· ' + duration"
-            ></span>
           </div>
-          <h1 class="text-xl font-semibold font-mono text-ink tracking-tight" x-text="target || '…'"></h1>
-        </div>
-
-        <!-- Export buttons -->
-        <div x-show="status === 'completed'" class="flex items-center gap-2 flex-shrink-0">
-          <a
-            :href="links.markdown"
-            download
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sand-200 text-xs font-mono
-                   text-ink-muted hover:text-ink hover:border-sand-300 transition-colors"
-          >
-            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z"/>
-              <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z"/>
-            </svg>
-            Markdown
-          </a>
-          <a
-            :href="links.sarif"
-            download
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sand-200 text-xs font-mono
-                   text-ink-muted hover:text-ink hover:border-sand-300 transition-colors"
-          >
-            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0-6a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z" clip-rule="evenodd"/>
-            </svg>
-            SARIF
-          </a>
+          <div x-show="status === 'completed'" class="flex items-center gap-2 flex-shrink-0">
+            <a :href="links.markdown" download class="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-sand-200 text-xs font-mono text-ink-muted hover:text-ink hover:border-sand-300 transition-colors">
+              <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z"/><path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z"/></svg>
+              Markdown
+            </a>
+            <a :href="links.sarif" download class="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-sand-200 text-xs font-mono text-ink-muted hover:text-ink hover:border-sand-300 transition-colors">
+              <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd"/></svg>
+              SARIF
+            </a>
+          </div>
         </div>
       </div>
 
-      <!-- ── Progress bar (queued / running) ────────────────── -->
-      <div x-show="status === 'queued' || status === 'running'" class="mb-10">
-        <div class="h-1 bg-sand-200 rounded-full overflow-hidden mb-2.5">
-          <div
-            class="h-full bg-accent rounded-full transition-all duration-500"
-            :style="'width:' + progressPercent + '%'"
-          ></div>
+      <!-- ── Running / queued state ─────────────────────────── -->
+      <div x-show="status === 'queued' || status === 'running'" class="max-w-2xl mx-auto px-6 py-16">
+        <div class="text-center mb-8">
+          <p class="text-lg font-semibold text-ink mb-1" x-text="'Scanning ' + target"></p>
+          <p class="text-xs font-mono text-ink-faint" x-text="progress.current_phase ? 'Checking ' + progress.current_phase + '…' : 'Starting…'"></p>
         </div>
-        <div class="flex items-center justify-between text-xs font-mono text-ink-faint">
-          <span x-text="progress.current_phase ? 'checking ' + progress.current_phase : 'starting…'"></span>
+        <div class="mb-2">
+          <div class="h-1.5 bg-sand-200 rounded-full overflow-hidden">
+            <div class="h-full bg-accent rounded-full transition-all duration-500" :style="'width:' + progressPercent + '%'"></div>
+          </div>
+        </div>
+        <div class="flex justify-between text-xs font-mono text-ink-faint mb-8">
+          <span x-text="progress.completed + ' checks done'"></span>
           <span x-text="progress.completed + ' / ' + progress.total"></span>
         </div>
-
-        <!-- Live findings feed -->
-        <div x-show="liveFindings.length > 0" class="mt-6 space-y-1.5" role="log" aria-live="polite" aria-label="Live findings">
-          <template x-for="f in liveFindings.slice(0, 25)" :key="f.id">
-            <div
-              class="flex items-center gap-3 py-2 px-3 rounded-lg bg-white border border-sand-200"
-              x-transition:enter="transition ease-out duration-150"
-              x-transition:enter-start="opacity-0 -translate-y-1"
-              x-transition:enter-end="opacity-100 translate-y-0"
-            >
-              <span
-                class="font-mono text-xs w-4 text-center flex-shrink-0"
-                :class="statusIconClass(f.status, f.severity)"
-                x-text="statusIcon(f.status)"
-                aria-hidden="true"
-              ></span>
+        <div x-show="liveFindings.length > 0" class="space-y-1.5" role="log" aria-live="polite">
+          <template x-for="f in liveFindings.slice(0, 20)" :key="f.id">
+            <div class="flex items-center gap-3 px-3 py-2 bg-white border border-sand-200 rounded-lg"
+                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+              <span class="font-mono text-xs w-3 flex-shrink-0"
+                    :class="f.status==='pass'?'text-green-600':f.severity==='critical'?'text-red-600':f.severity==='high'?'text-orange-600':'text-amber-600'"
+                    x-text="f.status==='pass'?'✓':'✕'"></span>
               <span class="font-mono text-xs text-ink flex-1 truncate" x-text="f.id"></span>
-              <span class="font-mono text-xs text-ink-faint" x-text="f.family"></span>
-              <span
-                class="badge flex-shrink-0"
-                :class="'severity-' + (f.severity || 'info')"
-                x-show="f.status !== 'pass'"
-                x-text="f.severity"
-              ></span>
-              <span class="font-mono text-xs text-green-600 flex-shrink-0" x-show="f.status === 'pass'">pass</span>
+              <span class="font-mono text-[10px] text-ink-faint" x-text="f.family"></span>
+              <span class="badge text-[10px]" :class="'severity-'+(f.severity||'info')" x-show="f.status!=='pass'" x-text="f.severity"></span>
+              <span class="font-mono text-[10px] text-green-600" x-show="f.status==='pass'">pass</span>
             </div>
           </template>
         </div>
       </div>
 
-      <!-- ── Grade header (completed) ────────────────────────── -->
-      <div x-show="status === 'completed'" class="mb-10">
-        <div class="flex items-start gap-5 p-6 bg-white border border-sand-200 rounded-xl">
+      <!-- ── Completed: grade summary bar ──────────────────────── -->
+      <div x-show="status === 'completed'" class="bg-white border-b border-sand-200">
+        <div class="max-w-6xl mx-auto px-6 py-6">
+          <div class="flex items-center gap-6 flex-wrap md:flex-nowrap">
 
-          <!-- Grade letter -->
-          <div
-            class="w-20 h-20 rounded-xl border-2 flex items-center justify-center flex-shrink-0"
-            :class="gradeBgClass(grade)"
-            aria-label="Grade"
-          >
-            <span
-              class="text-4xl font-bold font-mono"
-              :class="gradeColorClass(grade)"
-              x-text="grade || '?'"
-            ></span>
+            <!-- Grade box -->
+            <div class="w-20 h-20 rounded-2xl border-2 flex flex-col items-center justify-center flex-shrink-0"
+                 :class="gradeBgClass(grade)">
+              <span class="text-3xl font-bold font-mono leading-none" :class="gradeColorClass(grade)" x-text="grade || '?'"></span>
+              <span class="text-[9px] font-mono uppercase tracking-widest text-ink-faint mt-1">grade</span>
+            </div>
+
+            <!-- Target + meta -->
+            <div class="min-w-0 flex-shrink-0">
+              <h1 class="text-2xl font-bold font-mono text-ink leading-tight" x-text="target"></h1>
+              <p class="text-xs font-mono text-ink-muted mt-1.5 flex flex-wrap gap-x-3">
+                <span x-text="findings.length + ' checks'"></span>
+                <span>·</span>
+                <span x-text="failedFindings.length + ' issues'"></span>
+                <span>·</span>
+                <span class="text-green-600" x-text="counts.passed + ' passing'"></span>
+                <template x-if="counts.skipped > 0"><span class="text-ink-faint" x-text="counts.skipped + ' skipped'"></span></template>
+              </p>
+            </div>
+
+            <div class="flex-1 hidden md:block min-w-0"></div>
+
+            <!-- Gradient score bar -->
+            <div class="w-full md:w-64 flex-shrink-0">
+              <div class="flex items-baseline gap-1.5 mb-2">
+                <span class="text-3xl font-bold font-mono text-ink" x-text="score"></span>
+                <span class="text-xs font-mono text-ink-faint">/100</span>
+                <span class="text-xs font-mono text-ink-muted ml-2">overall score</span>
+              </div>
+              <div class="h-2 rounded-full bg-sand-200 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700"
+                     :style="'width:'+score+'%;background:linear-gradient(to right,#dc2626,#f59e0b 45%,#4e9a52 80%)'"></div>
+              </div>
+            </div>
+
+            <!-- Quick wins count -->
+            <div class="flex-shrink-0 text-center pl-4 border-l border-sand-200">
+              <p class="text-3xl font-bold font-mono text-ink" x-text="quickWinFindings.length"></p>
+              <p class="text-[10px] font-mono text-ink-faint uppercase tracking-widest mt-0.5">quick wins</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Family filter tabs ─────────────────────────────────── -->
+      <div x-show="status === 'completed'" class="border-b border-sand-200 bg-white">
+        <div class="max-w-6xl mx-auto px-6 overflow-x-auto">
+          <div class="flex items-center -mb-px">
+
+            <!-- All -->
+            <button @click="selectedFamily = 'all'"
+                    :class="selectedFamily === 'all' ? 'border-b-2 border-accent text-ink' : 'border-b-2 border-transparent text-ink-muted hover:text-ink'"
+                    class="px-4 py-3 text-xs font-mono whitespace-nowrap flex items-center gap-1.5 transition-colors" type="button">
+              All
+              <span x-show="failedFindings.length > 0"
+                    class="badge text-[10px] font-mono"
+                    :class="selectedFamily==='all'?'bg-accent-light text-accent border-accent-border':'bg-sand-100 border-sand-200 text-ink-muted'"
+                    x-text="failedFindings.length"></span>
+            </button>
+
+            <!-- Per family -->
+            <template x-for="fam in families" :key="fam">
+              <button @click="selectedFamily = fam"
+                      :class="selectedFamily === fam ? 'border-b-2 border-accent text-ink' : 'border-b-2 border-transparent text-ink-muted hover:text-ink'"
+                      class="px-4 py-3 text-xs font-mono whitespace-nowrap flex items-center gap-1.5 transition-colors" type="button">
+                <span x-text="fam"></span>
+                <span x-show="(familyTabCounts[fam] && familyTabCounts[fam].failed) > 0"
+                      class="badge text-[10px] font-mono"
+                      :class="selectedFamily===fam?'bg-accent-light text-accent border-accent-border':'bg-sand-100 border-sand-200 text-ink-muted'"
+                      x-text="familyTabCounts[fam] && familyTabCounts[fam].failed"></span>
+              </button>
+            </template>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Completed: 2-col layout ───────────────────────────── -->
+      <div x-show="status === 'completed'" class="max-w-6xl mx-auto px-6 py-8">
+        <div class="grid lg:grid-cols-3 gap-8">
+
+          <!-- ── Findings column (2/3) ─── -->
+          <div class="lg:col-span-2 space-y-8">
+
+            <!-- Severity sections -->
+            <template x-for="sev in ['critical','high','medium','low','info']" :key="sev">
+              <section x-show="filteredBySev(sev).length > 0">
+
+                <!-- Section header -->
+                <div class="flex items-center gap-3 mb-3">
+                  <h2 class="text-xs font-bold font-mono uppercase tracking-wider flex-shrink-0" :class="sevTextClass(sev)" x-text="sevLabel(sev)"></h2>
+                  <span class="badge text-[10px]" :class="sevBadgeClass(sev)" x-text="filteredBySev(sev).length + (filteredBySev(sev).length===1?' finding':' findings')"></span>
+                  <div class="flex-1 h-px" :class="sevLineClass(sev)"></div>
+                </div>
+
+                <!-- Finding cards -->
+                <div class="space-y-2">
+                  <template x-for="finding in filteredBySev(sev)" :key="finding.id + '-' + sev">
+                    <div
+                      x-data="{ open: false, tab: '' }"
+                      x-init="tab = Object.keys((finding.remediation && finding.remediation.snippets) || {})[0] || ''"
+                      class="bg-white border border-sand-200 rounded-xl overflow-hidden"
+                    >
+                      <!-- Card header -->
+                      <div @click="open = !open"
+                           class="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-sand-50 transition-colors select-none"
+                           role="button" tabindex="0"
+                           @keydown.enter.prevent="open=!open" @keydown.space.prevent="open=!open">
+                        <!-- Status icon -->
+                        <span class="font-mono text-sm mt-0.5 w-4 text-center flex-shrink-0"
+                              :class="finding.severity==='critical'?'text-red-600':finding.severity==='high'?'text-orange-600':finding.severity==='medium'?'text-amber-600':'text-blue-600'"
+                              aria-hidden="true">✕</span>
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0">
+                          <p class="font-mono text-sm font-medium text-ink leading-tight" x-text="finding.id"></p>
+                          <p class="text-xs text-ink-muted mt-0.5 leading-snug" x-text="finding.title || finding.description || ''"></p>
+                        </div>
+                        <!-- Badges + chevron -->
+                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                          <span class="badge text-[10px]" :class="sevBadgeClass(finding.severity)" x-text="finding.severity"></span>
+                          <span class="badge text-[10px] bg-sand-100 text-ink-muted border-sand-200" x-text="finding.family"></span>
+                          <svg class="w-4 h-4 text-ink-faint transition-transform duration-200 ml-1" :class="open?'rotate-180':''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <!-- Expanded body -->
+                      <div x-show="open" x-transition class="border-t border-sand-200 bg-sand-50 px-5 pb-5 pt-4 space-y-4">
+                        <!-- Description -->
+                        <p x-show="finding.title && finding.description" class="text-sm text-ink-muted leading-relaxed" x-text="finding.description"></p>
+                        <!-- Evidence -->
+                        <div x-show="finding.evidence && Object.keys(finding.evidence).length > 0">
+                          <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Evidence</p>
+                          <pre class="text-xs font-mono text-ink-muted bg-white border border-sand-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all" x-text="JSON.stringify(finding.evidence, null, 2)"></pre>
+                        </div>
+                        <!-- Snippets -->
+                        <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length > 0">
+                          <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Fix for</p>
+                          <div class="flex flex-wrap gap-1 mb-3">
+                            <template x-for="s in Object.keys((finding.remediation && finding.remediation.snippets) || {})" :key="s">
+                              <button @click="tab = s" :class="tab === s ? 'tab-btn tab-btn-active' : 'tab-btn'" type="button" x-text="s"></button>
+                            </template>
+                          </div>
+                          <div class="relative bg-gray-950 rounded-lg px-4 pt-3 pb-4">
+                            <div class="flex gap-1.5 mb-2.5" aria-hidden="true">
+                              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+                              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+                              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+                            </div>
+                            <pre class="font-mono text-sm text-green-400 leading-relaxed whitespace-pre-wrap break-all pr-20"
+                                 x-text="((finding.remediation && finding.remediation.snippets) || {})[tab] || ''"></pre>
+                            <button x-data="{ copied: false }"
+                                    @click="navigator.clipboard.writeText(((finding.remediation&&finding.remediation.snippets)||{})[tab]||'').then(()=>{copied=true;setTimeout(()=>{copied=false},2000)}).catch(()=>{})"
+                                    class="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all">
+                              <svg x-show="!copied" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z"/><path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z"/></svg>
+                              <svg x-show="copied" class="w-3.5 h-3.5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                              <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                            </button>
+                          </div>
+                          <p x-show="finding.remediation && finding.remediation.verification" class="mt-2 text-xs font-mono text-ink-faint" x-text="'verify: ' + ((finding.remediation && finding.remediation.verification) || '')"></p>
+                        </div>
+                        <!-- No snippets -->
+                        <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length === 0">
+                          <p class="text-xs text-ink-faint">No stack-specific snippets yet. <a href="/checks/" class="text-accent hover:underline">View catalog →</a></p>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </section>
+            </template>
+
+            <!-- Passing section -->
+            <section x-show="filteredPassed.length > 0">
+              <div class="flex items-center gap-3 mb-3">
+                <button @click="showPassed = !showPassed" class="flex items-center gap-3 flex-1 text-left" type="button">
+                  <h2 class="text-xs font-bold font-mono uppercase tracking-wider flex-shrink-0 text-green-700">Passing</h2>
+                  <span class="badge severity-pass text-[10px]" x-text="filteredPassed.length + ' checks'"></span>
+                  <div class="flex-1 h-px bg-green-200"></div>
+                  <svg class="w-3.5 h-3.5 text-ink-faint transition-transform duration-200" :class="showPassed ? 'rotate-90' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+                  </svg>
+                </button>
+              </div>
+              <div x-show="showPassed" x-transition class="space-y-1">
+                <template x-for="f in filteredPassed" :key="f.id + '-p'">
+                  <div class="flex items-center gap-3 px-3 py-2 bg-white border border-sand-200 rounded-lg">
+                    <span class="font-mono text-xs text-green-600 flex-shrink-0" aria-hidden="true">✓</span>
+                    <span class="font-mono text-xs text-ink flex-1 min-w-0 truncate" x-text="f.id"></span>
+                    <span class="text-[10px] font-mono text-ink-faint flex-shrink-0" x-text="f.family"></span>
+                    <span class="badge severity-pass text-[10px]">pass</span>
+                  </div>
+                </template>
+              </div>
+            </section>
+
+            <!-- Skipped section -->
+            <section x-show="skippedFindings.length > 0 && (selectedFamily === 'all' || skippedFindings.some(f => f.family === selectedFamily))">
+              <div class="flex items-center gap-3 mb-2">
+                <h2 class="text-xs font-bold font-mono uppercase tracking-wider flex-shrink-0 text-ink-faint">Skipped</h2>
+                <span class="badge bg-sand-100 text-ink-faint border-sand-200 text-[10px]" x-text="skippedFindings.length + ' checks'"></span>
+                <div class="flex-1 h-px bg-sand-200"></div>
+              </div>
+              <p class="text-xs text-ink-faint font-mono">These checks were skipped — e.g. email checks when no MX record is present.</p>
+            </section>
+
           </div>
 
-          <!-- Score + counts -->
-          <div class="flex-1 min-w-0 pt-1">
-            <div class="flex items-baseline gap-1.5 mb-3">
-              <span class="text-3xl font-bold font-mono text-ink" x-text="score"></span>
-              <span class="text-sm font-mono text-ink-faint">/ 100</span>
-            </div>
-            <!-- Score bar -->
-            <div class="h-1.5 bg-sand-200 rounded-full overflow-hidden mb-4">
-              <div
-                class="h-full rounded-full transition-all duration-700"
-                :class="gradeBarClass(grade)"
-                :style="'width:' + score + '%'"
-              ></div>
-            </div>
-            <!-- Severity counts -->
-            <div class="flex flex-wrap items-center gap-2">
-              <template x-for="[sev, count] in severityCounts" :key="sev">
-                <span class="badge" :class="'severity-' + sev" x-text="count + ' ' + sev" x-show="count > 0"></span>
-              </template>
-              <span class="font-mono text-xs text-green-600" x-show="counts.passed > 0" x-text="counts.passed + ' passed'"></span>
-              <span class="font-mono text-xs text-ink-faint" x-show="counts.skipped > 0" x-text="counts.skipped + ' skipped'"></span>
+          <!-- ── Sidebar (1/3) ─────────────────────────────────── -->
+          <div class="lg:col-span-1">
+            <div class="sticky top-[6.5rem] space-y-4">
+
+              <!-- Family breakdown -->
+              <div class="bg-white border border-sand-200 rounded-xl p-4">
+                <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-4">Score breakdown</h3>
+                <div class="space-y-3">
+                  <template x-for="item in familyBreakdown" :key="item.family">
+                    <div>
+                      <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs font-mono text-ink" x-text="item.family"></span>
+                        <span class="text-[10px] font-mono"
+                              :class="item.failed === 0 ? 'text-green-600' : item.failed <= 2 ? 'text-amber-600' : 'text-red-600'"
+                              x-text="item.failed === 0 ? 'all pass' : item.failed + ' issue' + (item.failed > 1 ? 's' : '')"></span>
+                      </div>
+                      <div class="h-1.5 bg-sand-200 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-700"
+                             :class="item.failed === 0 ? 'bg-accent' : item.failed <= 2 ? 'bg-amber-500' : 'bg-red-500'"
+                             :style="'width:' + (item.rate) + '%'"></div>
+                      </div>
+                    </div>
+                  </template>
+                  <div x-show="familyBreakdown.length === 0" class="text-xs text-ink-faint text-center py-2">No data yet</div>
+                </div>
+              </div>
+
+              <!-- Severity summary -->
+              <div class="bg-white border border-sand-200 rounded-xl p-4">
+                <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Severity summary</h3>
+                <div class="space-y-2">
+                  <template x-for="[sev, count] in severityCounts" :key="sev">
+                    <div x-show="count > 0" class="flex items-center justify-between">
+                      <span class="badge text-[10px]" :class="'severity-' + sev" x-text="sev"></span>
+                      <span class="text-xs font-mono text-ink" x-text="count"></span>
+                    </div>
+                  </template>
+                  <div class="flex items-center justify-between pt-1 border-t border-sand-200">
+                    <span class="badge severity-pass text-[10px]">pass</span>
+                    <span class="text-xs font-mono text-ink" x-text="counts.passed"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Scan metadata -->
+              <div class="bg-white border border-sand-200 rounded-xl p-4">
+                <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Scan metadata</h3>
+                <dl class="space-y-2">
+                  <div class="flex items-center justify-between gap-4">
+                    <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">target</dt>
+                    <dd class="text-xs font-mono text-ink truncate" x-text="target"></dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4" x-show="duration">
+                    <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">duration</dt>
+                    <dd class="text-xs font-mono text-ink" x-text="duration"></dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4">
+                    <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">checks</dt>
+                    <dd class="text-xs font-mono text-ink" x-text="findings.length + ' / 70'"></dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4">
+                    <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">scan id</dt>
+                    <dd class="text-[10px] font-mono text-ink-faint truncate" x-text="guid"></dd>
+                  </div>
+                </dl>
+              </div>
+
             </div>
           </div>
 
-        </div>
-      </div>
-
-      <!-- ── Quick wins (completed) ──────────────────────────── -->
-      <div x-show="status === 'completed' && quickWinFindings.length > 0" class="mb-8">
-        <div class="flex items-center gap-2 mb-3">
-          <svg class="w-4 h-4 text-accent" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M11.983 1.907a.75.75 0 00-1.292-.657l-8.5 9.5A.75.75 0 002.75 12h6.572l-1.305 6.093a.75.75 0 001.292.657l8.5-9.5A.75.75 0 0017.25 8h-6.572l1.305-6.093z"/>
-          </svg>
-          <h2 class="text-sm font-semibold text-ink">Quick wins</h2>
-          <span class="badge bg-accent-light text-accent border-accent-border font-mono" x-text="quickWinFindings.length"></span>
-        </div>
-        <div class="space-y-2">
-          <template x-for="finding in quickWinFindings" :key="finding.id + '-qw'">
-            <div
-              x-data="{ open: false, tab: '' }"
-              x-init="tab = Object.keys((finding.remediation && finding.remediation.snippets) || {})[0] || ''"
-              class="bg-white border border-sand-200 rounded-xl overflow-hidden"
-            >
-              <template x-if="true"><span style="display:none"></span></template>
-              <!-- header -->
-              <div @click="open = !open" class="flex items-start gap-3 p-4 cursor-pointer hover:bg-sand-50 transition-colors select-none" role="button" tabindex="0" @keydown.enter.prevent="open=!open" @keydown.space.prevent="open=!open">
-                <span class="font-mono text-sm mt-0.5 w-4 text-center flex-shrink-0"
-                      :class="finding.status==='pass'?'text-green-600':finding.severity==='critical'?'text-red-600':finding.severity==='high'?'text-orange-600':finding.severity==='medium'?'text-amber-600':'text-blue-600'"
-                      x-text="finding.status==='pass'?'✓':'✕'"></span>
-                <div class="flex-1 min-w-0">
-                  <p class="font-mono text-sm font-medium text-ink leading-tight" x-text="finding.id"></p>
-                  <p class="text-xs text-ink-muted mt-0.5 leading-snug" x-text="finding.title||finding.description||''"></p>
-                </div>
-                <div class="flex items-center gap-2 flex-shrink-0 ml-2">
-                  <span class="badge" :class="'severity-'+finding.severity" x-text="finding.severity"></span>
-                  <span class="badge bg-sand-100 text-ink-muted border-sand-200" x-text="finding.family"></span>
-                  <svg class="w-4 h-4 text-ink-faint transition-transform duration-200" :class="open?'rotate-180':''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
-                </div>
-              </div>
-              <!-- expanded -->
-              <div x-show="open" x-transition class="border-t border-sand-200 bg-sand-50 px-5 pb-5 pt-4 space-y-4">
-                <p x-show="finding.title&&finding.description" class="text-sm text-ink-muted leading-relaxed" x-text="finding.description"></p>
-                <div x-show="finding.evidence&&Object.keys(finding.evidence).length>0">
-                  <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Evidence</p>
-                  <pre class="text-xs font-mono text-ink-muted bg-white border border-sand-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all" x-text="JSON.stringify(finding.evidence,null,2)"></pre>
-                </div>
-                <div x-show="Object.keys((finding.remediation&&finding.remediation.snippets)||{}).length>0">
-                  <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Fix for</p>
-                  <div class="flex flex-wrap gap-1 mb-3">
-                    <template x-for="s in Object.keys((finding.remediation&&finding.remediation.snippets)||{})" :key="s">
-                      <button @click="tab=s" :class="tab===s?'tab-btn tab-btn-active':'tab-btn'" type="button" x-text="s"></button>
-                    </template>
-                  </div>
-                  <div class="relative bg-gray-950 rounded-lg px-4 pt-3 pb-4">
-                    <div class="flex gap-1.5 mb-2.5" aria-hidden="true"><div class="w-2 h-2 rounded-full bg-gray-700"></div><div class="w-2 h-2 rounded-full bg-gray-700"></div><div class="w-2 h-2 rounded-full bg-gray-700"></div></div>
-                    <pre class="font-mono text-sm text-green-400 leading-relaxed whitespace-pre-wrap break-all pr-16" x-text="((finding.remediation&&finding.remediation.snippets)||{})[tab]||''"></pre>
-                    <button x-data="{copied:false}" @click="navigator.clipboard.writeText(((finding.remediation&&finding.remediation.snippets)||{})[tab]||'').then(()=>{copied=true;setTimeout(()=>{copied=false},2000)}).catch(()=>{})" class="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200 transition-all">
-                      <svg x-show="!copied" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z"/><path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z"/></svg>
-                      <svg x-show="copied" class="w-3.5 h-3.5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                      <span x-text="copied?'Copied!':'Copy'"></span>
-                    </button>
-                  </div>
-                  <p x-show="finding.remediation&&finding.remediation.verification" class="mt-2 text-xs font-mono text-ink-faint" x-text="'verify: '+((finding.remediation&&finding.remediation.verification)||'')"></p>
-                </div>
-                <div x-show="Object.keys((finding.remediation&&finding.remediation.snippets)||{}).length===0">
-                  <p class="text-xs text-ink-faint">No stack-specific snippets yet. <a href="/checks/" class="text-accent hover:underline">View catalog →</a></p>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- ── Other failures (completed) ─────────────────────── -->
-      <div x-show="status === 'completed' && otherFailedFindings.length > 0" class="mb-8">
-        <div class="flex items-center gap-2 mb-3">
-          <h2 class="text-sm font-semibold text-ink">Findings</h2>
-          <span
-            class="badge bg-sand-100 text-ink-muted border-sand-200 font-mono"
-            x-text="otherFailedFindings.length"
-          ></span>
-        </div>
-        <div class="space-y-2">
-          <template x-for="finding in otherFailedFindings" :key="finding.id + '-f'">
-            <div
-              x-data="{ open: false, tab: '' }"
-              x-init="tab = Object.keys((finding.remediation && finding.remediation.snippets) || {})[0] || ''"
-              class="bg-white border border-sand-200 rounded-xl overflow-hidden"
-            >
-              <div @click="open = !open" class="flex items-start gap-3 p-4 cursor-pointer hover:bg-sand-50 transition-colors select-none" role="button" tabindex="0" @keydown.enter.prevent="open=!open" @keydown.space.prevent="open=!open">
-                <span class="font-mono text-sm mt-0.5 w-4 text-center flex-shrink-0"
-                      :class="finding.status==='pass'?'text-green-600':finding.severity==='critical'?'text-red-600':finding.severity==='high'?'text-orange-600':finding.severity==='medium'?'text-amber-600':'text-blue-600'"
-                      x-text="finding.status==='pass'?'✓':'✕'"></span>
-                <div class="flex-1 min-w-0">
-                  <p class="font-mono text-sm font-medium text-ink leading-tight" x-text="finding.id"></p>
-                  <p class="text-xs text-ink-muted mt-0.5 leading-snug" x-text="finding.title||finding.description||''"></p>
-                </div>
-                <div class="flex items-center gap-2 flex-shrink-0 ml-2">
-                  <span class="badge" :class="'severity-'+finding.severity" x-text="finding.severity"></span>
-                  <span class="badge bg-sand-100 text-ink-muted border-sand-200" x-text="finding.family"></span>
-                  <svg class="w-4 h-4 text-ink-faint transition-transform duration-200" :class="open?'rotate-180':''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
-                </div>
-              </div>
-              <div x-show="open" x-transition class="border-t border-sand-200 bg-sand-50 px-5 pb-5 pt-4 space-y-4">
-                <p x-show="finding.title&&finding.description" class="text-sm text-ink-muted leading-relaxed" x-text="finding.description"></p>
-                <div x-show="finding.evidence&&Object.keys(finding.evidence).length>0">
-                  <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Evidence</p>
-                  <pre class="text-xs font-mono text-ink-muted bg-white border border-sand-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all" x-text="JSON.stringify(finding.evidence,null,2)"></pre>
-                </div>
-                <div x-show="Object.keys((finding.remediation&&finding.remediation.snippets)||{}).length>0">
-                  <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Fix for</p>
-                  <div class="flex flex-wrap gap-1 mb-3">
-                    <template x-for="s in Object.keys((finding.remediation&&finding.remediation.snippets)||{})" :key="s">
-                      <button @click="tab=s" :class="tab===s?'tab-btn tab-btn-active':'tab-btn'" type="button" x-text="s"></button>
-                    </template>
-                  </div>
-                  <div class="relative bg-gray-950 rounded-lg px-4 pt-3 pb-4">
-                    <div class="flex gap-1.5 mb-2.5" aria-hidden="true"><div class="w-2 h-2 rounded-full bg-gray-700"></div><div class="w-2 h-2 rounded-full bg-gray-700"></div><div class="w-2 h-2 rounded-full bg-gray-700"></div></div>
-                    <pre class="font-mono text-sm text-green-400 leading-relaxed whitespace-pre-wrap break-all pr-16" x-text="((finding.remediation&&finding.remediation.snippets)||{})[tab]||''"></pre>
-                    <button x-data="{copied:false}" @click="navigator.clipboard.writeText(((finding.remediation&&finding.remediation.snippets)||{})[tab]||'').then(()=>{copied=true;setTimeout(()=>{copied=false},2000)}).catch(()=>{})" class="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200 transition-all">
-                      <svg x-show="!copied" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z"/><path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z"/></svg>
-                      <svg x-show="copied" class="w-3.5 h-3.5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                      <span x-text="copied?'Copied!':'Copy'"></span>
-                    </button>
-                  </div>
-                  <p x-show="finding.remediation&&finding.remediation.verification" class="mt-2 text-xs font-mono text-ink-faint" x-text="'verify: '+((finding.remediation&&finding.remediation.verification)||'')"></p>
-                </div>
-                <div x-show="Object.keys((finding.remediation&&finding.remediation.snippets)||{}).length===0">
-                  <p class="text-xs text-ink-faint">No stack-specific snippets yet. <a href="/checks/" class="text-accent hover:underline">View catalog →</a></p>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- ── Passed checks (completed, collapsed) ────────────── -->
-      <div x-show="status === 'completed' && passedFindings.length > 0" class="mb-8">
-        <button
-          @click="showPassed = !showPassed"
-          class="flex items-center gap-2 text-sm text-ink-muted hover:text-ink transition-colors"
-          type="button"
-          :aria-expanded="showPassed"
-        >
-          <svg
-            class="w-3.5 h-3.5 transition-transform duration-200 text-ink-faint"
-            :class="showPassed ? 'rotate-90' : ''"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
-          </svg>
-          <span x-text="passedFindings.length + ' passed checks'"></span>
-        </button>
-        <div x-show="showPassed" x-transition class="mt-3 space-y-1">
-          <template x-for="f in passedFindings" :key="f.id + '-p'">
-            <div class="flex items-center gap-3 py-1.5 px-3 rounded-lg border border-sand-200">
-              <span class="font-mono text-xs text-green-600 flex-shrink-0" aria-hidden="true">✓</span>
-              <span class="font-mono text-xs text-ink flex-1 min-w-0 truncate" x-text="f.id"></span>
-              <span class="font-mono text-xs text-ink-faint flex-shrink-0" x-text="f.family"></span>
-            </div>
-          </template>
         </div>
       </div>
 
@@ -340,55 +383,33 @@ import Nav from '../../components/Nav.astro';
 
 <script>
   document.addEventListener('alpine:init', () => {
-
-    // ── Main scan page ────────────────────────────────────────
     Alpine.data('scanPage', () => ({
-      // State
+      // ── State ─────────────────────────────────────────────
       guid: null,
       status: 'loading',
       error: '',
-
-      // Metadata
       target: '',
       startedAt: null,
       completedAt: null,
       links: { markdown: '#', sarif: '#' },
-
-      // Grade + score
       grade: '',
       score: 0,
-
-      // Findings
       findings: [],
       liveFindings: [],
       counts: { critical: 0, high: 0, medium: 0, low: 0, info: 0, passed: 0, skipped: 0, errored: 0 },
-
-      // Progress (running)
       progress: { total: 70, completed: 0, current_phase: '' },
-
-      // SSE
       eventSource: null,
-
-      // UI
       showPassed: false,
+      selectedFamily: 'all',
 
       // ── Lifecycle ──────────────────────────────────────────
       async init() {
         const parts = window.location.pathname.split('/').filter(p => p.length > 0);
-        // pathname: /scan/{guid}/ → ['scan', 'guid']
         this.guid = parts[1] || null;
-
-        if (!this.guid) {
-          this.status = 'not_found';
-          return;
-        }
-
+        if (!this.guid) { this.status = 'not_found'; return; }
         await this.fetchScan();
       },
-
-      destroy() {
-        this.closeSSE();
-      },
+      destroy() { this.closeSSE(); },
 
       // ── Data fetching ──────────────────────────────────────
       async fetchScan() {
@@ -398,9 +419,7 @@ import Nav from '../../components/Nav.astro';
           if (!res.ok) { this.status = 'failed'; this.error = 'Server error ' + res.status; return; }
           const data = await res.json();
           this.applyData(data);
-          if (data.status === 'running' || data.status === 'queued') {
-            this.connectSSE();
-          }
+          if (data.status === 'running' || data.status === 'queued') this.connectSSE();
         } catch {
           this.status = 'failed';
           this.error = 'Network error. Check your connection.';
@@ -412,22 +431,17 @@ import Nav from '../../components/Nav.astro';
         this.target = data.target || '';
         this.startedAt = data.started_at || null;
         this.completedAt = data.completed_at || null;
-
         if (data.links) {
           this.links = {
             markdown: data.links.markdown || ('/api/v1/scans/' + this.guid + '/markdown'),
             sarif:    data.links.sarif    || ('/api/v1/scans/' + this.guid + '/sarif'),
           };
         }
-        if (data.progress) {
-          this.progress = { ...this.progress, ...data.progress };
-        }
+        if (data.progress) this.progress = { ...this.progress, ...data.progress };
         if (typeof data.grade === 'string') this.grade = data.grade;
         if (typeof data.score === 'number') this.score = data.score;
-
         if (Array.isArray(data.findings)) {
           this.findings = data.findings;
-          // Recompute counts from findings
           this.counts = { critical:0, high:0, medium:0, low:0, info:0, passed:0, skipped:0, errored:0 };
           for (const f of data.findings) {
             if (f.status === 'pass') this.counts.passed++;
@@ -442,46 +456,26 @@ import Nav from '../../components/Nav.astro';
       connectSSE() {
         if (this.eventSource) return;
         this.eventSource = new EventSource('/api/v1/scans/' + this.guid + '/events');
-
         this.eventSource.addEventListener('progress', e => {
           try { this.progress = { ...this.progress, ...JSON.parse(e.data) }; } catch {}
         });
-
         this.eventSource.addEventListener('finding', e => {
-          try {
-            const f = JSON.parse(e.data);
-            this.liveFindings = [f, ...this.liveFindings];
-          } catch {}
+          try { this.liveFindings = [JSON.parse(e.data), ...this.liveFindings]; } catch {}
         });
-
-        this.eventSource.addEventListener('completed', () => {
-          this.closeSSE();
-          this.fetchScan();
-        });
-
+        this.eventSource.addEventListener('completed', () => { this.closeSSE(); this.fetchScan(); });
         this.eventSource.addEventListener('failed', e => {
           this.closeSSE();
-          try {
-            const d = JSON.parse(e.data);
-            this.error = d.error || 'Scan failed';
-          } catch {}
+          try { this.error = JSON.parse(e.data).error || 'Scan failed'; } catch {}
           this.status = 'failed';
         });
-
         this.eventSource.onerror = () => {
           setTimeout(() => {
-            if (this.status !== 'completed' && this.status !== 'failed') {
-              this.fetchScan();
-            }
+            if (this.status !== 'completed' && this.status !== 'failed') this.fetchScan();
           }, 3000);
         };
       },
-
       closeSSE() {
-        if (this.eventSource) {
-          this.eventSource.close();
-          this.eventSource = null;
-        }
+        if (this.eventSource) { this.eventSource.close(); this.eventSource = null; }
       },
 
       // ── Computed ──────────────────────────────────────────
@@ -489,26 +483,20 @@ import Nav from '../../components/Nav.astro';
         if (!this.progress.total) return 0;
         return Math.min(100, Math.round((this.progress.completed / this.progress.total) * 100));
       },
-
       get failedFindings() {
         return this.findings.filter(f => f.status === 'fail' || f.status === 'warn');
       },
-
       get passedFindings() {
         return this.findings.filter(f => f.status === 'pass');
       },
-
+      get skippedFindings() {
+        return this.findings.filter(f => f.status === 'skipped' || f.status === 'error');
+      },
       get quickWinFindings() {
         return this.failedFindings.filter(f =>
           f.severity === 'critical' || f.severity === 'high' || f.severity === 'medium'
         );
       },
-
-      get otherFailedFindings() {
-        const qwIds = new Set(this.quickWinFindings.map(f => f.id));
-        return this.failedFindings.filter(f => !qwIds.has(f.id));
-      },
-
       get severityCounts() {
         return [
           ['critical', this.counts.critical],
@@ -518,14 +506,59 @@ import Nav from '../../components/Nav.astro';
           ['info',     this.counts.info],
         ];
       },
-
       get duration() {
         if (!this.startedAt || !this.completedAt) return '';
-        const ms = new Date(this.completedAt) - new Date(this.startedAt);
-        return Math.round(ms / 1000) + 's';
+        return Math.round((new Date(this.completedAt) - new Date(this.startedAt)) / 1000) + 's';
+      },
+      get families() {
+        return [...new Set(this.findings.map(f => f.family).filter(Boolean))].sort();
+      },
+      get familyTabCounts() {
+        const map = {};
+        for (const f of this.findings) {
+          if (!map[f.family]) map[f.family] = { total: 0, failed: 0 };
+          map[f.family].total++;
+          if (f.status === 'fail' || f.status === 'warn') map[f.family].failed++;
+        }
+        return map;
+      },
+      get filteredPassed() {
+        return this.passedFindings.filter(f =>
+          this.selectedFamily === 'all' || f.family === this.selectedFamily
+        );
+      },
+      get familyBreakdown() {
+        const map = {};
+        for (const f of this.findings) {
+          if (!map[f.family]) map[f.family] = { family: f.family, passed: 0, failed: 0 };
+          if (f.status === 'pass') map[f.family].passed++;
+          else if (f.status === 'fail' || f.status === 'warn') map[f.family].failed++;
+        }
+        return Object.values(map).map(item => ({
+          ...item,
+          rate: Math.round(item.passed / Math.max(1, item.passed + item.failed) * 100),
+        })).sort((a, b) => a.family.localeCompare(b.family));
       },
 
-      // ── Helpers ───────────────────────────────────────────
+      // ── Methods ───────────────────────────────────────────
+      filteredBySev(sev) {
+        return this.failedFindings.filter(f =>
+          f.severity === sev &&
+          (this.selectedFamily === 'all' || f.family === this.selectedFamily)
+        );
+      },
+      sevLabel(sev) {
+        return { critical:'Critical – Fix immediately', high:'High priority', medium:'Medium – Recommended', low:'Low – Nice to have', info:'Info' }[sev] || sev;
+      },
+      sevTextClass(sev) {
+        return { critical:'text-red-700', high:'text-orange-700', medium:'text-amber-700', low:'text-blue-700', info:'text-gray-500' }[sev] || 'text-gray-500';
+      },
+      sevBadgeClass(sev) {
+        return { critical:'severity-critical', high:'severity-high', medium:'severity-medium', low:'severity-low', info:'severity-info' }[sev] || 'severity-info';
+      },
+      sevLineClass(sev) {
+        return { critical:'bg-red-200', high:'bg-orange-200', medium:'bg-amber-200', low:'bg-blue-200', info:'bg-gray-200' }[sev] || 'bg-gray-200';
+      },
       gradeColorClass(g) {
         if (!g) return 'text-ink-faint';
         const c = g.charAt(0);
@@ -533,38 +566,12 @@ import Nav from '../../components/Nav.astro';
         if (c === 'C') return 'text-amber-600';
         return 'text-red-600';
       },
-
       gradeBgClass(g) {
         if (!g) return 'bg-sand-100 border-sand-200';
         const c = g.charAt(0);
         if (c === 'A' || c === 'B') return 'bg-accent-light border-accent-border';
         if (c === 'C') return 'bg-amber-50 border-amber-200';
         return 'bg-red-50 border-red-200';
-      },
-
-      gradeBarClass(g) {
-        if (!g) return 'bg-sand-300';
-        const c = g.charAt(0);
-        if (c === 'A' || c === 'B') return 'bg-accent';
-        if (c === 'C') return 'bg-amber-500';
-        return 'bg-red-500';
-      },
-
-      statusIcon(status) {
-        if (status === 'pass') return '✓';
-        if (status === 'fail' || status === 'warn') return '✕';
-        return '—';
-      },
-
-      statusIconClass(status, severity) {
-        if (status === 'pass') return 'text-green-600';
-        if (status === 'fail' || status === 'warn') {
-          if (severity === 'critical') return 'text-red-600';
-          if (severity === 'high') return 'text-orange-600';
-          if (severity === 'medium') return 'text-amber-600';
-          return 'text-blue-600';
-        }
-        return 'text-ink-faint';
       },
     }));
   });
