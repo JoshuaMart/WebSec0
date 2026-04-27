@@ -337,12 +337,15 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 
 ## Phase 17 — CI/CD complet
 
-- [ ] `.github/workflows/release.yml` (déclenchée sur tag `v*`)
-  - [ ] Lance goreleaser
-  - [ ] Permissions OIDC (id-token: write)
-  - [ ] Vérifie l'image Docker post-push
-- [ ] Branch protection : require `ci.yml`, `verify-codegen.yml` checks
-- [ ] Test du release flow sur tag pré-release `v0.0.1-rc1` (release brouillon)
+- [x] `.github/workflows/release.yml` (déclenchée sur tag `v*`)
+  - [x] Lance goreleaser-action v7 (`~> v2` goreleaser binary) via `goreleaser/goreleaser-action`
+  - [x] Permissions OIDC (`id-token: write`) pour cosign keyless + SLSA provenance
+  - [x] SLSA Level 3 via `slsa-framework/slsa-github-generator` (reusable workflow, SHA-pinned)
+  - [x] Job `verify-docker` : pull image, smoke test health endpoint, verify cosign signature
+- [x] Branch protection sur `main` configurée via API GitHub :
+  - checks requis : `test`, `lint (golangci-lint + gosec)`, `openapi (spectral)`, `regenerate and diff`
+  - 1 PR review requise, signed commits activés
+- [ ] Test du release flow sur tag pré-release `v0.0.1-rc1` (à faire manuellement : `git tag v0.0.1-rc1 && git push origin v0.0.1-rc1`)
 
 ## Phase 18 — Documentation
 
