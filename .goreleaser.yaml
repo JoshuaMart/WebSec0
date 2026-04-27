@@ -106,62 +106,26 @@ signs:
     artifacts: checksum
     output: true
 
-# Docker images (linux/amd64 + linux/arm64) — server binary only
-dockers:
-  - id: websec0-linux-amd64
-    ids: [websec0]
-    goos: linux
-    goarch: amd64
-    image_templates:
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
+# Docker images — multi-arch manifest (linux/amd64 + linux/arm64), server binary only.
+# dockers_v2 replaces the deprecated dockers + docker_manifests combination.
+dockers_v2:
+  - ids: [websec0]
     dockerfile: deploy/docker/Dockerfile.goreleaser
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.description=Passive web security scanner"
-      - "--label=org.opencontainers.image.url=https://github.com/JoshuaMart/websec0"
-      - "--label=org.opencontainers.image.source=https://github.com/JoshuaMart/websec0"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.licenses=MIT"
-
-  - id: websec0-linux-arm64
-    ids: [websec0]
-    goos: linux
-    goarch: arm64
-    image_templates:
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
-    dockerfile: deploy/docker/Dockerfile.goreleaser
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.description=Passive web security scanner"
-      - "--label=org.opencontainers.image.url=https://github.com/JoshuaMart/websec0"
-      - "--label=org.opencontainers.image.source=https://github.com/JoshuaMart/websec0"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.licenses=MIT"
-
-# Multi-arch manifests — assembled after per-arch images are pushed
-docker_manifests:
-  - name_template: "ghcr.io/joshuamart/websec0:{{ .Tag }}"
-    image_templates:
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
-  - name_template: "ghcr.io/joshuamart/websec0:v{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
-    skip_push: auto
-  - name_template: "ghcr.io/joshuamart/websec0:latest"
-    image_templates:
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
-      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
-    skip_push: auto
+    images:
+      - "ghcr.io/joshuamart/websec0"
+    tags:
+      - "{{ .Tag }}"
+      - "v{{ .Major }}.{{ .Minor }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    labels:
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.title": "{{.ProjectName}}"
+      "org.opencontainers.image.description": "Passive web security scanner"
+      "org.opencontainers.image.url": "https://github.com/JoshuaMart/websec0"
+      "org.opencontainers.image.source": "https://github.com/JoshuaMart/websec0"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.licenses": "MIT"
 
 # Cosign signing for published Docker manifests
 docker_signs:
@@ -224,6 +188,12 @@ release:
     cosign verify-blob \
       --bundle checksums.txt.bundle \
       checksums.txt
+    ```
+
+    **Build provenance** (requires [GitHub CLI](https://cli.github.com) ≥ 2.49)
+    ```bash
+    gh attestation verify websec0_{{ .Version }}_Linux_x86_64.tar.gz \
+      --repo JoshuaMart/websec0
     ```
 
     **Docker image**

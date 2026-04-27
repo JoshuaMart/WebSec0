@@ -13,11 +13,10 @@ jobs:
     name: goreleaser
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # create GitHub release + upload assets
-      packages: write   # push to GHCR
-      id-token: write   # cosign keyless OIDC + SLSA provenance
-    outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
+      contents: write      # create GitHub release + upload assets
+      packages: write      # push to GHCR
+      id-token: write      # cosign keyless OIDC signing
+      attestations: write  # actions/attest-build-provenance
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -52,31 +51,17 @@ jobs:
       - uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
 
       - uses: goreleaser/goreleaser-action@1a80836c5c9d9e5755a25cb59ec6f45a3b5f41a8 # v7.2.1
-        id: goreleaser
         with:
           version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: compute artifact hashes for SLSA provenance
-        id: hash
-        run: |
-          hashes=$(base64 -w0 < dist/checksums.txt)
-          echo "hashes=$hashes" >> "$GITHUB_OUTPUT"
-
-  # SLSA Level 3 provenance — reusable workflow from slsa-framework
-  provenance:
-    name: slsa provenance (level 3)
-    needs: [goreleaser]
-    permissions:
-      actions: read
-      id-token: write
-      contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
-    with:
-      base64-subjects: ${{ needs.goreleaser.outputs.hashes }}
-      upload-assets: true
+      # GitHub-native SLSA provenance for all release artifacts listed in checksums.txt.
+      # Verify with: gh attestation verify <artifact> --repo JoshuaMart/WebSec0
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-checksums: dist/checksums.txt
 
   # Verify the pushed Docker image is functional and correctly signed
   verify-docker:
