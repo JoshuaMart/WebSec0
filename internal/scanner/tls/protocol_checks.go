@@ -107,23 +107,35 @@ func (noFSCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, er
 	if !res.AnySucceeded {
 		return skippedFinding(IDCipherNoForwardSecrecy, checks.SeverityHigh, "no successful TLS handshake"), nil
 	}
+
+	// Enrich evidence with the full TLS 1.2 cipher list from enumeration.
+	cenum, _ := CipherEnumFetch(ctx, t)
+
 	for _, v := range []uint16{stdtls.VersionTLS13, stdtls.VersionTLS12} {
 		p := res.Probes[v]
 		if p == nil || !p.Supported {
 			continue
 		}
 		if hasForwardSecrecy(v, p.NegotiatedCS) {
+			ev := map[string]any{
+				"version": versionString(v),
+				"cipher":  cipherName(p.NegotiatedCS),
+			}
+			if cenum != nil && len(cenum.TLS12Accepted) > 0 {
+				ev["tls12_ciphers_accepted"] = cenum.CipherNames()
+			}
 			return passFinding(IDCipherNoForwardSecrecy, checks.SeverityHigh,
-				"forward-secret cipher negotiated",
-				map[string]any{
-					"version": versionString(v),
-					"cipher":  cipherName(p.NegotiatedCS),
-				}), nil
+				"forward-secret cipher negotiated", ev), nil
 		}
+	}
+
+	ev := map[string]any{}
+	if cenum != nil && len(cenum.TLS12Accepted) > 0 {
+		ev["tls12_ciphers_accepted"] = cenum.CipherNames()
 	}
 	return failFinding(IDCipherNoForwardSecrecy, checks.SeverityHigh,
 		"no forward-secret cipher negotiated",
-		"All probed handshakes negotiated a cipher without ECDHE/DHE.", nil), nil
+		"All probed handshakes negotiated a cipher without ECDHE/DHE.", ev), nil
 }
 
 // --- TLS-ALPN-NO-HTTP2 ------------------------------------------------

@@ -353,6 +353,172 @@ func TestProbeDHKeySize_2048bit(t *testing.T) {
 	}
 }
 
+// ---- EnumerateCipherSuites tests -------------------------------------------
+
+// servePickingCiphers returns a mock server that accepts connections, reads
+// one ClientHello, and replies with a ServerHello selecting the FIRST cipher
+// from the offered list that matches one in acceptSet (server preference order
+// = acceptSet order). Returns Alert if none match.
+func servePickingCiphers(t *testing.T, acceptSet []uint16) string {
+	t.Helper()
+	return serveTCP(t, func(conn net.Conn) {
+		defer conn.Close()
+
+		// Read and parse the ClientHello to find offered ciphers.
+		hdr := make([]byte, 5)
+		if _, err := io.ReadFull(conn, hdr); err != nil {
+			return
+		}
+		recLen := binary.BigEndian.Uint16(hdr[3:5])
+		body := make([]byte, recLen)
+		if _, err := io.ReadFull(conn, body); err != nil {
+			return
+		}
+
+		// Parse offered cipher suites from the ClientHello body.
+		// body[0]=HandshakeType, body[1:4]=length, body[4:6]=version, body[6:38]=random,
+		// body[38]=session_id_len, then 2-byte cipher_suites_len, then suites.
+		if len(body) < 43 {
+			_, _ = conn.Write(buildTLSAlert(0x0303))
+			return
+		}
+		sidLen := int(body[38])
+		base := 39 + sidLen
+		if len(body) < base+2 {
+			_, _ = conn.Write(buildTLSAlert(0x0303))
+			return
+		}
+		csLen := int(binary.BigEndian.Uint16(body[base : base+2]))
+		base += 2
+		if len(body) < base+csLen {
+			_, _ = conn.Write(buildTLSAlert(0x0303))
+			return
+		}
+		var offered []uint16
+		for i := 0; i+1 < csLen; i += 2 {
+			offered = append(offered, binary.BigEndian.Uint16(body[base+i:base+i+2]))
+		}
+
+		// Pick the first acceptSet cipher that appears in offered.
+		chosen := uint16(0)
+		for _, want := range acceptSet {
+			for _, got := range offered {
+				if got == want {
+					chosen = want
+					break
+				}
+			}
+			if chosen != 0 {
+				break
+			}
+		}
+		if chosen == 0 {
+			_, _ = conn.Write(buildTLSAlert(0x0303))
+			return
+		}
+		_, _ = conn.Write(buildServerHelloRecord(0x0303, 0x0303, chosen))
+	})
+}
+
+func TestEnumerateCipherSuites_ServerPreferenceTwoSuites(t *testing.T) {
+	// Server accepts 0xC02F and 0x002F (in that preference order).
+	accepted := []uint16{0xC02F, 0x002F}
+
+	// We need a fresh listener per call because serveTCP only accepts one connection.
+	// Wrap servePickingCiphers to handle multiple sequential connections.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				hdr := make([]byte, 5)
+				if _, err := io.ReadFull(c, hdr); err != nil {
+					return
+				}
+				recLen := binary.BigEndian.Uint16(hdr[3:5])
+				body := make([]byte, recLen)
+				if _, err := io.ReadFull(c, body); err != nil {
+					return
+				}
+				if len(body) < 43 {
+					_, _ = c.Write(buildTLSAlert(0x0303))
+					return
+				}
+				sidLen := int(body[38])
+				base := 39 + sidLen
+				if len(body) < base+2 {
+					_, _ = c.Write(buildTLSAlert(0x0303))
+					return
+				}
+				csLen := int(binary.BigEndian.Uint16(body[base : base+2]))
+				base += 2
+				if len(body) < base+csLen {
+					_, _ = c.Write(buildTLSAlert(0x0303))
+					return
+				}
+				var offered []uint16
+				for i := 0; i+1 < csLen; i += 2 {
+					offered = append(offered, binary.BigEndian.Uint16(body[base+i:base+i+2]))
+				}
+				chosen := uint16(0)
+				for _, want := range accepted {
+					for _, got := range offered {
+						if got == want {
+							chosen = want
+							break
+						}
+					}
+					if chosen != 0 {
+						break
+					}
+				}
+				if chosen == 0 {
+					_, _ = c.Write(buildTLSAlert(0x0303))
+					return
+				}
+				_, _ = c.Write(buildServerHelloRecord(0x0303, 0x0303, chosen))
+			}(conn)
+		}
+	}()
+
+	addr := ln.Addr().String()
+	result := probes.EnumerateCipherSuites(context.Background(), addr, 0x0303, []uint16{0x002F, 0xC02F, 0x0035})
+
+	if len(result) != 2 {
+		t.Fatalf("got %d ciphers, want 2: %v", len(result), result)
+	}
+	// Server preference: 0xC02F first, then 0x002F
+	if result[0] != 0xC02F {
+		t.Errorf("first accepted cipher = 0x%04X, want 0xC02F", result[0])
+	}
+	if result[1] != 0x002F {
+		t.Errorf("second accepted cipher = 0x%04X, want 0x002F", result[1])
+	}
+}
+
+func TestEnumerateCipherSuites_NoneAccepted(t *testing.T) {
+	// Server always sends Alert.
+	addr := serveTCP(t, func(conn net.Conn) {
+		defer conn.Close()
+		discardClientHello(conn)
+		_, _ = conn.Write(buildTLSAlert(0x0303))
+	})
+
+	result := probes.EnumerateCipherSuites(context.Background(), addr, 0x0303, []uint16{0xC02F, 0x002F})
+	if len(result) != 0 {
+		t.Errorf("got %v, want empty slice", result)
+	}
+}
+
 func TestProbeDHKeySize_NoDHE(t *testing.T) {
 	// Server responds with a non-DHE cipher (ECDHE) → should return 0.
 	addr := serveTCP(t, func(conn net.Conn) {
