@@ -174,3 +174,57 @@ func (hstsNoIncludeSubCheck) Run(ctx context.Context, t *checks.Target) (*checks
 	return passFinding(IDHSTSNoIncludeSubDomains, checks.SeverityLow,
 		"HSTS covers subdomains", nil), nil
 }
+
+// --- TLS-HSTS-NO-PRELOAD -----------------------------------------------------
+
+// hstsPreloadMinMaxAge is the minimum max-age required by hstspreload.org.
+const hstsPreloadMinMaxAge = 10886400 * time.Second // 18 weeks
+
+type hstsNoPreloadCheck struct{}
+
+func (hstsNoPreloadCheck) ID() string                       { return IDHSTSNoPreload }
+func (hstsNoPreloadCheck) Family() checks.Family            { return checks.FamilyTLS }
+func (hstsNoPreloadCheck) DefaultSeverity() checks.Severity { return checks.SeverityInfo }
+func (hstsNoPreloadCheck) Title() string                    { return "HSTS preload is configured" }
+func (hstsNoPreloadCheck) Description() string {
+	return "The HSTS `preload` directive, combined with `includeSubDomains` and `max-age ≥ 10886400`, makes the domain eligible for inclusion in browser HSTS preload lists, providing protection even for first-time visitors. Verification of actual list inclusion requires checking hstspreload.org (deferred)."
+}
+func (hstsNoPreloadCheck) RFCRefs() []string { return []string{"RFC 6797"} }
+
+func (hstsNoPreloadCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, error) {
+	res, err := Fetch(ctx, t)
+	if err != nil {
+		return errFinding(IDHSTSNoPreload, checks.SeverityInfo, err), nil
+	}
+	if !res.AnySucceeded {
+		return skippedFinding(IDHSTSNoPreload, checks.SeverityInfo, "HTTPS unreachable"), nil
+	}
+	p, ok := ParseHSTS(res.HSTSHeader)
+	if !ok {
+		return skippedFinding(IDHSTSNoPreload, checks.SeverityInfo, "HSTS header missing"), nil
+	}
+
+	ev := map[string]any{
+		"has_preload":          p.Preload,
+		"has_includesubdomains": p.IncludeSubDomains,
+		"max_age_seconds":      int(p.MaxAge.Seconds()),
+	}
+
+	eligible := p.Preload && p.IncludeSubDomains && p.MaxAge >= hstsPreloadMinMaxAge
+	if eligible {
+		return passFinding(IDHSTSNoPreload, checks.SeverityInfo,
+			"HSTS preload-eligible (preload + includeSubDomains + max-age ≥ 18 weeks)", ev), nil
+	}
+
+	var reason string
+	switch {
+	case !p.Preload:
+		reason = "HSTS header lacks the `preload` directive."
+	case !p.IncludeSubDomains:
+		reason = "HSTS header lacks `includeSubDomains` (required for preload)."
+	default:
+		reason = "HSTS max-age is below 10886400 (18 weeks, required for preload)."
+	}
+	return failFinding(IDHSTSNoPreload, checks.SeverityInfo,
+		"HSTS not preload-eligible", reason, ev), nil
+}

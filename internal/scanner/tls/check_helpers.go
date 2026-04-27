@@ -4,6 +4,7 @@ import "github.com/JoshuaMart/websec0/internal/checks"
 
 // Check IDs for the TLS family.
 const (
+	// Modern TLS / cert / HSTS (phases 6.1, 6.2, 6.6)
 	IDProtocolTLS12Missing    = "TLS-PROTOCOL-TLS12-MISSING"
 	IDProtocolTLS13Missing    = "TLS-PROTOCOL-TLS13-MISSING"
 	IDCipherNoForwardSecrecy  = "TLS-CIPHER-NO-FORWARD-SECRECY"
@@ -22,7 +23,26 @@ const (
 	IDHSTSMissing             = "TLS-HSTS-MISSING"
 	IDHSTSMaxAgeLow           = "TLS-HSTS-MAX-AGE-LOW"
 	IDHSTSNoIncludeSubDomains = "TLS-HSTS-NO-INCLUDESUBDOMAINS"
+	IDHSTSNoPreload           = "TLS-HSTS-NO-PRELOAD"
 	IDRedirectHTTPToHTTPS     = "TLS-REDIRECT-HTTP-TO-HTTPS"
+
+	// Legacy protocols (phase 6.3 + 6.4)
+	IDProtocolLegacySSL2  = "TLS-PROTOCOL-LEGACY-SSL2"
+	IDProtocolLegacySSL3  = "TLS-PROTOCOL-LEGACY-SSL3"
+	IDProtocolLegacyTLS10 = "TLS-PROTOCOL-LEGACY-TLS10"
+	IDProtocolLegacyTLS11 = "TLS-PROTOCOL-LEGACY-TLS11"
+
+	// Weak cipher suites (phase 6.3)
+	IDCipherNull      = "TLS-CIPHER-NULL"
+	IDCipherExport    = "TLS-CIPHER-EXPORT"
+	IDCipherRC4       = "TLS-CIPHER-RC4"
+	IDCipherDES       = "TLS-CIPHER-DES"
+	IDCipherTripleDES = "TLS-CIPHER-3DES"
+	IDCipherCBCTLS10  = "TLS-CIPHER-CBC-TLS10"
+	IDCipherDHWeak    = "TLS-CIPHER-DH-WEAK"
+
+	// Active vulnerability probe (phase 6.5)
+	IDVulnHeartbleed = "TLS-VULN-HEARTBLEED"
 )
 
 // errFinding is the canonical "fetcher exploded" record.

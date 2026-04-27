@@ -160,11 +160,13 @@ func TestRegisterAddsAllPhase6Checks(t *testing.T) {
 	r := checks.NewRegistry()
 	scannertls.Register(r)
 	for _, id := range []string{
+		// Phase 6.1 — modern TLS
 		scannertls.IDProtocolTLS12Missing,
 		scannertls.IDProtocolTLS13Missing,
 		scannertls.IDCipherNoForwardSecrecy,
 		scannertls.IDALPNNoHTTP2,
 		scannertls.IDOCSPStaplingMissing,
+		// Phase 6.2 — certificates
 		scannertls.IDCertExpired,
 		scannertls.IDCertExpiresSoon14d,
 		scannertls.IDCertExpiresSoon30d,
@@ -174,9 +176,27 @@ func TestRegisterAddsAllPhase6Checks(t *testing.T) {
 		scannertls.IDCertWeakRSA,
 		scannertls.IDCertWeakECC,
 		scannertls.IDCertWeakSignature,
+		// Phase 6.3 — legacy protocols
+		scannertls.IDProtocolLegacyTLS10,
+		scannertls.IDProtocolLegacyTLS11,
+		// Phase 6.3 — weak ciphers
+		scannertls.IDCipherNull,
+		scannertls.IDCipherExport,
+		scannertls.IDCipherRC4,
+		scannertls.IDCipherDES,
+		scannertls.IDCipherTripleDES,
+		scannertls.IDCipherCBCTLS10,
+		scannertls.IDCipherDHWeak,
+		// Phase 6.4 — SSLv2/SSLv3
+		scannertls.IDProtocolLegacySSL2,
+		scannertls.IDProtocolLegacySSL3,
+		// Phase 6.5 — Heartbleed stub
+		scannertls.IDVulnHeartbleed,
+		// Phase 6.6 — HSTS + redirect
 		scannertls.IDHSTSMissing,
 		scannertls.IDHSTSMaxAgeLow,
 		scannertls.IDHSTSNoIncludeSubDomains,
+		scannertls.IDHSTSNoPreload,
 		scannertls.IDRedirectHTTPToHTTPS,
 	} {
 		if _, ok := r.Get(id); !ok {
