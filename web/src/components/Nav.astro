@@ -21,23 +21,36 @@ const links = [
       <span class="font-semibold text-sm text-ink tracking-tight">WebSec0</span>
     </a>
 
-    <ul class="flex items-center gap-0.5" role="list">
-      {links.map(({ href, label, key }) => (
-        <li>
-          <a
-            href={href}
-            class:list={[
-              'px-3 py-1.5 rounded-md text-sm transition-colors',
-              current === key
-                ? 'text-ink font-medium bg-sand-100'
-                : 'text-ink-muted hover:text-ink hover:bg-sand-100',
-            ]}
-          >
-            {label}
-          </a>
-        </li>
-      ))}
-    </ul>
+    <div class="flex items-center gap-1">
+      <ul class="flex items-center gap-0.5" role="list">
+        {links.map(({ href, label, key }) => (
+          <li>
+            <a
+              href={href}
+              class:list={[
+                'px-3 py-1.5 rounded-md text-sm transition-colors',
+                current === key
+                  ? 'text-ink font-medium bg-sand-100'
+                  : 'text-ink-muted hover:text-ink hover:bg-sand-100',
+              ]}
+            >
+              {label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <a
+        href="/"
+        class="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-sm font-medium
+               hover:bg-accent-hover transition-colors"
+        aria-label="Run a scan"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clip-rule="evenodd"/>
+        </svg>
+        Scan
+      </a>
+    </div>
 
   </nav>
 </header>
