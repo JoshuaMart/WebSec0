@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // --- TLS-CERT-EXPIRED -------------------------------------------------

@@ -3,7 +3,7 @@ package tls
 import (
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // Register adds every TLS check shipped in Phase 6.1+6.2+6.6 to r.

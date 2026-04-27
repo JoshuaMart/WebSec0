@@ -1,4 +1,4 @@
-// Command websec101 is the WebSec101 server binary. It hosts the HTTP API
+// Command websec0 is the WebSec101 server binary. It hosts the HTTP API
 // (and, in later phases, the embedded frontend).
 package main
 
@@ -15,34 +15,34 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/Jomar/websec101/internal/api"
-	"github.com/Jomar/websec101/internal/audit"
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/config"
-	"github.com/Jomar/websec101/internal/logging"
-	"github.com/Jomar/websec101/internal/ratelimit"
-	"github.com/Jomar/websec101/internal/scanner"
-	"github.com/Jomar/websec101/internal/scanner/cookies"
-	scannerdns "github.com/Jomar/websec101/internal/scanner/dns"
-	"github.com/Jomar/websec101/internal/scanner/email"
-	"github.com/Jomar/websec101/internal/scanner/headers"
-	scannerhttp "github.com/Jomar/websec101/internal/scanner/http"
-	"github.com/Jomar/websec101/internal/scanner/safety"
-	scannertls "github.com/Jomar/websec101/internal/scanner/tls"
-	"github.com/Jomar/websec101/internal/scanner/wellknown"
-	"github.com/Jomar/websec101/internal/storage/memory"
-	"github.com/Jomar/websec101/internal/version"
+	"github.com/JoshuaMart/websec0/internal/api"
+	"github.com/JoshuaMart/websec0/internal/audit"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/config"
+	"github.com/JoshuaMart/websec0/internal/logging"
+	"github.com/JoshuaMart/websec0/internal/ratelimit"
+	"github.com/JoshuaMart/websec0/internal/scanner"
+	"github.com/JoshuaMart/websec0/internal/scanner/cookies"
+	scannerdns "github.com/JoshuaMart/websec0/internal/scanner/dns"
+	"github.com/JoshuaMart/websec0/internal/scanner/email"
+	"github.com/JoshuaMart/websec0/internal/scanner/headers"
+	scannerhttp "github.com/JoshuaMart/websec0/internal/scanner/http"
+	"github.com/JoshuaMart/websec0/internal/scanner/safety"
+	scannertls "github.com/JoshuaMart/websec0/internal/scanner/tls"
+	"github.com/JoshuaMart/websec0/internal/scanner/wellknown"
+	"github.com/JoshuaMart/websec0/internal/storage/memory"
+	"github.com/JoshuaMart/websec0/internal/version"
 )
 
 func main() {
 	if err := run(os.Args[1:], os.Stderr); err != nil {
-		fmt.Fprintln(os.Stderr, "websec101:", err)
+		fmt.Fprintln(os.Stderr, "websec0:", err)
 		os.Exit(1)
 	}
 }
 
 func run(args []string, errOut *os.File) error {
-	flags := pflag.NewFlagSet("websec101", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("websec0", pflag.ContinueOnError)
 	flags.SortFlags = false
 
 	configPath := flags.StringP("config", "c", "", "path to YAML config file (optional)")
@@ -62,7 +62,7 @@ func run(args []string, errOut *os.File) error {
 
 	if *showVersion {
 		info := version.Get()
-		_, _ = fmt.Fprintf(errOut, "websec101 %s (commit %s, built %s)\n",
+		_, _ = fmt.Fprintf(errOut, "websec0 %s (commit %s, built %s)\n",
 			info.Version, info.Commit, info.BuildDate)
 		return nil
 	}
@@ -160,7 +160,7 @@ func run(args []string, errOut *os.File) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info("websec101 listening",
+		log.Info("websec0 listening",
 			"version", version.Version,
 			"commit", version.Commit,
 			"listen", cfg.Server.Listen,

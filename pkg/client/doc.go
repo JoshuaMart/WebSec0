@@ -2,7 +2,7 @@
 // WebSec101 API.
 //
 // It hosts both the server-side Handler interface (implemented internally
-// by cmd/websec101) and the Client struct (importable by external Go
+// by cmd/websec0) and the Client struct (importable by external Go
 // programs). Request and response types are shared between both.
 //
 // Regenerate with `go generate ./...` (or `make gen`). All other files in

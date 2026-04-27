@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 const (
@@ -100,7 +100,7 @@ func doFetch(ctx context.Context, t *checks.Target) *AuxResult {
 	go func() {
 		defer wg.Done()
 		res.CORSReflect = probe(ctx, cl, t, http.MethodGet, base+"/",
-			map[string]string{"Origin": "https://websec101-test.invalid"})
+			map[string]string{"Origin": "https://websec0-test.invalid"})
 	}()
 	wg.Add(1)
 	go func() {
@@ -111,7 +111,7 @@ func doFetch(ctx context.Context, t *checks.Target) *AuxResult {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		path := fmt.Sprintf("/websec101-test-%d", time.Now().UnixNano())
+		path := fmt.Sprintf("/websec0-test-%d", time.Now().UnixNano())
 		res.NotFound = probe(ctx, cl, t, http.MethodGet, base+path, nil)
 	}()
 	wg.Add(1)

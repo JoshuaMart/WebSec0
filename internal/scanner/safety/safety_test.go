@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Jomar/websec101/internal/scanner/safety"
+	"github.com/JoshuaMart/websec0/internal/scanner/safety"
 )
 
 // stubResolver lets us test ResolveAndValidate without DNS.

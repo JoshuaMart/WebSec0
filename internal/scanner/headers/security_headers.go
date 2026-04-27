@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // --- HEADER-XCTO-MISSING ---------------------------------------------

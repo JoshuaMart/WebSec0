@@ -12,7 +12,7 @@ func Defaults() map[string]any {
 		"scanner.max_concurrent_checks_per_scan": 10,
 		"scanner.per_check_timeout":              "8s",
 		"scanner.per_scan_timeout":               "120s",
-		"scanner.user_agent":                     "WebSec101/0.1.0 (+https://websec101.example/about; passive-scan)",
+		"scanner.user_agent":                     "WebSec101/0.1.0 (+https://websec0.example/about; passive-scan)",
 
 		"storage.backend":   "memory",
 		"storage.ttl":       "24h",

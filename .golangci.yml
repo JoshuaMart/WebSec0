@@ -91,4 +91,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/Jomar/websec101
+        - github.com/JoshuaMart/websec0

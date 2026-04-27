@@ -14,7 +14,7 @@ import (
 
 	mdns "github.com/miekg/dns"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // DefaultResolver is used when Target.DNSResolverAddr is empty.
@@ -233,7 +233,7 @@ func doFetch(ctx context.Context, t *checks.Target) *Result {
 func wildcardProbe(ctx context.Context, server, host string) *WildcardProbe {
 	// 12 random hex characters keeps the chance of a real-zone collision
 	// essentially zero.
-	rand := fmt.Sprintf("websec101-%x", time.Now().UnixNano())
+	rand := fmt.Sprintf("websec0-%x", time.Now().UnixNano())
 	probe := &WildcardProbe{QueryName: rand + "." + host}
 	resp, err := query(ctx, server, probe.QueryName, mdns.TypeA, false)
 	if err != nil || resp == nil {

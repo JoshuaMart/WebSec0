@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // dangerousMethods are HTTP verbs that should not be reachable on a

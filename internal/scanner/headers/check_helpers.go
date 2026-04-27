@@ -1,6 +1,6 @@
 package headers
 
-import "github.com/Jomar/websec101/internal/checks"
+import "github.com/JoshuaMart/websec0/internal/checks"
 
 // Check IDs for the HTTP-headers family.
 const (

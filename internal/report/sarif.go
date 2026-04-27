@@ -1,7 +1,7 @@
 package report
 
 import (
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // SARIF is a minimal subset of the SARIF 2.1.0 schema sufficient for
@@ -87,7 +87,7 @@ func ToSARIF(r *Report) *SARIF {
 		Tool: SARIFTool{Driver: SARIFDriver{
 			Name:           "WebSec101",
 			Version:        r.Scan.ScannerVersion,
-			InformationURI: "https://websec101.example",
+			InformationURI: "https://websec0.example",
 		}},
 		Properties: map[string]any{
 			"target": r.Scan.Target,

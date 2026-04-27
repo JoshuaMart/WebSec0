@@ -17,7 +17,7 @@ func TestVersionCommand(t *testing.T) {
 	if err := root.Execute(); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !strings.HasPrefix(out.String(), "websec101-cli ") {
+	if !strings.HasPrefix(out.String(), "websec0-cli ") {
 		t.Errorf("version output = %q", out.String())
 	}
 }

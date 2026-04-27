@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/report"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/report"
 )
 
 func sample(findings []checks.Finding) *report.Report {

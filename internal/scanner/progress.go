@@ -2,7 +2,7 @@
 // against a Target.
 package scanner
 
-import "github.com/Jomar/websec101/internal/checks"
+import "github.com/JoshuaMart/websec0/internal/checks"
 
 // EventKind enumerates the asynchronous events emitted during a scan.
 // Mirrors the SSE event names defined in SPECIFICATIONS.md §5.6.

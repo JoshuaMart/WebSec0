@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/headers"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/headers"
 )
 
 // Cookies returns every cookie set on the homepage response.

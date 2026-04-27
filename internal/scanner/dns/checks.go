@@ -6,7 +6,7 @@ import (
 
 	mdns "github.com/miekg/dns"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // Check IDs.

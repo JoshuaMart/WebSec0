@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // ErrNotFound is returned by Get/Delete/UpdateStatus when the scan id

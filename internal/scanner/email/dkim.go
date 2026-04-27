@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"strings"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // DKIM is the parsed shape of a `v=DKIM1 …` record.

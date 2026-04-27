@@ -9,12 +9,12 @@ import (
 	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 
-	"github.com/Jomar/websec101/internal/api/middleware"
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner"
-	"github.com/Jomar/websec101/internal/scanner/safety"
-	"github.com/Jomar/websec101/internal/storage"
-	client "github.com/Jomar/websec101/pkg/client"
+	"github.com/JoshuaMart/websec0/internal/api/middleware"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner"
+	"github.com/JoshuaMart/websec0/internal/scanner/safety"
+	"github.com/JoshuaMart/websec0/internal/storage"
+	client "github.com/JoshuaMart/websec0/pkg/client"
 )
 
 // ScanService is what the handler needs from the scanner package — kept

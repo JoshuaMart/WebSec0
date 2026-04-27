@@ -11,10 +11,10 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/report"
-	"github.com/Jomar/websec101/internal/storage"
-	"github.com/Jomar/websec101/internal/version"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/report"
+	"github.com/JoshuaMart/websec0/internal/storage"
+	"github.com/JoshuaMart/websec0/internal/version"
 )
 
 // Manager owns the asynchronous lifecycle of scans: creation, kickoff in

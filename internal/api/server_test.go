@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/api"
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner"
-	"github.com/Jomar/websec101/internal/scanner/safety"
-	"github.com/Jomar/websec101/internal/storage/memory"
-	"github.com/Jomar/websec101/internal/version"
+	"github.com/JoshuaMart/websec0/internal/api"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner"
+	"github.com/JoshuaMart/websec0/internal/scanner/safety"
+	"github.com/JoshuaMart/websec0/internal/storage/memory"
+	"github.com/JoshuaMart/websec0/internal/version"
 )
 
 func newTestServer(t *testing.T) *httptest.Server {

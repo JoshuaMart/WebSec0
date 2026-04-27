@@ -9,7 +9,7 @@ import (
 
 	gocache "github.com/patrickmn/go-cache"
 
-	"github.com/Jomar/websec101/internal/storage"
+	"github.com/JoshuaMart/websec0/internal/storage"
 )
 
 // gcInterval is how often expired entries are reaped. SPECIFICATIONS.md §9.3.

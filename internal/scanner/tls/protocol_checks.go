@@ -4,7 +4,7 @@ import (
 	"context"
 	stdtls "crypto/tls"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // hasForwardSecrecy reports whether suite is an ECDHE/DHE-based cipher

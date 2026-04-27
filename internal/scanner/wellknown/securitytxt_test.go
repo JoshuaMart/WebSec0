@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/wellknown"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/wellknown"
 )
 
 // fixtureServer mimics a target's web root with configurable behaviour

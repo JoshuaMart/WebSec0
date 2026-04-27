@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // Check IDs for the security.txt family.

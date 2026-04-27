@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/storage"
+	"github.com/JoshuaMart/websec0/internal/storage"
 )
 
 func newScan(id string) *storage.Scan {

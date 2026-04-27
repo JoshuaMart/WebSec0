@@ -1,6 +1,6 @@
 package http
 
-import "github.com/Jomar/websec101/internal/checks"
+import "github.com/JoshuaMart/websec0/internal/checks"
 
 // Register adds every Web/Custom check to r.
 func Register(r *checks.Registry) {

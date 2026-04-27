@@ -9,15 +9,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/cookies"
-	scannerdns "github.com/Jomar/websec101/internal/scanner/dns"
-	"github.com/Jomar/websec101/internal/scanner/email"
-	"github.com/Jomar/websec101/internal/scanner/headers"
-	scannerhttp "github.com/Jomar/websec101/internal/scanner/http"
-	scannertls "github.com/Jomar/websec101/internal/scanner/tls"
-	"github.com/Jomar/websec101/internal/scanner/wellknown"
-	client "github.com/Jomar/websec101/pkg/client"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/cookies"
+	scannerdns "github.com/JoshuaMart/websec0/internal/scanner/dns"
+	"github.com/JoshuaMart/websec0/internal/scanner/email"
+	"github.com/JoshuaMart/websec0/internal/scanner/headers"
+	scannerhttp "github.com/JoshuaMart/websec0/internal/scanner/http"
+	scannertls "github.com/JoshuaMart/websec0/internal/scanner/tls"
+	"github.com/JoshuaMart/websec0/internal/scanner/wellknown"
+	client "github.com/JoshuaMart/websec0/pkg/client"
 )
 
 func catalogCmd() *cobra.Command {

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/cookies"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/cookies"
 )
 
 // schemeRewrite mirrors the helper from the headers package: httptest is

@@ -10,16 +10,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/Jomar/websec101/internal/api/handlers"
-	mw "github.com/Jomar/websec101/internal/api/middleware"
-	"github.com/Jomar/websec101/internal/api/spec"
-	"github.com/Jomar/websec101/internal/audit"
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/ratelimit"
-	"github.com/Jomar/websec101/internal/scanner"
-	"github.com/Jomar/websec101/internal/scanner/safety"
-	"github.com/Jomar/websec101/internal/storage"
-	client "github.com/Jomar/websec101/pkg/client"
+	"github.com/JoshuaMart/websec0/internal/api/handlers"
+	mw "github.com/JoshuaMart/websec0/internal/api/middleware"
+	"github.com/JoshuaMart/websec0/internal/api/spec"
+	"github.com/JoshuaMart/websec0/internal/audit"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/ratelimit"
+	"github.com/JoshuaMart/websec0/internal/scanner"
+	"github.com/JoshuaMart/websec0/internal/scanner/safety"
+	"github.com/JoshuaMart/websec0/internal/storage"
+	client "github.com/JoshuaMart/websec0/pkg/client"
 )
 
 // Options configures NewServer.

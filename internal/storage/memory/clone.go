@@ -1,8 +1,8 @@
 package memory
 
 import (
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/storage"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/storage"
 )
 
 // cloneScan returns a shallow-but-safe copy: scalar fields are copied,

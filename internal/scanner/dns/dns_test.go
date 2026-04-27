@@ -10,8 +10,8 @@ import (
 
 	mdns "github.com/miekg/dns"
 
-	"github.com/Jomar/websec101/internal/checks"
-	scannerdns "github.com/Jomar/websec101/internal/scanner/dns"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	scannerdns "github.com/JoshuaMart/websec0/internal/scanner/dns"
 )
 
 // mockServer is a tiny in-process DNS server. The handler is replaced

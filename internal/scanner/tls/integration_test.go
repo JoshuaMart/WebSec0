@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
-	scannertls "github.com/Jomar/websec101/internal/scanner/tls"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	scannertls "github.com/JoshuaMart/websec0/internal/scanner/tls"
 )
 
 // certKind picks the leaf certificate generated for the test server.

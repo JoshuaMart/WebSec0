@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-faster/jx"
 
-	"github.com/Jomar/websec101/internal/report"
-	"github.com/Jomar/websec101/internal/storage"
-	client "github.com/Jomar/websec101/pkg/client"
+	"github.com/JoshuaMart/websec0/internal/report"
+	"github.com/JoshuaMart/websec0/internal/storage"
+	client "github.com/JoshuaMart/websec0/pkg/client"
 )
 
 // GetScanMarkdown implements GET /api/v1/scans/{guid}/markdown.

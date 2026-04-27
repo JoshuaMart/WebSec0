@@ -14,14 +14,14 @@ import (
 	ogenhttp "github.com/ogen-go/ogen/http"
 	ogenerrors "github.com/ogen-go/ogen/ogenerrors"
 
-	"github.com/Jomar/websec101/internal/api/spec"
-	"github.com/Jomar/websec101/internal/audit"
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/ratelimit"
-	"github.com/Jomar/websec101/internal/scanner/safety"
-	"github.com/Jomar/websec101/internal/storage"
-	"github.com/Jomar/websec101/internal/version"
-	client "github.com/Jomar/websec101/pkg/client"
+	"github.com/JoshuaMart/websec0/internal/api/spec"
+	"github.com/JoshuaMart/websec0/internal/audit"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/ratelimit"
+	"github.com/JoshuaMart/websec0/internal/scanner/safety"
+	"github.com/JoshuaMart/websec0/internal/storage"
+	"github.com/JoshuaMart/websec0/internal/version"
+	client "github.com/JoshuaMart/websec0/pkg/client"
 )
 
 // Handler is the concrete ogen Handler implementation.

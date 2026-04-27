@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/safety"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/safety"
 )
 
 const (

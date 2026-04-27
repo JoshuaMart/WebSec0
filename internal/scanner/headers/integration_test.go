@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/headers"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/headers"
 )
 
 // fixture spins up an httptest.Server that emits whatever headers the test

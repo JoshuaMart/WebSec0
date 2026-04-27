@@ -1,6 +1,6 @@
 package email
 
-import "github.com/Jomar/websec101/internal/checks"
+import "github.com/JoshuaMart/websec0/internal/checks"
 
 // Register adds every email check to r. The MX-gating logic lives inside
 // each check (gateOnMX), so domains without MX skip every check cleanly.

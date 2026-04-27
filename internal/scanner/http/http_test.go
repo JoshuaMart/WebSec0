@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
-	scannerhttp "github.com/Jomar/websec101/internal/scanner/http"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	scannerhttp "github.com/JoshuaMart/websec0/internal/scanner/http"
 )
 
 // schemeRewrite intercepts https:// requests against the test server and
@@ -97,7 +97,7 @@ func newServer(t *testing.T, f *fixture) *checks.Target {
 				w.Header().Set("Location", f.changePassLoc)
 			}
 			w.WriteHeader(st)
-		case strings.HasPrefix(r.URL.Path, "/websec101-test-"):
+		case strings.HasPrefix(r.URL.Path, "/websec0-test-"):
 			// 404 probe.
 			st := f.notFoundStatus
 			if st == 0 {
@@ -200,8 +200,8 @@ func TestCORSOriginReflectedDetected(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, &fixture{
 		cors: map[string]map[string]string{
-			"https://websec101-test.invalid": {
-				"Access-Control-Allow-Origin":      "https://websec101-test.invalid",
+			"https://websec0-test.invalid": {
+				"Access-Control-Allow-Origin":      "https://websec0-test.invalid",
 				"Access-Control-Allow-Credentials": "true",
 			},
 		},

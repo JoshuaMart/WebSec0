@@ -14,7 +14,7 @@ import (
 )
 
 // DefaultUserAgent is used when a Target is constructed without one set.
-const DefaultUserAgent = "WebSec101/0.1.0 (+https://websec101.example/about; passive-scan)"
+const DefaultUserAgent = "WebSec101/0.1.0 (+https://websec0.example/about; passive-scan)"
 
 // Target is the input handed to every Check during a scan. It holds the
 // canonical hostname, the original input string, and a per-scan DNS cache

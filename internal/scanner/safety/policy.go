@@ -39,7 +39,7 @@ func Default() *Policy {
 }
 
 // Permissive disables every IP-level restriction except metadata. Used
-// by `websec101-cli scan --unsafe` and self-hosted lab deployments.
+// by `websec0-cli scan --unsafe` and self-hosted lab deployments.
 func Permissive() *Policy {
 	return &Policy{
 		RefuseMetadata: true,

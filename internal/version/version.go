@@ -1,5 +1,5 @@
 // Package version exposes build-time metadata. Values are injected via
-// -ldflags '-X github.com/Jomar/websec101/internal/version.<Var>=<value>'.
+// -ldflags '-X github.com/JoshuaMart/websec0/internal/version.<Var>=<value>'.
 // See Makefile for the canonical invocation.
 package version
 

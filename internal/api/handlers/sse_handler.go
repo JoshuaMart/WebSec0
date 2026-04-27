@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/Jomar/websec101/internal/api/sse"
-	"github.com/Jomar/websec101/internal/scanner"
-	"github.com/Jomar/websec101/internal/storage"
+	"github.com/JoshuaMart/websec0/internal/api/sse"
+	"github.com/JoshuaMart/websec0/internal/scanner"
+	"github.com/JoshuaMart/websec0/internal/storage"
 )
 
 // heartbeatInterval is how often the SSE connection emits a comment line

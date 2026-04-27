@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // HSTSPolicy is the parsed shape of a Strict-Transport-Security header.

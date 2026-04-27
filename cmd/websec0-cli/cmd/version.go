@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Jomar/websec101/internal/version"
+	"github.com/JoshuaMart/websec0/internal/version"
 )
 
 func versionCmd() *cobra.Command {
@@ -15,7 +15,7 @@ func versionCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			info := version.Get()
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(),
-				"websec101-cli %s (commit %s, built %s)\n",
+				"websec0-cli %s (commit %s, built %s)\n",
 				info.Version, info.Commit, info.BuildDate)
 			return nil
 		},

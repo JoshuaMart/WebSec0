@@ -1,4 +1,4 @@
-// Package config loads the websec101 configuration from defaults, an optional
+// Package config loads the websec0 configuration from defaults, an optional
 // YAML file, environment variables prefixed with WEBSEC101_, and CLI flags.
 //
 // Precedence (lowest to highest): defaults < YAML < env < flags.

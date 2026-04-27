@@ -3,7 +3,7 @@ package tls
 import (
 	"context"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // --- TLS-REDIRECT-HTTP-TO-HTTPS ---------------------------------------

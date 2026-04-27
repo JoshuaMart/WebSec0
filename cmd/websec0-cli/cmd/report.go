@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
-	"github.com/Jomar/websec101/internal/report"
-	client "github.com/Jomar/websec101/pkg/client"
+	"github.com/JoshuaMart/websec0/internal/report"
+	client "github.com/JoshuaMart/websec0/pkg/client"
 )
 
 func reportCmd() *cobra.Command {

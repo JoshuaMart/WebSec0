@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/headers"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/headers"
 )
 
 // --- HTTP-HTTP2-MISSING ----------------------------------------------

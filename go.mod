@@ -1,4 +1,4 @@
-module github.com/Jomar/websec101
+module github.com/JoshuaMart/websec0
 
 go 1.25.0
 

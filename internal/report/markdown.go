@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Jomar/websec101/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/checks"
 )
 
 // Markdown renders a Report as the human-and-agent-friendly Markdown

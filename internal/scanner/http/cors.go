@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Jomar/websec101/internal/checks"
-	"github.com/Jomar/websec101/internal/scanner/headers"
+	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/scanner/headers"
 )
 
 // --- HTTP-CORS-WILDCARD-CREDENTIALS ----------------------------------
@@ -49,7 +49,7 @@ func (corsWildcardCredCheck) Run(ctx context.Context, t *checks.Target) (*checks
 
 // --- HTTP-CORS-ORIGIN-REFLECTED --------------------------------------
 //
-// We GET / with `Origin: https://websec101-test.invalid`. If the
+// We GET / with `Origin: https://websec0-test.invalid`. If the
 // server reflects that origin verbatim AND attaches credentials, any
 // cross-origin attacker can read authenticated responses.
 
@@ -77,7 +77,7 @@ func (corsReflectedCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 		return skipped(IDCORSOriginReflected, checks.FamilyHTTP, checks.SeverityHigh, reason), nil
 	}
 	acao := strings.TrimSpace(res.CORSReflect.Headers.Get("Access-Control-Allow-Origin"))
-	if acao == "https://websec101-test.invalid" {
+	if acao == "https://websec0-test.invalid" {
 		acac := strings.ToLower(strings.TrimSpace(res.CORSReflect.Headers.Get("Access-Control-Allow-Credentials")))
 		sev := checks.SeverityMedium
 		if acac == "true" {
