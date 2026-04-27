@@ -13,9 +13,6 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 - [x] Initialiser `go.mod` (`go mod init github.com/your-org/websec0`, Go 1.23)
 - [x] Créer la structure de dossiers vide conforme au layout §2.2
 - [x] Premier commit `chore: bootstrap repository`
-- [ ] Ajouter `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1)
-- [ ] Ajouter `CONTRIBUTING.md` (workflow PR, conventional commits, dev setup)
-- [ ] Ajouter `SECURITY.md` (canal de divulgation, GPG key, délai 90j)
 - [ ] Ajouter `CHANGELOG.md` (format Keep a Changelog, vide initialement)
 - [x] Ajouter `.editorconfig`
 - [ ] Configurer branch protection sur `main` (require PR review, require status checks, signed commits)
@@ -30,8 +27,6 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 - [x] Créer `Makefile` racine (`build`, `test`, `lint`, `clean`, `run`, `gen`, `test-race`)
 - [ ] Configurer `dependabot.yml` (gomod weekly + github-actions weekly + npm weekly)
 - [ ] Ajouter le workflow `codeql.yml` (Go + JavaScript, hebdo + PR sensibles)
-- [ ] Ajouter `.github/PULL_REQUEST_TEMPLATE.md`
-- [ ] Ajouter `.github/ISSUE_TEMPLATE/{bug_report,feature_request}.md`
 - [ ] Activer OSSF Scorecard workflow
 
 ## Phase 2 — Foundation backend
