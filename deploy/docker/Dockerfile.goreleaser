@@ -1,7 +1,11 @@
 # Thin Dockerfile used by GoReleaser: the binary is pre-built and injected
 # into the build context. The frontend is already embedded in the binary.
+# With dockers_v2, GoReleaser places binaries at <TARGETOS>/<TARGETARCH>/websec0 —
+# Docker Buildx sets TARGETOS/TARGETARCH automatically per platform.
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
-COPY websec0 /websec0
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+COPY ${TARGETOS}/${TARGETARCH}/websec0 /websec0
 EXPOSE 8080
 USER nonroot:nonroot
 ENTRYPOINT ["/websec0"]
