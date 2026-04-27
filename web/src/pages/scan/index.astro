@@ -391,25 +391,19 @@ import Nav from '../../components/Nav.astro';
                 <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Score breakdown</h3>
                 <div class="space-y-3">
                   <template x-for="item in familyBreakdown" :key="item.family">
-                    <div>
-                      <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-sm font-mono text-ink" x-text="item.family"></span>
-                        <div class="flex items-center gap-2.5">
-                          <!-- Grade letter -->
-                          <span class="text-xs font-mono font-bold"
-                                :class="item.grade.charAt(0)==='A'?'text-accent':item.grade==='B'?'text-blue-600':item.grade==='C'?'text-amber-600':'text-red-600'"
-                                x-text="item.grade"></span>
-                          <!-- Issue count -->
-                          <span class="text-xs font-mono"
-                                :class="item.failed === 0 ? 'text-green-600' : item.failureRate > 50 ? 'text-red-600' : 'text-amber-600'"
-                                x-text="item.failed === 0 ? 'all pass' : item.failed + ' issue' + (item.failed > 1 ? 's' : '')"></span>
-                        </div>
-                      </div>
-                      <div class="h-1.5 bg-sand-200 rounded-full overflow-hidden">
+                    <div class="flex items-center gap-3 py-2 border-b border-sand-200 last:border-0">
+                      <!-- Family name -->
+                      <span class="font-mono text-sm text-ink w-20 flex-shrink-0" x-text="item.family"></span>
+                      <!-- Pass-rate bar (longer = better) -->
+                      <div class="flex-1 h-1.5 bg-sand-200 rounded-full overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-700"
-                             :class="item.failed === 0 ? 'bg-accent' : item.failureRate > 50 ? 'bg-red-500' : 'bg-amber-500'"
-                             :style="'width:' + (item.failed === 0 ? 100 : item.failureRate) + '%'"></div>
+                             :class="familyBarColor(item.grade)"
+                             :style="'width:' + item.passRate + '%'"></div>
                       </div>
+                      <!-- Grade letter (right) -->
+                      <span class="font-mono text-sm font-bold w-6 text-right flex-shrink-0"
+                            :class="familyGradeColor(item.grade)"
+                            x-text="item.grade"></span>
                     </div>
                   </template>
                   <div x-show="familyBreakdown.length === 0" class="text-xs text-ink-faint py-2">No data yet</div>
@@ -605,10 +599,9 @@ import Nav from '../../components/Nav.astro';
         }
         return Object.values(map).map(item => {
           const total = item.passed + item.failed;
-          const passRate = total > 0 ? item.passed / total : 0;
-          const failureRate = Math.round((1 - passRate) * 100);
-          const grade = passRate >= 0.97 ? 'A+' : passRate >= 0.9 ? 'A' : passRate >= 0.8 ? 'B' : passRate >= 0.7 ? 'C' : passRate >= 0.5 ? 'D' : 'F';
-          return { ...item, failureRate, grade };
+          const passRate = total > 0 ? Math.round(item.passed / total * 100) : 0;
+          const grade = passRate >= 97 ? 'A+' : passRate >= 90 ? 'A' : passRate >= 80 ? 'B' : passRate >= 70 ? 'C' : passRate >= 50 ? 'D' : 'F';
+          return { ...item, passRate, grade };
         }).sort((a, b) => b.failed - a.failed); // worst first
       },
 
@@ -624,6 +617,18 @@ import Nav from '../../components/Nav.astro';
           f.severity === sev &&
           (this.selectedFamily === 'all' || f.family === this.selectedFamily)
         );
+      },
+      familyBarColor(grade) {
+        const g = (grade || 'F').charAt(0);
+        if (g === 'A') return 'bg-accent';
+        if (g === 'B' || g === 'C') return 'bg-amber-500';
+        return 'bg-red-500';
+      },
+      familyGradeColor(grade) {
+        const g = (grade || 'F').charAt(0);
+        if (g === 'A') return 'text-accent';
+        if (g === 'B' || g === 'C') return 'text-amber-600';
+        return 'text-red-600';
       },
       sevLabel(sev) {
         return { critical:'Critical – Fix immediately', high:'High priority', medium:'Medium – Recommended', low:'Low – Nice to have', info:'Info' }[sev] || sev;
