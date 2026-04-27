@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "devDependencies": {
+    "@stoplight/spectral-cli": "6.14.2"
+  }
+}

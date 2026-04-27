@@ -22,12 +22,10 @@ jobs:
           node-version: '20'
 
       - name: install commitlint
-        run: |
-          npm install --no-save \
-            @commitlint/cli@19 \
-            @commitlint/config-conventional@19
+        run: npm ci
+        working-directory: .github/tools/commitlint
 
       - name: lint PR title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: echo "$PR_TITLE" | npx --no-install commitlint
+        run: echo "$PR_TITLE" | .github/tools/commitlint/node_modules/.bin/commitlint

@@ -59,9 +59,10 @@ jobs:
         with:
           node-version: '20'
 
-      - run: npm install --no-save @stoplight/spectral-cli@6
+      - run: npm ci
+        working-directory: .github/tools/spectral
 
-      - run: npx --no-install spectral lint --ruleset .spectral.yaml api/openapi.yaml
+      - run: .github/tools/spectral/node_modules/.bin/spectral lint --ruleset .spectral.yaml api/openapi.yaml
 
       - name: upload coverage
         if: always()
