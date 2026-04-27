@@ -1,6 +1,6 @@
 # Thin Dockerfile used by GoReleaser: the binary is pre-built and injected
 # into the build context. The frontend is already embedded in the binary.
-FROM gcr.io/distroless/static-debian13:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
 COPY websec0 /websec0
 EXPOSE 8080
 USER nonroot:nonroot
