@@ -33,7 +33,7 @@ import Nav from '../../components/Nav.astro';
 
       <!-- Sticky sub-header: breadcrumb + export -->
       <div class="sticky top-14 z-40 bg-sand/95 backdrop-blur-sm border-b border-sand-200">
-        <div class="max-w-6xl mx-auto px-6 h-10 flex items-center justify-between gap-4">
+        <div class="max-w-7xl mx-auto px-6 h-10 flex items-center justify-between gap-4">
           <div class="flex items-center gap-2 text-xs font-mono text-ink-faint min-w-0">
             <a href="/" class="hover:text-ink flex-shrink-0 transition-colors">WebSec0</a>
             <span class="flex-shrink-0 text-sand-300">›</span>
@@ -91,7 +91,7 @@ import Nav from '../../components/Nav.astro';
 
       <!-- ── Completed: grade summary bar ──────────────────────── -->
       <div x-show="status === 'completed'" class="bg-white border-b border-sand-200">
-        <div class="max-w-6xl mx-auto px-6 py-6">
+        <div class="max-w-7xl mx-auto px-6 py-6">
           <div class="flex items-center gap-6 flex-wrap md:flex-nowrap">
 
             <!-- Grade box -->
@@ -141,7 +141,7 @@ import Nav from '../../components/Nav.astro';
 
       <!-- ── Family filter tabs ─────────────────────────────────── -->
       <div x-show="status === 'completed'" class="border-b border-sand-200 bg-white">
-        <div class="max-w-6xl mx-auto px-6 overflow-x-auto scrollbar-none">
+        <div class="max-w-7xl mx-auto px-6 overflow-x-auto scrollbar-none">
           <div class="flex items-center -mb-px">
 
             <!-- All -->
@@ -173,7 +173,7 @@ import Nav from '../../components/Nav.astro';
       </div>
 
       <!-- ── Completed: severity pills (full width, above grid) ──── -->
-      <div x-show="status === 'completed'" class="max-w-6xl mx-auto px-6 pt-6 pb-0">
+      <div x-show="status === 'completed'" class="max-w-7xl mx-auto px-6 pt-6 pb-0">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-ink-faint flex-shrink-0 mr-1">Severity</span>
           <button @click="selectedSeverity = 'all'"
@@ -200,7 +200,7 @@ import Nav from '../../components/Nav.astro';
       </div>
 
       <!-- ── Completed: 2-col layout ───────────────────────────── -->
-      <div x-show="status === 'completed'" class="max-w-6xl mx-auto px-6 py-6">
+      <div x-show="status === 'completed'" class="max-w-7xl mx-auto px-6 py-6">
         <div class="grid lg:grid-cols-3 gap-8">
 
           <!-- ── Findings column (2/3) ─── -->
@@ -250,82 +250,93 @@ import Nav from '../../components/Nav.astro';
                       </div>
 
                       <!-- Expanded body -->
-                      <div x-show="open" x-transition class="border-t border-sand-200 px-5 pb-5 pt-4 space-y-5">
-                        <!-- Description (when distinct from title) -->
-                        <p x-show="finding.title && finding.description" class="text-sm text-ink-muted leading-relaxed" x-text="finding.description"></p>
+                      <div x-show="open" x-transition class="border-t border-sand-200 px-6 pb-6 pt-5 space-y-6">
 
-                        <!-- Why it matters + Impact (2-col when both present) -->
+                        <!-- Description (when distinct from title) -->
+                        <p x-show="finding.title && finding.description"
+                           class="text-base text-ink-muted leading-relaxed"
+                           x-text="finding.description"></p>
+
+                        <!-- 2-col: [Why it matters] | [Impact + References] -->
                         <div x-show="finding.remediation && (finding.remediation.why_it_matters || finding.remediation.impact)"
-                             class="grid sm:grid-cols-2 gap-5 pb-1">
+                             class="grid sm:grid-cols-2 gap-8">
+
+                          <!-- Left: Why it matters -->
                           <div x-show="finding.remediation && finding.remediation.why_it_matters">
-                            <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">Why it matters</p>
+                            <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Why it matters</p>
                             <p class="text-sm text-ink-muted leading-relaxed" x-text="finding.remediation && finding.remediation.why_it_matters"></p>
                           </div>
-                          <div x-show="finding.remediation && finding.remediation.impact">
-                            <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">Impact</p>
-                            <p class="text-sm text-ink-muted leading-relaxed" x-text="finding.remediation && finding.remediation.impact"></p>
-                          </div>
-                        </div>
 
-                        <!-- References -->
-                        <div x-show="finding.remediation && finding.remediation.references && finding.remediation.references.length > 0">
-                          <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">References</p>
-                          <div class="space-y-1.5">
-                            <template x-for="ref in (finding.remediation && finding.remediation.references) || []" :key="ref.url || ref.title">
-                              <a :href="ref.url" target="_blank" rel="noopener noreferrer"
-                                 class="flex items-start gap-1.5 text-sm text-accent hover:underline">
-                                <svg class="w-3 h-3 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                  <path fill-rule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clip-rule="evenodd"/>
-                                  <path fill-rule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clip-rule="evenodd"/>
-                                </svg>
-                                <span x-text="ref.title"></span>
-                              </a>
-                            </template>
+                          <!-- Right: Impact + References stacked -->
+                          <div class="space-y-4">
+                            <div x-show="finding.remediation && finding.remediation.impact">
+                              <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">Impact</p>
+                              <p class="text-sm text-ink-muted leading-relaxed" x-text="finding.remediation && finding.remediation.impact"></p>
+                            </div>
+                            <div x-show="finding.remediation && finding.remediation.references && finding.remediation.references.length > 0">
+                              <p class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-2">References</p>
+                              <div class="space-y-1.5">
+                                <template x-for="ref in (finding.remediation && finding.remediation.references) || []" :key="ref.url || ref.title">
+                                  <a :href="ref.url" target="_blank" rel="noopener noreferrer"
+                                     class="flex items-start gap-1.5 text-sm text-accent hover:underline">
+                                    <span class="flex-shrink-0 mt-0.5 text-[10px]">↗</span>
+                                    <span x-text="ref.title"></span>
+                                  </a>
+                                </template>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
                         <!-- Evidence -->
-                        <div x-show="finding.evidence && Object.keys(finding.evidence).length > 0" class="rounded-xl border border-sand-200 overflow-hidden">
-                          <div class="px-4 py-2 bg-sand-50 border-b border-sand-200">
-                            <span class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint">Evidence</span>
+                        <div x-show="finding.evidence && Object.keys(finding.evidence).length > 0"
+                             class="rounded-xl border border-sand-200 overflow-hidden">
+                          <div class="px-4 py-2 border-b border-sand-200 bg-sand-50">
+                            <span class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint">Evidence (live response)</span>
                           </div>
-                          <pre class="text-xs font-mono text-ink-muted px-4 py-3 overflow-x-auto whitespace-pre-wrap break-all" x-text="JSON.stringify(finding.evidence, null, 2)"></pre>
+                          <pre class="text-xs font-mono text-ink px-4 py-3 overflow-x-auto whitespace-pre-wrap break-all bg-white"
+                               x-text="JSON.stringify(finding.evidence, null, 2)"></pre>
                         </div>
 
                         <!-- Remediation snippets -->
-                        <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length > 0" class="rounded-xl border border-sand-200 overflow-hidden">
+                        <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length > 0"
+                             class="rounded-xl border border-sand-200 overflow-hidden">
                           <!-- Tab bar -->
-                          <div class="flex items-center border-b border-sand-200 overflow-x-auto scrollbar-none">
+                          <div class="flex items-center bg-sand-50 border-b border-sand-200 overflow-x-auto scrollbar-none px-1">
                             <template x-for="s in Object.keys((finding.remediation && finding.remediation.snippets) || {})" :key="s">
                               <button @click="tab = s"
-                                      :class="tab === s ? 'border-b-2 border-accent text-ink bg-white' : 'border-b-2 border-transparent text-ink-muted hover:text-ink bg-sand-50'"
-                                      class="px-4 py-2.5 text-xs font-mono whitespace-nowrap transition-colors -mb-px"
+                                      :class="tab === s
+                                        ? 'bg-white border border-sand-200 text-ink font-semibold shadow-sm -mb-px rounded-t-md'
+                                        : 'text-ink-muted hover:text-ink'"
+                                      class="px-4 py-2.5 text-xs font-mono whitespace-nowrap transition-colors mt-1 mr-1"
                                       type="button" x-text="s"></button>
                             </template>
-                            <span class="ml-auto px-4 text-[10px] font-mono text-ink-faint whitespace-nowrap">Remediation snippet</span>
+                            <span class="ml-auto px-4 text-[10px] font-mono text-ink-faint whitespace-nowrap">Remediation snippet — copy &amp; deploy</span>
                           </div>
-                          <!-- Code block -->
-                          <div class="relative bg-gray-950 px-4 pt-3 pb-4">
-                            <pre class="font-mono text-sm text-green-400 leading-relaxed whitespace-pre-wrap break-all pr-20"
+                          <!-- Code block (light style) -->
+                          <div class="relative bg-white px-5 pt-4 pb-4">
+                            <pre class="font-mono text-sm text-ink leading-relaxed whitespace-pre-wrap break-all pr-24"
                                  x-text="((finding.remediation && finding.remediation.snippets) || {})[tab] || ''"></pre>
                             <button x-data="{ copied: false }"
                                     @click="navigator.clipboard.writeText(((finding.remediation&&finding.remediation.snippets)||{})[tab]||'').then(()=>{copied=true;setTimeout(()=>{copied=false},2000)}).catch(()=>{})"
-                                    class="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all">
+                                    class="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono
+                                           border border-sand-200 bg-white text-ink-muted hover:text-ink hover:border-sand-300 shadow-sm transition-all">
                               <svg x-show="!copied" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z"/><path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z"/></svg>
-                              <svg x-show="copied" class="w-3.5 h-3.5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                              <svg x-show="copied" class="w-3.5 h-3.5 text-accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
                               <span x-text="copied ? 'Copied!' : 'Copy'"></span>
                             </button>
                           </div>
                           <!-- Verify footer -->
                           <div x-show="finding.remediation && finding.remediation.verification"
                                class="px-4 py-2.5 border-t border-sand-200 bg-sand-50">
-                            <p class="text-xs font-mono text-ink-faint" x-text="'verify: ' + ((finding.remediation && finding.remediation.verification) || '')"></p>
+                            <p class="text-xs font-mono text-ink-faint"
+                               x-text="'verify: ' + ((finding.remediation && finding.remediation.verification) || '')"></p>
                           </div>
                         </div>
 
                         <!-- No snippets -->
                         <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length === 0">
-                          <p class="text-xs text-ink-faint">No stack-specific snippets yet. <a href="/checks/" class="text-accent hover:underline">View catalog →</a></p>
+                          <p class="text-xs text-ink-faint">No stack-specific snippets yet for this check. <a href="/checks/" class="text-accent hover:underline">View catalog →</a></p>
                         </div>
                       </div>
                     </div>
