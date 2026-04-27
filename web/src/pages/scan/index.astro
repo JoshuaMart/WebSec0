@@ -141,7 +141,7 @@ import Nav from '../../components/Nav.astro';
 
       <!-- ── Family filter tabs ─────────────────────────────────── -->
       <div x-show="status === 'completed'" class="border-b border-sand-200 bg-white">
-        <div class="max-w-6xl mx-auto px-6 overflow-x-auto">
+        <div class="max-w-6xl mx-auto px-6 overflow-x-auto scrollbar-none">
           <div class="flex items-center -mb-px">
 
             <!-- All -->
@@ -179,9 +179,45 @@ import Nav from '../../components/Nav.astro';
           <!-- ── Findings column (2/3) ─── -->
           <div class="lg:col-span-2 space-y-8">
 
+            <!-- Severity filter pills -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-ink-faint flex-shrink-0 mr-1">Severity</span>
+
+              <!-- All -->
+              <button @click="selectedSeverity = 'all'"
+                      :class="selectedSeverity === 'all' ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors"
+                      type="button">
+                All findings
+                <span class="font-semibold" x-text="filteredFailedCount"></span>
+              </button>
+
+              <!-- Per severity -->
+              <template x-for="sev in ['critical','high','medium','low','info']" :key="sev + '-pill'">
+                <button x-show="filteredBySev(sev).length > 0"
+                        @click="selectedSeverity = sev"
+                        :class="selectedSeverity === sev ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors capitalize"
+                        type="button">
+                  <span x-text="sev.charAt(0).toUpperCase() + sev.slice(1)"></span>
+                  <span class="font-semibold" x-text="filteredBySev(sev).length"></span>
+                </button>
+              </template>
+
+              <!-- Passing -->
+              <button x-show="filteredPassed.length > 0"
+                      @click="selectedSeverity = 'passing'"
+                      :class="selectedSeverity === 'passing' ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors"
+                      type="button">
+                Passing
+                <span class="font-semibold" x-text="filteredPassed.length"></span>
+              </button>
+            </div>
+
             <!-- Severity sections -->
             <template x-for="sev in ['critical','high','medium','low','info']" :key="sev">
-              <section x-show="filteredBySev(sev).length > 0">
+              <section x-show="filteredBySev(sev).length > 0 && (selectedSeverity === 'all' || selectedSeverity === sev)">
 
                 <!-- Section header -->
                 <div class="flex items-center gap-3 mb-3">
@@ -269,7 +305,7 @@ import Nav from '../../components/Nav.astro';
             </template>
 
             <!-- Passing section -->
-            <section x-show="filteredPassed.length > 0">
+            <section x-show="filteredPassed.length > 0 && (selectedSeverity === 'all' || selectedSeverity === 'passing')">
               <div class="flex items-center gap-3 mb-3">
                 <button @click="showPassed = !showPassed" class="flex items-center gap-3 flex-1 text-left" type="button">
                   <h2 class="text-xs font-bold font-mono uppercase tracking-wider flex-shrink-0 text-green-700">Passing</h2>
@@ -401,6 +437,7 @@ import Nav from '../../components/Nav.astro';
       eventSource: null,
       showPassed: false,
       selectedFamily: 'all',
+      selectedSeverity: 'all',
 
       // ── Lifecycle ──────────────────────────────────────────
       async init() {
@@ -538,6 +575,12 @@ import Nav from '../../components/Nav.astro';
           ...item,
           rate: Math.round(item.passed / Math.max(1, item.passed + item.failed) * 100),
         })).sort((a, b) => a.family.localeCompare(b.family));
+      },
+
+      get filteredFailedCount() {
+        return this.failedFindings.filter(f =>
+          this.selectedFamily === 'all' || f.family === this.selectedFamily
+        ).length;
       },
 
       // ── Methods ───────────────────────────────────────────
