@@ -139,7 +139,7 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 - [x] `internal/scanner/tls/probes/sslv3.go` : ClientHello SSLv3 craft + analyse réponse (cf. §4.3)
 - [x] `internal/scanner/tls/probes/sslv2.go` : ClientHello SSLv2 (record format Netscape)
 - [x] Tests unitaires probes (mock TCP server répondant ServerHello/Alert/RST)
-- [ ] Tests d'intégration contre `tls-v1-0.badssl.com`, `tls-v1-1.badssl.com`, `null.badssl.com`, `rc4.badssl.com`, etc. (différé — accès réseau CI)
+- [x] Tests d'intégration contre badssl.com (`integration` build tag) : SSLv2/SSLv3, TLS 1.0/1.1, RC4, RC4-MD5, 3DES, NULL, DH 480/1024-bit, Heartbleed safe, cipher enum — `go test -tags integration ./internal/scanner/tls/probes/`
 - [x] `TLS-PROTOCOL-LEGACY-SSL2`, `*-LEGACY-SSL3`
 
 ### 6.5 Heartbleed actif
