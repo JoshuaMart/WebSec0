@@ -10,4 +10,14 @@ export default defineConfig({
     tailwind({ applyBaseStyles: false }),
     alpinejs(),
   ],
+  vite: {
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
+      },
+    },
+  },
 });
