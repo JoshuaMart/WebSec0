@@ -1,0 +1,35 @@
+services:
+  websec0:
+    image: ghcr.io/joshuamart/websec0:latest
+    container_name: websec0
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/etc/websec0/config.yaml:ro
+    environment:
+      # Override individual settings via env vars (prefix: WEBSEC101_)
+      - WEBSEC101_SERVER_LISTEN=:8080
+      - WEBSEC101_LOGGING_LEVEL=info
+      - WEBSEC101_LOGGING_FORMAT=json
+      # Uncomment to persist reports across restarts (requires redis backend)
+      # - WEBSEC101_STORAGE_BACKEND=redis
+      # - WEBSEC101_STORAGE_REDIS_URL=redis://redis:6379/0
+    healthcheck:
+      test: ["/websec0", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Optional: Redis for persistent scan storage (uncomment to enable)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: websec0-redis
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis_data:/data
+  #   command: redis-server --save 60 1 --loglevel warning
+
+# volumes:
+#   redis_data:

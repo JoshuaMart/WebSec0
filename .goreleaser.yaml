@@ -1,0 +1,238 @@
+version: 2
+
+project_name: websec0
+
+before:
+  hooks:
+    - go mod download
+    - pnpm --dir web install --frozen-lockfile
+    - pnpm --dir web build
+
+builds:
+  - id: websec0
+    main: ./cmd/websec0
+    binary: websec0
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/JoshuaMart/websec0/internal/version.Version={{.Version}}
+      - -X github.com/JoshuaMart/websec0/internal/version.Commit={{.ShortCommit}}
+      - -X github.com/JoshuaMart/websec0/internal/version.BuildDate={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+  - id: websec0-cli
+    main: ./cmd/websec0-cli
+    binary: websec0-cli
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/JoshuaMart/websec0/internal/version.Version={{.Version}}
+      - -X github.com/JoshuaMart/websec0/internal/version.Commit={{.ShortCommit}}
+      - -X github.com/JoshuaMart/websec0/internal/version.BuildDate={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: websec0
+    ids: [websec0]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+  - id: websec0-cli
+    ids: [websec0-cli]
+    name_template: >-
+      {{ .ProjectName }}-cli_{{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+
+# SBOM generation via Syft (SPDX JSON format)
+sboms:
+  - artifacts: archive
+
+# Cosign v3 keyless OIDC signing — uses --bundle (replaces --output-certificate
+# / --output-signature in cosign <3.0). Requires OIDC identity from CI.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.bundle"
+    args:
+      - sign-blob
+      - --bundle=${signature}
+      - ${artifact}
+      - --yes
+    artifacts: checksum
+    output: true
+
+# Docker images (linux/amd64 + linux/arm64) — server binary only
+dockers:
+  - id: websec0-linux-amd64
+    ids: [websec0]
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
+    dockerfile: deploy/docker/Dockerfile.goreleaser
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.description=Passive web security scanner"
+      - "--label=org.opencontainers.image.url=https://github.com/JoshuaMart/websec0"
+      - "--label=org.opencontainers.image.source=https://github.com/JoshuaMart/websec0"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - id: websec0-linux-arm64
+    ids: [websec0]
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
+    dockerfile: deploy/docker/Dockerfile.goreleaser
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.description=Passive web security scanner"
+      - "--label=org.opencontainers.image.url=https://github.com/JoshuaMart/websec0"
+      - "--label=org.opencontainers.image.source=https://github.com/JoshuaMart/websec0"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+# Multi-arch manifests — assembled after per-arch images are pushed
+docker_manifests:
+  - name_template: "ghcr.io/joshuamart/websec0:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/joshuamart/websec0:v{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
+    skip_push: auto
+  - name_template: "ghcr.io/joshuamart/websec0:latest"
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-amd64"
+      - "ghcr.io/joshuamart/websec0:{{ .Tag }}-arm64"
+    skip_push: auto
+
+# Cosign signing for published Docker manifests
+docker_signs:
+  - cmd: cosign
+    args:
+      - sign
+      - ${artifact}
+      - --yes
+    artifacts: manifests
+    output: true
+
+# CHANGELOG from Conventional Commits
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^chore\(deps'
+      - '^ci:'
+      - '^docs:'
+      - '^test:'
+      - "^Merge pull request"
+      - "^Merge branch"
+  groups:
+    - title: "Breaking Changes"
+      regexp: '^.*!:.*$'
+      order: 0
+    - title: "New Features"
+      regexp: '^.*feat(\([[:word:]]+\))?!?:.+$'
+      order: 1
+    - title: "Bug Fixes"
+      regexp: '^.*fix(\([[:word:]]+\))?!?:.+$'
+      order: 2
+    - title: "Security"
+      regexp: '^.*sec(\([[:word:]]+\))?!?:.+$'
+      order: 3
+    - title: "Performance"
+      regexp: '^.*perf(\([[:word:]]+\))?!?:.+$'
+      order: 4
+    - title: "Others"
+      order: 999
+
+release:
+  github:
+    owner: JoshuaMart
+    name: websec0
+  draft: false
+  prerelease: auto
+  mode: replace
+  footer: |
+    ## Verification
+
+    **Checksum**
+    ```bash
+    sha256sum --check checksums.txt
+    ```
+
+    **Cosign v3 bundle** (requires [cosign](https://github.com/sigstore/cosign) ≥ 3.0)
+    ```bash
+    cosign verify-blob \
+      --bundle checksums.txt.bundle \
+      checksums.txt
+    ```
+
+    **Docker image**
+    ```bash
+    cosign verify \
+      --certificate-identity-regexp="https://github.com/JoshuaMart/websec0/.github/workflows/release.yml@refs/tags/{{ .Tag }}" \
+      --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+      ghcr.io/joshuamart/websec0:{{ .Tag }}
+    ```
+
+    ---
+    *WebSec101 is a passive configuration scanner — [about](https://github.com/JoshuaMart/websec0#readme) · [report abuse](mailto:abuse@websec0.example)*
