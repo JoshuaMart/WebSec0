@@ -1,15 +1,22 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./src/**/*.{astro,html,js,ts,jsx,tsx,mdx}'],
+  safelist: [
+    // Dynamic grade classes returned from Alpine JS functions
+    'text-accent', 'bg-accent', 'bg-accent-light', 'border-accent-border',
+    'text-amber-600', 'bg-amber-50', 'bg-amber-500', 'border-amber-200',
+    'text-red-600',   'bg-red-50',   'bg-red-500',   'border-red-200',
+    'bg-sand-100', 'border-sand-200', 'bg-sand-300',
+  ],
   theme: {
     extend: {
       colors: {
         sand: {
-          DEFAULT: '#FAFAFA',
-          50:  '#FFFFFF',
-          100: '#F3F4F6',  // hover backgrounds
-          200: '#E5E7EB',  // borders
-          300: '#D1D5DB',  // stronger borders
+          DEFAULT: '#fdfcf9',
+          50:  '#ffffff',
+          100: '#f4f3ef',  // hover backgrounds
+          200: '#e8e5df',  // borders
+          300: '#d4d0c9',  // stronger borders
         },
         ink: {
           DEFAULT: '#111827',
@@ -17,10 +24,10 @@ module.exports = {
           faint:   '#9CA3AF',
         },
         accent: {
-          DEFAULT: '#2563EB',
-          hover:   '#1D4ED8',
-          light:   '#EFF6FF',
-          border:  '#BFDBFE',
+          DEFAULT: '#4e9a52',
+          hover:   '#3d7a40',
+          light:   '#dbf3db',
+          border:  '#b8e8b9',
         },
         severity: {
           critical: '#DC2626',

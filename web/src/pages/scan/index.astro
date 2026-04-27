@@ -631,8 +631,7 @@ import Nav from '../../components/Nav.astro';
       gradeColorClass(g) {
         if (!g) return 'text-ink-faint';
         const c = g.charAt(0);
-        if (c === 'A') return 'text-green-600';
-        if (c === 'B') return 'text-blue-600';
+        if (c === 'A' || c === 'B') return 'text-accent';
         if (c === 'C') return 'text-amber-600';
         return 'text-red-600';
       },
@@ -640,8 +639,7 @@ import Nav from '../../components/Nav.astro';
       gradeBgClass(g) {
         if (!g) return 'bg-sand-100 border-sand-200';
         const c = g.charAt(0);
-        if (c === 'A') return 'bg-green-50 border-green-200';
-        if (c === 'B') return 'bg-blue-50 border-blue-200';
+        if (c === 'A' || c === 'B') return 'bg-accent-light border-accent-border';
         if (c === 'C') return 'bg-amber-50 border-amber-200';
         return 'bg-red-50 border-red-200';
       },
@@ -649,8 +647,7 @@ import Nav from '../../components/Nav.astro';
       gradeBarClass(g) {
         if (!g) return 'bg-sand-300';
         const c = g.charAt(0);
-        if (c === 'A') return 'bg-green-500';
-        if (c === 'B') return 'bg-blue-500';
+        if (c === 'A' || c === 'B') return 'bg-accent';
         if (c === 'C') return 'bg-amber-500';
         return 'bg-red-500';
       },
