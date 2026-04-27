@@ -281,21 +281,24 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 
 ## Phase 14 — Frontend Astro
 
-- [ ] `web/` init Astro 5 + Tailwind + Alpine
-- [ ] `web/astro.config.mjs` : output static, base path
-- [ ] Layout principal + theme
-- [ ] Page d'accueil `/` avec formulaire de scan + Turnstile
-- [ ] Page `/scan/{guid}` lecture seule
-  - [ ] Mode SSE pendant le scan (Alpine island)
-  - [ ] Vue statique du rapport quand completed
+- [x] `web/` init Astro 5 + Tailwind + Alpine
+- [x] `web/astro.config.mjs` : output static, outDir → `internal/webfs/dist/`
+- [x] Layout principal + theme (Inter Variable, vert #4e9a52, fond #fdfcf9)
+- [x] Page d'accueil `/` avec formulaire de scan (Turnstile différé — retourne directement 429 sur abus)
+  - [x] Hero split 2 colonnes : form gauche + mock report droite
+  - [x] Stats row (70+ checks, 9 stacks, <8s, 0kB)
+  - [x] Section features + CTA finale dark
+- [x] Page `/scan/{guid}` lecture seule
+  - [x] Mode SSE pendant le scan (Alpine island) : barre de progression + live findings feed
+  - [x] Vue statique du rapport quand completed : grade card, quick wins, findings expandables, snippets par stack + copy
 - [ ] Page `/about` (description scanner, User-Agent, opt-out)
 - [ ] Page `/checks` (catalogue interactif, filtrage par famille/sévérité)
 - [ ] Page `/checks/{id}` (détail check, snippets par stack avec onglets)
 - [ ] Page `/docs/api` (Scalar UI ou Swagger UI sur openapi.json)
 - [ ] Pages `/legal/{tos,privacy}`
-- [ ] Build → `web/dist/`
-- [ ] `internal/webfs/embed.go` : `//go:embed all:dist` + handler statique
-- [ ] Mode dégradé : route Go `/scan/{guid}.html` rendu via `html/template`
+- [x] Build → `internal/webfs/dist/` (via `make web` / `pnpm build`)
+- [x] `internal/webfs/embed.go` : `//go:embed all:dist` + handler statique
+- [x] ~~Mode dégradé~~ → déféré : agents IA utilisent `/api/v1/scans/{guid}/markdown`, `<noscript>` renvoie vers l'API
 - [ ] Audit accessibilité (WCAG 2.1 AA, contraste, navigation clavier)
 
 ## Phase 15 — CLI
