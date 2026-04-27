@@ -18,7 +18,7 @@ func ProbeDHKeySize(ctx context.Context, addr string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(time.Now().Add(8 * time.Second))
 
 	pkt := craftTLSClientHello(0x0303, DHECipherSuites)

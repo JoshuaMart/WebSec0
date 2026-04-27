@@ -76,7 +76,7 @@ func probeSMTP(ctx context.Context, mxHost string) *SMTPProbeResult {
 		return res
 	}
 	res.Connected = true
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(time.Now().Add(smtpTotalTimeout))
 
 	r := bufio.NewReader(conn)
@@ -88,7 +88,10 @@ func probeSMTP(ctx context.Context, mxHost string) *SMTPProbeResult {
 	}
 
 	// EHLO.
-	fmt.Fprintf(conn, "EHLO websec0-probe.invalid\r\n")
+	if _, err := fmt.Fprintf(conn, "EHLO websec0-probe.invalid\r\n"); err != nil {
+		res.Err = fmt.Errorf("EHLO write: %w", err)
+		return res
+	}
 	caps, code, err := readSMTPResponse(r)
 	if err != nil || code != "250" {
 		res.Err = fmt.Errorf("EHLO: code=%s err=%w", code, err)
@@ -106,7 +109,10 @@ func probeSMTP(ctx context.Context, mxHost string) *SMTPProbeResult {
 	}
 
 	// Upgrade to TLS.
-	fmt.Fprintf(conn, "STARTTLS\r\n")
+	if _, err := fmt.Fprintf(conn, "STARTTLS\r\n"); err != nil {
+		res.Err = fmt.Errorf("STARTTLS write: %w", err)
+		return res
+	}
 	_, code, err = readSMTPResponse(r)
 	if err != nil || code != "220" {
 		res.Err = fmt.Errorf("STARTTLS command: code=%s err=%w", code, err)

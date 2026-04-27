@@ -45,7 +45,7 @@ func ProbeHeartbleed(ctx context.Context, addr string) (HeartbleedStatus, error)
 	if err != nil {
 		return HeartbleedUnknown, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
 
 	// Step 1: ClientHello with Heartbeat extension.

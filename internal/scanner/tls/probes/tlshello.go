@@ -30,7 +30,7 @@ func ProbeTLSHello(ctx context.Context, addr string, maxVersion uint16, cipherSu
 	if err != nil {
 		return TLSHelloResult{}, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(time.Now().Add(8 * time.Second))
 
 	if _, err := conn.Write(craftTLSClientHello(maxVersion, cipherSuites)); err != nil {

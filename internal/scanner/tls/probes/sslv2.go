@@ -69,7 +69,7 @@ func ProbeSSLv2(ctx context.Context, addr string) (ProtocolStatus, error) {
 	if err != nil {
 		return StatusUnknown, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
 
 	if _, err := conn.Write(craftSSLv2ClientHello()); err != nil {
