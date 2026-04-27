@@ -11,6 +11,7 @@ import (
 
 	"github.com/JoshuaMart/websec0/internal/api/middleware"
 	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/report"
 	"github.com/JoshuaMart/websec0/internal/scanner"
 	"github.com/JoshuaMart/websec0/internal/scanner/safety"
 	"github.com/JoshuaMart/websec0/internal/storage"
@@ -249,6 +250,12 @@ func (h *Handler) toClientScan(s *storage.Scan) *client.Scan {
 	}
 	if s.Error != "" {
 		out.Error = client.NewOptString(s.Error)
+	}
+	if rep, ok := s.Report.(*report.Report); ok && rep != nil {
+		if rep.Summary.Grade != "" {
+			out.Grade = client.NewOptString(rep.Summary.Grade)
+		}
+		out.Score = client.NewOptInt(rep.Summary.Score)
 	}
 	return out
 }
