@@ -17,3 +17,15 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+
+  - package-ecosystem: "npm"
+    directory: "/.github/tools/commitlint"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+
+  - package-ecosystem: "npm"
+    directory: "/.github/tools/spectral"
+    schedule:
+      interval: "weekly"
+      day: "monday"
