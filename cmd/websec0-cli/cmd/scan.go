@@ -261,8 +261,7 @@ type bearerTransport struct {
 
 func (b *bearerTransport) Do(r *http.Request) (*http.Response, error) {
 	r.Header.Set("Authorization", "Bearer "+b.token)
-	//nolint:gosec // user-supplied --server URL is the intended target
-	return b.base.Do(r)
+	return b.base.Do(r) // #nosec G704 -- user-supplied --server URL is the intended target
 }
 
 // render writes the Report in the requested format.

@@ -106,7 +106,7 @@ func (m *Manager) CreateScan(ctx context.Context, target *checks.Target, scanTim
 	m.subs[id] = br
 	m.subMu.Unlock()
 
-	go m.run(id, target, br, scanTimeout)
+	go m.run(id, target, br, scanTimeout) // #nosec G118 -- scan outlives the request intentionally
 	return scan, nil
 }
 

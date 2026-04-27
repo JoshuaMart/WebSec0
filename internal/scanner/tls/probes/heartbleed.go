@@ -108,7 +108,7 @@ func craftClientHelloWithHeartbeat() []byte {
 		0x000A, // TLS_RSA_WITH_3DES_EDE_CBC_SHA
 		0x00FF, // TLS_EMPTY_RENEGOTIATION_INFO_SCSV
 	}
-	body = binary.BigEndian.AppendUint16(body, uint16(len(suites)*2)) //nolint:gosec
+	body = binary.BigEndian.AppendUint16(body, uint16(len(suites)*2)) // #nosec G115
 	for _, s := range suites {
 		body = binary.BigEndian.AppendUint16(body, s)
 	}
@@ -120,19 +120,19 @@ func craftClientHelloWithHeartbeat() []byte {
 		0x00, 0x01, // extension data length = 1
 		0x01, // HeartbeatMode = peer_allowed_to_send
 	}
-	body = binary.BigEndian.AppendUint16(body, uint16(len(ext))) //nolint:gosec
+	body = binary.BigEndian.AppendUint16(body, uint16(len(ext))) // #nosec G115
 	body = append(body, ext...)
 
 	// Handshake message: ClientHello (0x01) + 3-byte length
 	hs := make([]byte, 0, 4+len(body))
 	hs = append(hs, 0x01)
-	hs = append(hs, byte(len(body)>>16), byte(len(body)>>8), byte(len(body))) //nolint:gosec
+	hs = append(hs, byte(len(body)>>16), byte(len(body)>>8), byte(len(body))) // #nosec G115
 	hs = append(hs, body...)
 
 	// TLS record: Handshake (0x16), version 0x0301, 2-byte length
 	var rec []byte
 	rec = append(rec, 0x16, 0x03, 0x01)
-	rec = binary.BigEndian.AppendUint16(rec, uint16(len(hs))) //nolint:gosec
+	rec = binary.BigEndian.AppendUint16(rec, uint16(len(hs))) // #nosec G115
 	rec = append(rec, hs...)
 	return rec
 }
