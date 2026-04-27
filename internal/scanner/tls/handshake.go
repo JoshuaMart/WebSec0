@@ -39,6 +39,9 @@ type VersionProbe struct {
 	OCSPStapled   bool
 	HandshakeErr  error
 	PeerCertCount int
+	// SCTs holds raw Signed Certificate Timestamps delivered via the TLS
+	// handshake extension (RFC 6962 §3.3.1). Non-nil only when Supported=true.
+	SCTs [][]byte
 }
 
 // HandshakeResult is the per-Target snapshot consumed by every TLS check.
@@ -196,6 +199,7 @@ func handshakeOne(ctx context.Context, t *checks.Target, hostPort, sni string, v
 	probe.ALPN = st.NegotiatedProtocol
 	probe.OCSPStapled = len(st.OCSPResponse) > 0
 	probe.PeerCertCount = len(st.PeerCertificates)
+	probe.SCTs = st.SignedCertificateTimestamps
 	_ = tlsConn.Close()
 	return probe
 }

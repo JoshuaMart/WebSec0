@@ -20,6 +20,7 @@ const (
 	IDCertWeakRSA             = "TLS-CERT-WEAK-RSA"
 	IDCertWeakECC             = "TLS-CERT-WEAK-ECC"
 	IDCertWeakSignature       = "TLS-CERT-WEAK-SIGNATURE"
+	IDCertNoCT                = "TLS-CERT-NO-CT"
 	IDHSTSMissing             = "TLS-HSTS-MISSING"
 	IDHSTSMaxAgeLow           = "TLS-HSTS-MAX-AGE-LOW"
 	IDHSTSNoIncludeSubDomains = "TLS-HSTS-NO-INCLUDESUBDOMAINS"

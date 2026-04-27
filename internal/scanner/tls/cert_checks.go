@@ -6,8 +6,10 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/asn1"
 	"errors"
 	"fmt"
+	stdtls "crypto/tls"
 	"time"
 
 	"github.com/JoshuaMart/websec0/internal/checks"
@@ -329,4 +331,81 @@ func isWeakSignature(a x509.SignatureAlgorithm) bool {
 	default:
 		return false
 	}
+}
+
+// --- TLS-CERT-NO-CT ----------------------------------------------------------
+
+// oidSCTList is the X.509 extension OID for embedded SCTs (RFC 6962 §3.3).
+var oidSCTList = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
+
+type ctCheck struct{}
+
+func (ctCheck) ID() string                       { return IDCertNoCT }
+func (ctCheck) Family() checks.Family            { return checks.FamilyTLS }
+func (ctCheck) DefaultSeverity() checks.Severity { return checks.SeverityLow }
+func (ctCheck) Title() string                    { return "Certificate is logged in Certificate Transparency" }
+func (ctCheck) Description() string {
+	return "Certificate Transparency (RFC 6962) requires CAs to log certificates to public, append-only logs. " +
+		"Browsers enforce CT for publicly-trusted certificates. SCTs can be delivered via the TLS handshake " +
+		"extension, embedded in the certificate (OID 1.3.6.1.4.1.11129.2.4.2), or via OCSP stapling."
+}
+func (ctCheck) RFCRefs() []string { return []string{"RFC 6962"} }
+
+func (ctCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, error) {
+	res, err := Fetch(ctx, t)
+	if err != nil {
+		return errFinding(IDCertNoCT, checks.SeverityLow, err), nil
+	}
+	if !res.AnySucceeded {
+		return skippedFinding(IDCertNoCT, checks.SeverityLow, "HTTPS unreachable"), nil
+	}
+	if res.Leaf == nil {
+		return skippedFinding(IDCertNoCT, checks.SeverityLow, "no leaf certificate"), nil
+	}
+
+	// Method 1: SCTs delivered via TLS handshake extension (most common for modern CAs).
+	for _, v := range []uint16{stdtls.VersionTLS13, stdtls.VersionTLS12} {
+		p := res.Probes[v]
+		if p != nil && p.Supported && len(p.SCTs) > 0 {
+			return passFinding(IDCertNoCT, checks.SeverityLow,
+				"SCTs present via TLS handshake extension",
+				map[string]any{
+					"delivery":  "tls_extension",
+					"sct_count": len(p.SCTs),
+					"version":   versionString(v),
+				}), nil
+		}
+	}
+
+	// Method 2: SCTs embedded in the certificate as an X.509 extension (OID 1.3.6.1.4.1.11129.2.4.2).
+	for _, ext := range res.Leaf.Extensions {
+		if ext.Id.Equal(oidSCTList) {
+			return passFinding(IDCertNoCT, checks.SeverityLow,
+				"SCTs embedded in certificate (X.509 extension)",
+				map[string]any{"delivery": "x509_extension"}), nil
+		}
+	}
+
+	// Method 3: SCTs via OCSP stapling — we don't parse the OCSP response here,
+	// but stapling is noted in evidence as a potential (unverified) source.
+	ocspNote := ""
+	for _, v := range []uint16{stdtls.VersionTLS13, stdtls.VersionTLS12} {
+		if p := res.Probes[v]; p != nil && p.OCSPStapled {
+			ocspNote = "OCSP response stapled (may carry SCTs, not parsed)"
+			break
+		}
+	}
+
+	ev := map[string]any{
+		"tls_extension_scts": 0,
+		"x509_embedded_scts": false,
+	}
+	if ocspNote != "" {
+		ev["ocsp_note"] = ocspNote
+	}
+	return failFinding(IDCertNoCT, checks.SeverityLow,
+		"no SCTs found",
+		"No Signed Certificate Timestamps were found in the TLS handshake extension or in the certificate's X.509 extension. "+
+			"SCTs are required for CA/Browser Forum compliance and enforced by Chrome and Safari.",
+		ev), nil
 }

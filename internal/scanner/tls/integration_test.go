@@ -9,6 +9,7 @@ import (
 	stdtls "crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -24,10 +25,11 @@ import (
 type certKind int
 
 const (
-	kindRSA2048 certKind = iota
-	kindRSA1024          // weak
+	kindRSA2048    certKind = iota
+	kindRSA1024             // weak
 	kindECDSAP256
-	kindSelfSigned // RSA leaf where Issuer == Subject
+	kindSelfSigned          // RSA leaf where Issuer == Subject
+	kindSCTEmbedded         // RSA leaf with CT SCT-list X.509 extension
 )
 
 type fixture struct {
@@ -51,6 +53,13 @@ func makeFixture(t *testing.T, kind certKind, hostname string, hstsHeader string
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 
+	if kind == kindSCTEmbedded {
+		// Embed a fake CT SCT-list extension (OID 1.3.6.1.4.1.11129.2.4.2).
+		oidSCT := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
+		fakeSCTValue, _ := asn1.Marshal([]byte("fake_sct"))
+		tmpl.ExtraExtensions = []pkix.Extension{{Id: oidSCT, Value: fakeSCTValue}}
+	}
+
 	var (
 		priv      any
 		pub       any
@@ -58,7 +67,7 @@ func makeFixture(t *testing.T, kind certKind, hostname string, hstsHeader string
 		err       error
 	)
 	switch kind {
-	case kindRSA2048, kindSelfSigned:
+	case kindRSA2048, kindSelfSigned, kindSCTEmbedded:
 		k, perr := rsa.GenerateKey(rand.Reader, 2048)
 		if perr != nil {
 			t.Fatalf("rsa: %v", perr)
@@ -327,5 +336,27 @@ func TestHSTSShortMaxAge(t *testing.T) {
 	}
 	if g := runReg(t, scannertls.IDHSTSNoIncludeSubDomains, tgt); g.Status != checks.StatusFail {
 		t.Errorf("HSTS-NO-INCLUDESUB = %s, want fail", g.Status)
+	}
+}
+
+// TestCertNoCT_NoSCTs verifies that a certificate without any SCT delivery
+// (no TLS extension, no X.509 extension) reports a fail.
+func TestCertNoCT_NoSCTs(t *testing.T) {
+	t.Parallel()
+	f := makeFixture(t, kindRSA2048, "127.0.0.1", "", time.Now().Add(90*24*time.Hour))
+	_, tgt := startServer(t, f)
+	if g := runReg(t, scannertls.IDCertNoCT, tgt); g.Status != checks.StatusFail {
+		t.Errorf("CERT-NO-CT (no SCTs) = %s, want fail", g.Status)
+	}
+}
+
+// TestCertNoCT_X509Extension verifies that a certificate with the CT SCT-list
+// X.509 extension (OID 1.3.6.1.4.1.11129.2.4.2) reports a pass.
+func TestCertNoCT_X509Extension(t *testing.T) {
+	t.Parallel()
+	f := makeFixture(t, kindSCTEmbedded, "127.0.0.1", "", time.Now().Add(90*24*time.Hour))
+	_, tgt := startServer(t, f)
+	if g := runReg(t, scannertls.IDCertNoCT, tgt); g.Status != checks.StatusPass {
+		t.Errorf("CERT-NO-CT (X.509 extension) = %s, want pass", g.Status)
 	}
 }

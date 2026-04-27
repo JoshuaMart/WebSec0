@@ -35,6 +35,7 @@ func Register(r *checks.Registry) {
 	r.Register(weakRSACheck{})
 	r.Register(weakECCCheck{})
 	r.Register(weakSignatureCheck{})
+	r.Register(ctCheck{})
 
 	// Phase 6.3 — Legacy protocol probes
 	r.Register(tls10Check{})
