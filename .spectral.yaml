@@ -12,7 +12,6 @@ rules:
 
   # Documentation hygiene.
   operation-description: warn
-  operation-summary-formatted: warn
   info-contact: off
   info-description: warn
   no-$ref-siblings: error
