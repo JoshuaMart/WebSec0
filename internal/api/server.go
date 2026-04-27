@@ -104,9 +104,32 @@ func NewServer(opts Options) (http.Handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("api: load embedded frontend: %w", err)
 	}
+
+	// Scan report pages — serve the same static shell for any /scan/{guid}/ URL.
+	// Alpine.js reads the GUID from window.location and fetches the API.
+	scanShell := scanShellHandler(staticFS)
+	r.Get("/scan/{guid}", scanShell)
+	r.Get("/scan/{guid}/", scanShell)
+
 	r.Handle("/*", frontendHandler(staticFS))
 
 	return r, nil
+}
+
+// scanShellHandler serves the pre-built scan/index.html for any /scan/{guid}/ path.
+// The file is read once from the embedded FS; cache-control is set to no-store so
+// browsers always get fresh state when navigating back.
+func scanShellHandler(fsys fs.FS) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := fs.ReadFile(fsys, "scan/index.html")
+		if err != nil {
+			http.Error(w, "Frontend not built. Run 'make web' first.", http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, no-store")
+		_, _ = w.Write(data)
+	}
 }
 
 // frontendHandler serves static files from the embedded Astro dist/.
