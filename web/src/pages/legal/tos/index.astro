@@ -1,0 +1,99 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Nav from '../../../components/Nav.astro';
+---
+<Base title="Terms of Service" description="WebSec0 Terms of Service.">
+  <Nav />
+
+  <main class="max-w-2xl mx-auto px-6 py-16">
+    <h1 class="text-3xl font-bold text-ink tracking-tight mb-2">Terms of Service</h1>
+    <p class="text-xs font-mono text-ink-faint mb-12">Last updated: 2026-04-27 · Version 0.1</p>
+
+    <div class="prose prose-sm max-w-none space-y-10 text-ink-muted leading-relaxed">
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">1. Service description</h2>
+        <p>
+          WebSec0 is a passive web security scanner that performs HTTP/TLS requests and DNS
+          lookups to audit a domain's security configuration. It does not crawl, fuzz, or
+          exploit vulnerabilities. All checks are described in the
+          <a href="/checks/" class="text-accent hover:underline">check catalog</a>.
+          Scans are limited to ≤ 50 HTTP requests per target, spread over 30–60 seconds.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">2. Acceptable use</h2>
+        <p>You may use WebSec0 only if <strong class="text-ink">all</strong> of the following apply:</p>
+        <ul class="mt-3 space-y-1.5 list-disc list-inside">
+          <li>You own the target domain, or hold written authorisation from the owner.</li>
+          <li>The target is a public web property (not internal infrastructure).</li>
+          <li>Your use complies with applicable law, including the CFAA (US), CMA 1990 (UK), §202c StGB (DE), and art. 323-1 du Code pénal (FR).</li>
+          <li>You are not acting on behalf of a state-level threat actor.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">3. Prohibited targets</h2>
+        <p>Scanning the following is prohibited and will be blocked:</p>
+        <ul class="mt-3 space-y-1.5 list-disc list-inside">
+          <li>Government and military domains (<code class="font-mono text-xs">.gov</code>, <code class="font-mono text-xs">.mil</code>, <code class="font-mono text-xs">.gouv.fr</code>, <code class="font-mono text-xs">.gc.ca</code>, etc.)</li>
+          <li>Critical infrastructure (energy, healthcare, finance)</li>
+          <li>Private IP ranges and localhost</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">4. Rate limits</h2>
+        <p>
+          The public instance enforces a limit of 10 scans per hour per IP address.
+          A minimum cooldown of 5 minutes applies between two scans of the same target.
+          Abuse patterns result in a temporary ban.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">5. Scan reports</h2>
+        <p>
+          Reports are stored for 24 hours on the public instance, identified by a GUIDv4.
+          They are not listed publicly. Private mode (token-protected) is available via the API.
+          Reports are published under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" class="text-accent hover:underline">CC BY 4.0</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">6. Disclaimer</h2>
+        <p>
+          WebSec0 is provided <strong class="text-ink">"as is"</strong>, without warranty of any kind.
+          Findings are based on observed configuration and known best practices; they are not a
+          substitute for a full security assessment. The user is responsible for ensuring they have
+          authorisation to scan the target.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">7. Licence</h2>
+        <p>
+          The WebSec0 source code is released under the <strong class="text-ink">MIT License</strong>.
+          Scan reports produced by the public instance are published under CC BY 4.0.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">8. Contact</h2>
+        <div class="flex flex-col gap-1 font-mono text-xs">
+          <span>Abuse: <a href="mailto:abuse@websec0.example" class="text-accent hover:underline">abuse@websec0.example</a></span>
+          <span>Security: <a href="mailto:security@websec0.example" class="text-accent hover:underline">security@websec0.example</a></span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="py-7 px-6 border-t border-sand-200">
+    <div class="max-w-2xl mx-auto flex gap-4">
+      <a href="/legal/privacy/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">Privacy Policy</a>
+      <a href="/about/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">About</a>
+    </div>
+  </footer>
+</Base>

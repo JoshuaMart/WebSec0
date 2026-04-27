@@ -1,0 +1,98 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Nav from '../../../components/Nav.astro';
+---
+<Base title="Privacy Policy" description="WebSec0 Privacy Policy — what data is collected and how it is used.">
+  <Nav />
+
+  <main class="max-w-2xl mx-auto px-6 py-16">
+    <h1 class="text-3xl font-bold text-ink tracking-tight mb-2">Privacy Policy</h1>
+    <p class="text-xs font-mono text-ink-faint mb-12">Last updated: 2026-04-27 · Version 0.1</p>
+
+    <div class="space-y-10 text-ink-muted leading-relaxed text-sm">
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">1. Data collected</h2>
+        <div class="bg-white border border-sand-200 rounded-xl overflow-hidden">
+          {[
+            ['Target domain', 'Stored with the scan report. Retained for 24 h on the public instance (configurable for self-hosters).'],
+            ['Client IP', 'Last octet zeroed for IPv4 (/24), /64 prefix for IPv6. Retained ≤ 7 days for rate-limiting. Legal basis: legitimate interest (GDPR art. 6(1)(f)).'],
+            ['User-Agent', 'Stored with each HTTP request log. Retained ≤ 7 days.'],
+            ['Scan report', 'GUIDv4-keyed, not publicly listed, auto-deleted after TTL.'],
+          ].map(([label, value], i, arr) => (
+            <div class:list={['px-4 py-3 flex gap-4', i < arr.length - 1 ? 'border-b border-sand-200' : '']}>
+              <span class="font-mono text-xs text-ink-faint w-28 flex-shrink-0 pt-0.5">{label}</span>
+              <span class="text-xs text-ink-muted leading-relaxed">{value}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">2. What we do not collect</h2>
+        <ul class="space-y-1.5 list-disc list-inside">
+          <li>No analytics or tracking pixels</li>
+          <li>No third-party cookies</li>
+          <li>No browser fingerprinting</li>
+          <li>No full client IP addresses in persistent storage</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">3. Sub-processors</h2>
+        <p>
+          The public instance is hosted on infrastructure within the EU/EEA.
+          No personal data is shared with third parties for advertising or profiling purposes.
+          Self-hosters choose their own infrastructure and are the data controller for their instance.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">4. Your rights (GDPR)</h2>
+        <p>
+          Under GDPR arts. 15–17, you have the right to access, rectify, or erase data held about you.
+          To exercise these rights, email
+          <a href="mailto:privacy@websec0.example" class="text-accent hover:underline font-mono text-xs">privacy@websec0.example</a>.
+          We will respond within 30 days.
+        </p>
+        <p class="mt-2">
+          In the event of a personal data breach, we will notify the relevant supervisory authority
+          within 72 hours where feasible (GDPR arts. 33–34).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">5. Scan report deletion</h2>
+        <p>
+          Reports are automatically deleted after 24 hours on the public instance.
+          To request early deletion of a specific scan, send the scan GUID to
+          <a href="mailto:privacy@websec0.example" class="text-accent hover:underline font-mono text-xs">privacy@websec0.example</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">6. Changes to this policy</h2>
+        <p>
+          This policy may be updated. The date at the top of this page reflects the last revision.
+          Continued use of the service after a material change constitutes acceptance.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-semibold text-ink mb-3">7. Contact</h2>
+        <div class="flex flex-col gap-1 font-mono text-xs">
+          <span>Privacy: <a href="mailto:privacy@websec0.example" class="text-accent hover:underline">privacy@websec0.example</a></span>
+          <span>Abuse: <a href="mailto:abuse@websec0.example" class="text-accent hover:underline">abuse@websec0.example</a></span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="py-7 px-6 border-t border-sand-200">
+    <div class="max-w-2xl mx-auto flex gap-4">
+      <a href="/legal/tos/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">Terms of Service</a>
+      <a href="/about/" class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">About</a>
+    </div>
+  </footer>
+</Base>

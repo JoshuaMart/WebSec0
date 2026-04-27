@@ -1,0 +1,243 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+---
+<Base title="Checks" description="Complete catalog of WebSec0 security checks — TLS, HTTP headers, DNS, email, and more.">
+  <Nav current="checks" />
+
+  <main class="max-w-5xl mx-auto px-6 py-12" x-data="checksPage" x-cloak>
+
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-ink tracking-tight mb-2">Check catalog</h1>
+      <p class="text-sm text-ink-muted">
+        Every check WebSec0 runs, with its default severity and family.
+        <span x-show="!loading && !error" class="font-mono" x-text="'(' + checks.length + ' total)'"></span>
+      </p>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+
+      <!-- Search -->
+      <div class="relative flex-1 min-w-48 max-w-xs">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-faint" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/>
+        </svg>
+        <input
+          type="text"
+          x-model="search"
+          placeholder="Search checks…"
+          class="w-full pl-8 pr-3 py-2 text-xs font-mono bg-white border border-sand-200 rounded-lg
+                 text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+          aria-label="Search checks"
+        />
+      </div>
+
+      <!-- Family filter -->
+      <select
+        x-model="selectedFamily"
+        class="px-3 py-2 text-xs font-mono bg-white border border-sand-200 rounded-lg text-ink
+               focus:outline-none focus:border-accent cursor-pointer"
+        aria-label="Filter by family"
+      >
+        <option value="all">All families</option>
+        <template x-for="fam in families" :key="fam">
+          <option :value="fam" x-text="fam"></option>
+        </template>
+      </select>
+
+      <!-- Severity filter -->
+      <select
+        x-model="selectedSeverity"
+        class="px-3 py-2 text-xs font-mono bg-white border border-sand-200 rounded-lg text-ink
+               focus:outline-none focus:border-accent cursor-pointer"
+        aria-label="Filter by severity"
+      >
+        <option value="all">All severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="info">Info</option>
+      </select>
+
+      <!-- Count -->
+      <span class="ml-auto text-xs font-mono text-ink-faint" x-show="!loading">
+        <span x-text="filtered.length"></span> check<span x-show="filtered.length !== 1">s</span>
+      </span>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="flex items-center justify-center py-20">
+      <svg class="w-5 h-5 animate-spin text-ink-faint" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+      </svg>
+    </div>
+
+    <!-- Error -->
+    <div x-show="error" class="text-center py-20">
+      <p class="font-mono text-sm text-red-600" x-text="error"></p>
+      <button @click="init()" class="mt-3 text-xs text-accent hover:underline font-mono" type="button">Retry</button>
+    </div>
+
+    <!-- Empty state -->
+    <div x-show="!loading && !error && filtered.length === 0" class="text-center py-20">
+      <p class="font-mono text-sm text-ink-faint">No checks match your filters.</p>
+      <button @click="search = ''; selectedFamily = 'all'; selectedSeverity = 'all'" class="mt-3 text-xs text-accent hover:underline font-mono" type="button">
+        Clear filters
+      </button>
+    </div>
+
+    <!-- Checks table -->
+    <div x-show="!loading && !error && filtered.length > 0" class="bg-white border border-sand-200 rounded-xl overflow-hidden">
+      <template x-for="(check, index) in filtered" :key="check.id">
+        <div
+          x-data="{ open: false }"
+          :class="index < filtered.length - 1 ? 'border-b border-sand-200' : ''"
+        >
+          <!-- Row -->
+          <div
+            @click="open = !open"
+            class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-sand-100 transition-colors"
+            :aria-expanded="open"
+            role="button"
+            tabindex="0"
+            @keydown.enter.prevent="open = !open"
+            @keydown.space.prevent="open = !open"
+          >
+            <!-- Severity dot -->
+            <div
+              class="w-2 h-2 rounded-full flex-shrink-0"
+              :class="{
+                'bg-red-500':    check.default_severity === 'critical',
+                'bg-orange-500': check.default_severity === 'high',
+                'bg-amber-500':  check.default_severity === 'medium',
+                'bg-blue-500':   check.default_severity === 'low',
+                'bg-gray-400':   check.default_severity === 'info',
+              }"
+              aria-hidden="true"
+            ></div>
+
+            <!-- ID -->
+            <span class="font-mono text-xs font-medium text-ink flex-1 min-w-0 truncate" x-text="check.id"></span>
+
+            <!-- Title (if available) -->
+            <span class="hidden sm:block text-xs text-ink-muted flex-1 min-w-0 truncate" x-text="check.title || ''"></span>
+
+            <!-- Family + Severity -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="family-tag" x-text="check.family"></span>
+              <span
+                class="badge"
+                :class="{
+                  'severity-critical': check.default_severity === 'critical',
+                  'severity-high':     check.default_severity === 'high',
+                  'severity-medium':   check.default_severity === 'medium',
+                  'severity-low':      check.default_severity === 'low',
+                  'severity-info':     check.default_severity === 'info' || !check.default_severity,
+                }"
+                x-text="check.default_severity || 'info'"
+              ></span>
+
+              <!-- Chevron -->
+              <svg
+                class="w-3.5 h-3.5 text-ink-faint transition-transform duration-200 flex-shrink-0"
+                :class="open ? 'rotate-180' : ''"
+                viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
+              >
+                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Expanded detail -->
+          <div x-show="open" x-transition class="px-4 pb-4 pt-2 bg-sand-50 border-t border-sand-200 space-y-3">
+
+            <!-- Full ID -->
+            <div>
+              <p class="text-xs font-mono text-ink-faint mb-1">Check ID</p>
+              <code class="text-xs font-mono text-ink" x-text="check.id"></code>
+            </div>
+
+            <!-- Description -->
+            <div x-show="check.description">
+              <p class="text-xs font-mono text-ink-faint mb-1">Description</p>
+              <p class="text-sm text-ink-muted leading-relaxed" x-text="check.description"></p>
+            </div>
+
+            <!-- RFC refs -->
+            <div x-show="check.rfc_refs && check.rfc_refs.length > 0">
+              <p class="text-xs font-mono text-ink-faint mb-1.5">References</p>
+              <div class="flex flex-wrap gap-1.5">
+                <template x-for="ref in (check.rfc_refs || [])" :key="ref">
+                  <span class="badge bg-sand-100 text-ink-muted border-sand-200 font-mono" x-text="ref"></span>
+                </template>
+              </div>
+            </div>
+
+            <!-- No extra info -->
+            <div x-show="!check.description && (!check.rfc_refs || check.rfc_refs.length === 0)">
+              <p class="text-xs text-ink-faint">No additional details available for this check yet.</p>
+            </div>
+          </div>
+
+        </div>
+      </template>
+    </div>
+
+  </main>
+
+  <footer class="py-7 px-6 border-t border-sand-200 mt-8">
+    <div class="max-w-5xl mx-auto">
+      <span class="font-mono text-xs text-ink-faint">WebSec0 · MIT License</span>
+    </div>
+  </footer>
+</Base>
+
+<script>
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('checksPage', () => ({
+      checks: [],
+      loading: true,
+      error: '',
+      search: '',
+      selectedFamily: 'all',
+      selectedSeverity: 'all',
+
+      async init() {
+        try {
+          const res = await fetch('/api/v1/checks');
+          if (!res.ok) { this.error = 'Failed to load catalog (HTTP ' + res.status + ')'; return; }
+          const data = await res.json();
+          // The endpoint returns an array or an object with a checks property
+          this.checks = Array.isArray(data) ? data : (data.checks || []);
+        } catch {
+          this.error = 'Network error loading catalog.';
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      get families() {
+        const fams = [...new Set(this.checks.map(c => c.family).filter(Boolean))].sort();
+        return fams;
+      },
+
+      get filtered() {
+        return this.checks.filter(c => {
+          if (this.selectedFamily !== 'all' && c.family !== this.selectedFamily) return false;
+          if (this.selectedSeverity !== 'all' && c.default_severity !== this.selectedSeverity) return false;
+          if (this.search) {
+            const q = this.search.toLowerCase();
+            return (c.id || '').toLowerCase().includes(q) ||
+                   (c.title || '').toLowerCase().includes(q) ||
+                   (c.description || '').toLowerCase().includes(q);
+          }
+          return true;
+        });
+      },
+    }));
+  });
+</script>

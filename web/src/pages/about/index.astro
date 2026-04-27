@@ -1,0 +1,133 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+
+const ua = 'WebSec0/0.1.0 (+https://websec0.example/about; passive-scan)';
+---
+<Base title="About" description="How WebSec0 works, its User-Agent, and how to opt out of scanning.">
+  <Nav current="about" />
+
+  <main class="max-w-2xl mx-auto px-6 py-16">
+
+    <h1 class="text-3xl font-bold text-ink tracking-tight mb-2">About WebSec0</h1>
+    <p class="text-ink-muted mb-12 font-mono text-sm">Passive web security scanner · Open-source · MIT</p>
+
+    <!-- What it does -->
+    <section class="mb-12">
+      <h2 class="text-base font-semibold text-ink mb-3">What it does</h2>
+      <p class="text-sm text-ink-muted leading-relaxed mb-3">
+        WebSec0 is a <strong class="font-medium text-ink">passive</strong> web security scanner.
+        It performs standard HTTP/TLS requests and DNS lookups to audit a web property's
+        security configuration — TLS protocols, HTTP headers, cookies, DNSSEC, email security
+        (SPF/DKIM/DMARC/MTA-STS), <code>security.txt</code>, and common sensitive file exposures.
+      </p>
+      <p class="text-sm text-ink-muted leading-relaxed">
+        It does <strong class="font-medium text-ink">not</strong> crawl, fuzz parameters, inject
+        payloads, or exploit vulnerabilities. Every finding comes with a copy-paste remediation
+        snippet for your specific stack.
+      </p>
+    </section>
+
+    <!-- Requests -->
+    <section class="mb-12">
+      <h2 class="text-base font-semibold text-ink mb-3">Request footprint</h2>
+      <div class="bg-white border border-sand-200 rounded-xl overflow-hidden">
+        {[
+          ['HTTP requests', 'GET / · GET /.well-known/security.txt · OPTIONS · TRACE · CORS probe · 404 probe · ~40 sensitive file probes'],
+          ['TLS probes', 'TLS 1.2/1.3 handshakes (stdlib) · SSLv2/SSLv3 detection probes'],
+          ['DNS lookups', 'A · AAAA · MX · TXT · CAA · TLSA · DNSSEC chain'],
+          ['Total', '≤ 50 requests per scan, spread over 30–60 seconds, max 5 concurrent toward a single host'],
+        ].map(([label, value], i, arr) => (
+          <div class:list={['px-4 py-3 flex gap-4', i < arr.length - 1 ? 'border-b border-sand-200' : '']}>
+            <span class="font-mono text-xs text-ink-faint w-24 flex-shrink-0 pt-0.5">{label}</span>
+            <span class="text-xs text-ink-muted leading-relaxed">{value}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- User-Agent -->
+    <section class="mb-12">
+      <h2 class="text-base font-semibold text-ink mb-3">User-Agent</h2>
+      <p class="text-sm text-ink-muted leading-relaxed mb-3">
+        All requests are sent with an identifiable User-Agent so server operators can
+        recognise and block scans if desired.
+      </p>
+      <pre class="bg-gray-950 text-green-400 font-mono text-xs rounded-xl px-4 py-3 overflow-x-auto whitespace-pre-wrap break-all">{ua}</pre>
+    </section>
+
+    <!-- Opt-out -->
+    <section class="mb-12">
+      <h2 class="text-base font-semibold text-ink mb-3">Opt-out</h2>
+      <p class="text-sm text-ink-muted leading-relaxed mb-4">
+        To prevent WebSec0 from scanning your domain, use any of these methods:
+      </p>
+      <div class="space-y-4">
+        <div>
+          <p class="text-xs font-semibold font-mono text-ink mb-2">1. robots.txt</p>
+          <pre class="bg-white border border-sand-200 rounded-lg px-4 py-3 font-mono text-xs text-ink overflow-x-auto">{'User-agent: WebSec0\nDisallow: /'}</pre>
+          <p class="text-xs text-ink-faint mt-1.5">WebSec0 checks robots.txt first and aborts the scan if disallowed.</p>
+        </div>
+        <div>
+          <p class="text-xs font-semibold font-mono text-ink mb-2">2. HTTP 429 on User-Agent</p>
+          <pre class="bg-white border border-sand-200 rounded-lg px-4 py-3 font-mono text-xs text-ink overflow-x-auto">{'# nginx\nif ($http_user_agent ~* "WebSec0") {\n    return 429;\n}'}</pre>
+        </div>
+        <div>
+          <p class="text-xs font-semibold font-mono text-ink mb-2">3. Contact us</p>
+          <p class="text-xs text-ink-muted">
+            Email <a href="mailto:abuse@websec0.example" class="text-accent hover:underline font-mono">abuse@websec0.example</a>
+            to have your domain added to the permanent blocklist.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy -->
+    <section class="mb-12">
+      <h2 class="text-base font-semibold text-ink mb-3">Privacy</h2>
+      <ul class="space-y-2 text-sm text-ink-muted">
+        {[
+          'No domain is logged by default — access logs contain only the scan GUID.',
+          'Scan reports are stored for 24 hours (public instance) then automatically deleted.',
+          'Client IPs are anonymised: last octet zeroed for IPv4, /64 for IPv6.',
+          'No analytics, no third-party cookies, no fingerprinting.',
+          'GUIDv4 (122 bits of entropy) for all report IDs — non-guessable.',
+        ].map((item) => (
+          <li class="flex items-start gap-2">
+            <span class="text-accent mt-1 flex-shrink-0" aria-hidden="true">·</span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <!-- Links -->
+    <section>
+      <h2 class="text-base font-semibold text-ink mb-3">Links</h2>
+      <div class="flex flex-wrap gap-3">
+        {[
+          { href: 'https://github.com/JoshuaMart/websec0', label: 'Source code' },
+          { href: '/legal/tos/', label: 'Terms of Service' },
+          { href: '/legal/privacy/', label: 'Privacy Policy' },
+          { href: '/docs/api/', label: 'API Reference' },
+          { href: '/checks/', label: 'Check catalog' },
+        ].map(({ href, label }) => (
+          <a
+            href={href}
+            class="px-3 py-1.5 rounded-lg border border-sand-200 text-xs font-mono text-ink-muted
+                   hover:text-ink hover:border-sand-300 transition-colors"
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="py-7 px-6 border-t border-sand-200">
+    <div class="max-w-2xl mx-auto">
+      <span class="font-mono text-xs text-ink-faint">WebSec0 · MIT License</span>
+    </div>
+  </footer>
+</Base>

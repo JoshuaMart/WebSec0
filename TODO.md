@@ -291,11 +291,11 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 - [x] Page `/scan/{guid}` lecture seule
   - [x] Mode SSE pendant le scan (Alpine island) : barre de progression + live findings feed
   - [x] Vue statique du rapport quand completed : grade card, quick wins, findings expandables, snippets par stack + copy
-- [ ] Page `/about` (description scanner, User-Agent, opt-out)
-- [ ] Page `/checks` (catalogue interactif, filtrage par famille/sévérité)
-- [ ] Page `/checks/{id}` (détail check, snippets par stack avec onglets)
-- [ ] Page `/docs/api` (Scalar UI ou Swagger UI sur openapi.json)
-- [ ] Pages `/legal/{tos,privacy}`
+- [x] Page `/about` (description scanner, User-Agent, opt-out)
+- [x] Page `/checks` (catalogue interactif, filtrage par famille/sévérité + inline expand)
+- [ ] Page `/checks/{id}` (deep-link par check — différé, inline expand pour MVP)
+- [x] Page `/docs/api` (Scalar UI via CDN sur `/api/v1/openapi.json`)
+- [x] Pages `/legal/{tos,privacy}`
 - [x] Build → `internal/webfs/dist/` (via `make web` / `pnpm build`)
 - [x] `internal/webfs/embed.go` : `//go:embed all:dist` + handler statique
 - [x] ~~Mode dégradé~~ → déféré : agents IA utilisent `/api/v1/scans/{guid}/markdown`, `<noscript>` renvoie vers l'API
