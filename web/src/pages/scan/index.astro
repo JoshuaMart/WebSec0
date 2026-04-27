@@ -172,48 +172,39 @@ import Nav from '../../components/Nav.astro';
         </div>
       </div>
 
+      <!-- ── Completed: severity pills (full width, above grid) ──── -->
+      <div x-show="status === 'completed'" class="max-w-6xl mx-auto px-6 pt-6 pb-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-ink-faint flex-shrink-0 mr-1">Severity</span>
+          <button @click="selectedSeverity = 'all'"
+                  :class="selectedSeverity === 'all' ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors" type="button">
+            All findings <span class="font-semibold" x-text="filteredFailedCount"></span>
+          </button>
+          <template x-for="sev in ['critical','high','medium','low','info']" :key="sev + '-pill'">
+            <button x-show="filteredBySev(sev).length > 0"
+                    @click="selectedSeverity = sev"
+                    :class="selectedSeverity === sev ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors" type="button">
+              <span x-text="sev.charAt(0).toUpperCase() + sev.slice(1)"></span>
+              <span class="font-semibold" x-text="filteredBySev(sev).length"></span>
+            </button>
+          </template>
+          <button x-show="filteredPassed.length > 0"
+                  @click="selectedSeverity = 'passing'"
+                  :class="selectedSeverity === 'passing' ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors" type="button">
+            Passing <span class="font-semibold" x-text="filteredPassed.length"></span>
+          </button>
+        </div>
+      </div>
+
       <!-- ── Completed: 2-col layout ───────────────────────────── -->
-      <div x-show="status === 'completed'" class="max-w-6xl mx-auto px-6 py-8">
+      <div x-show="status === 'completed'" class="max-w-6xl mx-auto px-6 py-6">
         <div class="grid lg:grid-cols-3 gap-8">
 
           <!-- ── Findings column (2/3) ─── -->
           <div class="lg:col-span-2 space-y-8">
-
-            <!-- Severity filter pills -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-ink-faint flex-shrink-0 mr-1">Severity</span>
-
-              <!-- All -->
-              <button @click="selectedSeverity = 'all'"
-                      :class="selectedSeverity === 'all' ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
-                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors"
-                      type="button">
-                All findings
-                <span class="font-semibold" x-text="filteredFailedCount"></span>
-              </button>
-
-              <!-- Per severity -->
-              <template x-for="sev in ['critical','high','medium','low','info']" :key="sev + '-pill'">
-                <button x-show="filteredBySev(sev).length > 0"
-                        @click="selectedSeverity = sev"
-                        :class="selectedSeverity === sev ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
-                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors capitalize"
-                        type="button">
-                  <span x-text="sev.charAt(0).toUpperCase() + sev.slice(1)"></span>
-                  <span class="font-semibold" x-text="filteredBySev(sev).length"></span>
-                </button>
-              </template>
-
-              <!-- Passing -->
-              <button x-show="filteredPassed.length > 0"
-                      @click="selectedSeverity = 'passing'"
-                      :class="selectedSeverity === 'passing' ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-sand-200 hover:border-sand-300'"
-                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-colors"
-                      type="button">
-                Passing
-                <span class="font-semibold" x-text="filteredPassed.length"></span>
-              </button>
-            </div>
 
             <!-- Severity sections -->
             <template x-for="sev in ['critical','high','medium','low','info']" :key="sev">
@@ -236,22 +227,22 @@ import Nav from '../../components/Nav.astro';
                     >
                       <!-- Card header -->
                       <div @click="open = !open"
-                           class="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-sand-50 transition-colors select-none"
+                           class="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-sand-50 transition-colors select-none"
                            role="button" tabindex="0"
                            @keydown.enter.prevent="open=!open" @keydown.space.prevent="open=!open">
                         <!-- Status icon -->
-                        <span class="font-mono text-sm mt-0.5 w-4 text-center flex-shrink-0"
-                              :class="finding.severity==='critical'?'text-red-600':finding.severity==='high'?'text-orange-600':finding.severity==='medium'?'text-amber-600':'text-blue-600'"
-                              aria-hidden="true">✕</span>
+                        <span class="mt-1 w-4 text-center flex-shrink-0 text-base leading-none"
+                              :class="finding.severity==='critical'?'text-red-500':finding.severity==='high'?'text-orange-500':finding.severity==='medium'?'text-amber-500':'text-blue-400'"
+                              aria-hidden="true">×</span>
                         <!-- Content -->
                         <div class="flex-1 min-w-0">
-                          <p class="font-mono text-sm font-medium text-ink leading-tight" x-text="finding.id"></p>
-                          <p class="text-xs text-ink-muted mt-0.5 leading-snug" x-text="finding.title || finding.description || ''"></p>
+                          <p class="font-mono text-sm font-semibold text-ink leading-tight tracking-tight" x-text="finding.id"></p>
+                          <p class="text-sm text-ink-muted mt-1 leading-snug" x-text="finding.title || finding.description || ''"></p>
                         </div>
                         <!-- Badges + chevron -->
-                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-3">
                           <span class="badge text-[10px]" :class="sevBadgeClass(finding.severity)" x-text="finding.severity"></span>
-                          <span class="badge text-[10px] bg-sand-100 text-ink-muted border-sand-200" x-text="finding.family"></span>
+                          <span class="badge text-[10px] bg-sand-100 text-ink-muted border-sand-200 font-mono" x-text="finding.family"></span>
                           <svg class="w-4 h-4 text-ink-faint transition-transform duration-200 ml-1" :class="open?'rotate-180':''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
                           </svg>
@@ -259,28 +250,32 @@ import Nav from '../../components/Nav.astro';
                       </div>
 
                       <!-- Expanded body -->
-                      <div x-show="open" x-transition class="border-t border-sand-200 bg-sand-50 px-5 pb-5 pt-4 space-y-4">
-                        <!-- Description -->
+                      <div x-show="open" x-transition class="border-t border-sand-200 px-5 pb-5 pt-4 space-y-5">
+                        <!-- Description (when distinct from title) -->
                         <p x-show="finding.title && finding.description" class="text-sm text-ink-muted leading-relaxed" x-text="finding.description"></p>
+
                         <!-- Evidence -->
-                        <div x-show="finding.evidence && Object.keys(finding.evidence).length > 0">
-                          <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Evidence</p>
-                          <pre class="text-xs font-mono text-ink-muted bg-white border border-sand-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all" x-text="JSON.stringify(finding.evidence, null, 2)"></pre>
-                        </div>
-                        <!-- Snippets -->
-                        <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length > 0">
-                          <p class="text-xs font-mono text-ink-faint uppercase tracking-wider mb-2">Fix for</p>
-                          <div class="flex flex-wrap gap-1 mb-3">
-                            <template x-for="s in Object.keys((finding.remediation && finding.remediation.snippets) || {})" :key="s">
-                              <button @click="tab = s" :class="tab === s ? 'tab-btn tab-btn-active' : 'tab-btn'" type="button" x-text="s"></button>
-                            </template>
+                        <div x-show="finding.evidence && Object.keys(finding.evidence).length > 0" class="rounded-xl border border-sand-200 overflow-hidden">
+                          <div class="px-4 py-2 bg-sand-50 border-b border-sand-200">
+                            <span class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint">Evidence</span>
                           </div>
-                          <div class="relative bg-gray-950 rounded-lg px-4 pt-3 pb-4">
-                            <div class="flex gap-1.5 mb-2.5" aria-hidden="true">
-                              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
-                              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
-                              <div class="w-2 h-2 rounded-full bg-gray-700"></div>
-                            </div>
+                          <pre class="text-xs font-mono text-ink-muted px-4 py-3 overflow-x-auto whitespace-pre-wrap break-all" x-text="JSON.stringify(finding.evidence, null, 2)"></pre>
+                        </div>
+
+                        <!-- Remediation snippets -->
+                        <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length > 0" class="rounded-xl border border-sand-200 overflow-hidden">
+                          <!-- Tab bar -->
+                          <div class="flex items-center border-b border-sand-200 overflow-x-auto scrollbar-none">
+                            <template x-for="s in Object.keys((finding.remediation && finding.remediation.snippets) || {})" :key="s">
+                              <button @click="tab = s"
+                                      :class="tab === s ? 'border-b-2 border-accent text-ink bg-white' : 'border-b-2 border-transparent text-ink-muted hover:text-ink bg-sand-50'"
+                                      class="px-4 py-2.5 text-xs font-mono whitespace-nowrap transition-colors -mb-px"
+                                      type="button" x-text="s"></button>
+                            </template>
+                            <span class="ml-auto px-4 text-[10px] font-mono text-ink-faint whitespace-nowrap">Remediation snippet</span>
+                          </div>
+                          <!-- Code block -->
+                          <div class="relative bg-gray-950 px-4 pt-3 pb-4">
                             <pre class="font-mono text-sm text-green-400 leading-relaxed whitespace-pre-wrap break-all pr-20"
                                  x-text="((finding.remediation && finding.remediation.snippets) || {})[tab] || ''"></pre>
                             <button x-data="{ copied: false }"
@@ -291,8 +286,13 @@ import Nav from '../../components/Nav.astro';
                               <span x-text="copied ? 'Copied!' : 'Copy'"></span>
                             </button>
                           </div>
-                          <p x-show="finding.remediation && finding.remediation.verification" class="mt-2 text-xs font-mono text-ink-faint" x-text="'verify: ' + ((finding.remediation && finding.remediation.verification) || '')"></p>
+                          <!-- Verify footer -->
+                          <div x-show="finding.remediation && finding.remediation.verification"
+                               class="px-4 py-2.5 border-t border-sand-200 bg-sand-50">
+                            <p class="text-xs font-mono text-ink-faint" x-text="'verify: ' + ((finding.remediation && finding.remediation.verification) || '')"></p>
+                          </div>
                         </div>
+
                         <!-- No snippets -->
                         <div x-show="Object.keys((finding.remediation && finding.remediation.snippets) || {}).length === 0">
                           <p class="text-xs text-ink-faint">No stack-specific snippets yet. <a href="/checks/" class="text-accent hover:underline">View catalog →</a></p>
@@ -364,23 +364,6 @@ import Nav from '../../components/Nav.astro';
                     </div>
                   </template>
                   <div x-show="familyBreakdown.length === 0" class="text-xs text-ink-faint text-center py-2">No data yet</div>
-                </div>
-              </div>
-
-              <!-- Severity summary -->
-              <div class="bg-white border border-sand-200 rounded-xl p-4">
-                <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Severity summary</h3>
-                <div class="space-y-2">
-                  <template x-for="[sev, count] in severityCounts" :key="sev">
-                    <div x-show="count > 0" class="flex items-center justify-between">
-                      <span class="badge text-[10px]" :class="'severity-' + sev" x-text="sev"></span>
-                      <span class="text-xs font-mono text-ink" x-text="count"></span>
-                    </div>
-                  </template>
-                  <div class="flex items-center justify-between pt-1 border-t border-sand-200">
-                    <span class="badge severity-pass text-[10px]">pass</span>
-                    <span class="text-xs font-mono text-ink" x-text="counts.passed"></span>
-                  </div>
                 </div>
               </div>
 
