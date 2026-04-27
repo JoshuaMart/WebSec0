@@ -1,17 +1,9 @@
-# WebSec101
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License%20MIT-111111?style=for-the-badge&logo=unlicense&logoColor=#FFF"></a>
+  <img src="https://img.shields.io/badge/Docker-111111?style=for-the-badge&logo=docker&logoColor=#2496ed">
+  <img src="https://img.shields.io/badge/Golang-111111?style=for-the-badge&logo=go&logoColor=#00a6d2">
+  <img src="https://img.shields.io/badge/AstroJS-111111?style=for-the-badge&logo=astro&logoColor=FF3E00">
+</p>
 
-![Status: WIP](https://img.shields.io/badge/status-WIP-orange)
-![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Go](https://img.shields.io/badge/go-1.23-00ADD8)
-
-Open-source web security configuration scanner — a single binary that combines TLS,
-HTTP headers, cookies, DNS, email and custom checks, and ships copy-paste-ready
-remediation snippets per stack.
-
-> **Status:** pre-release, actively bootstrapping toward `0.1.0`.
-> See [`SPECIFICATIONS.md`](./SPECIFICATIONS.md) for the full spec and
-> [`TODO.md`](./TODO.md) for the execution plan.
-
-## License
-
-MIT — see [`LICENSE`](./LICENSE).
+> [!WARNING]
+> Work In Progress
