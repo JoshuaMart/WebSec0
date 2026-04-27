@@ -5,7 +5,7 @@ import alpinejs from '@astrojs/alpinejs';
 export default defineConfig({
   output: 'static',
   outDir: '../internal/webfs/dist',
-  trailingSlash: 'always',
+  trailingSlash: 'ignore',
   integrations: [
     tailwind({ applyBaseStyles: false }),
     alpinejs(),
