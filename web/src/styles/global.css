@@ -1,0 +1,50 @@
+@import '@fontsource-variable/inter';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-sand text-ink antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  body {
+    @apply font-sans text-base leading-relaxed;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-sand rounded;
+  }
+
+  code, kbd, pre {
+    @apply font-mono;
+  }
+}
+
+@layer components {
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium font-mono;
+  }
+
+  .family-tag {
+    @apply badge bg-sand-100 text-ink-muted border border-sand-200;
+  }
+
+  .severity-critical { @apply badge bg-red-50   text-red-700   border border-red-200; }
+  .severity-high     { @apply badge bg-orange-50 text-orange-700 border border-orange-200; }
+  .severity-medium   { @apply badge bg-amber-50  text-amber-700  border border-amber-200; }
+  .severity-low      { @apply badge bg-blue-50   text-blue-700   border border-blue-200; }
+  .severity-info     { @apply badge bg-sand-100  text-ink-muted  border border-sand-200; }
+  .severity-pass     { @apply badge bg-green-50  text-green-700  border border-green-200; }
+
+  .tab-btn {
+    @apply px-3 py-1 rounded text-xs font-mono font-medium transition-colors
+           text-ink-muted hover:text-ink hover:bg-sand-100
+           border border-transparent;
+  }
+  .tab-btn-active {
+    @apply text-ink bg-sand-50 border-sand-200;
+  }
+}

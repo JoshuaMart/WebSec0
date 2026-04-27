@@ -22,6 +22,10 @@ vendor/
 node_modules/
 .astro/
 web/dist/
+web/.astro/
+# Frontend build output embedded by Go — exclude compiled assets, keep placeholder
+internal/webfs/dist/*
+!internal/webfs/dist/.gitkeep
 .pnpm-store/
 .npm/
 .yarn/

@@ -1,0 +1,148 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import ScanForm from '../components/ScanForm.astro';
+import SnippetPreview from '../components/SnippetPreview.astro';
+
+const families = ['TLS', 'HTTP Headers', 'Cookies', 'DNS', 'Email', 'security.txt', 'Exposures'];
+
+const features = [
+  {
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
+    </svg>`,
+    title: 'Quick wins first',
+    body: 'No 50-page reports. Findings are ranked by impact/effort ratio so you always know what to fix first.',
+  },
+  {
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/>
+    </svg>`,
+    title: 'Stack-specific fixes',
+    body: 'Stop Googling. Get exact config snippets for nginx, Apache, Caddy, HAProxy, Cloudflare, Spring Boot, and IIS.',
+  },
+  {
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375"/>
+    </svg>`,
+    title: '4 tools in 1',
+    body: 'Replaces SSL Labs, Hardenize, and SecurityHeaders.com. Single self-hosted binary, no external dependencies.',
+  },
+];
+---
+<Base>
+  <Nav />
+
+  <main class="flex-1">
+
+    <!-- Hero -->
+    <section class="pt-20 pb-16 px-6 text-center">
+      <div class="max-w-2xl mx-auto">
+
+        <!-- Badge -->
+        <a
+          href="https://github.com/JoshuaMart/websec0"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sand-100 border border-sand-200
+                 text-ink-muted text-xs font-mono font-medium mb-8 hover:border-sand-300 transition-colors"
+        >
+          <!-- GitHub icon -->
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          Open-source · Self-hostable · MIT
+        </a>
+
+        <!-- Headline -->
+        <h1 class="text-4xl sm:text-5xl font-semibold text-ink leading-tight tracking-tight mb-5">
+          The web security scanner<br/>that goes straight to the fix.
+        </h1>
+
+        <!-- Subheadline -->
+        <p class="text-lg text-ink-muted mb-10 max-w-lg mx-auto leading-relaxed">
+          Replace SSL Labs, Hardenize, and SecurityHeaders.com with one lightweight tool.
+          Get copy-paste remediation snippets for your exact stack.
+        </p>
+
+        <!-- Scan form -->
+        <ScanForm />
+
+        <!-- Family tags -->
+        <div class="mt-7 flex flex-wrap items-center justify-center gap-1.5">
+          {families.map((label) => (
+            <span class="family-tag">{label}</span>
+          ))}
+          <span class="text-xs font-mono text-ink-faint ml-1">+&nbsp;more</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Snippet preview -->
+    <section class="pb-20 px-6">
+      <SnippetPreview />
+    </section>
+
+    <!-- Divider -->
+    <div class="max-w-5xl mx-auto px-6">
+      <hr class="border-sand-200" />
+    </div>
+
+    <!-- Features -->
+    <section class="py-16 px-6">
+      <div class="max-w-5xl mx-auto grid sm:grid-cols-3 gap-10">
+        {features.map(({ icon, title, body }) => (
+          <div class="flex flex-col gap-3">
+            <div
+              class="w-8 h-8 rounded-lg bg-accent-light border border-accent-border text-accent
+                     flex items-center justify-center flex-shrink-0"
+              set:html={icon}
+            />
+            <h2 class="text-sm font-semibold text-ink">{title}</h2>
+            <p class="text-sm text-ink-muted leading-relaxed">{body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Passive scanner callout -->
+    <section class="py-10 px-6 bg-white border-y border-sand-200">
+      <div class="max-w-2xl mx-auto flex items-start gap-4">
+        <div class="w-6 h-6 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <p class="text-sm text-ink-muted leading-relaxed">
+          <span class="font-medium text-ink">Passive scanner.</span>{' '}
+          WebSec0 performs standard HTTP/TLS requests and DNS lookups only.
+          No crawling, no fuzzing, no exploits. Under 50 requests per scan.
+          {' '}<a href="/about/" class="text-accent hover:underline font-mono text-xs">learn more →</a>
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-7 px-6 border-t border-sand-200">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <span class="font-mono text-xs text-ink-faint">WebSec0 · MIT License</span>
+      <nav class="flex items-center gap-5" aria-label="Footer">
+        {[
+          { href: '/checks/',    label: 'Checks'  },
+          { href: '/about/',     label: 'About'   },
+          { href: '/docs/api/', label: 'API'      },
+          { href: '/legal/tos/', label: 'Terms'   },
+          { href: '/legal/privacy/', label: 'Privacy' },
+        ].map(({ href, label }) => (
+          <a href={href} class="font-mono text-xs text-ink-faint hover:text-ink transition-colors">
+            {label}
+          </a>
+        ))}
+      </nav>
+    </div>
+  </footer>
+
+</Base>

@@ -1,0 +1,123 @@
+---
+// SnippetPreview — Interactive demo card showing a real finding + stack-specific fix.
+// Demonstrates the key product differentiator without requiring a live scan.
+---
+<script>
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('snippetPreview', () => ({
+      tab: 'nginx',
+      copied: false,
+      snippets: {
+        nginx:      'add_header Strict-Transport-Security\n  "max-age=31536000; includeSubDomains" always;',
+        apache:     'Header always set Strict-Transport-Security\n  "max-age=31536000; includeSubDomains"',
+        caddy:      'header Strict-Transport-Security\n  "max-age=31536000; includeSubDomains"',
+        cloudflare: 'SSL/TLS → Edge Certificates\n  → HTTP Strict Transport Security (HSTS) → Enable',
+        spring:     'server.ssl.enabled=true\nserver.ssl.protocol=TLS',
+      },
+      get currentSnippet() {
+        return this.snippets[this.tab];
+      },
+      async copy() {
+        try {
+          await navigator.clipboard.writeText(this.currentSnippet);
+          this.copied = true;
+          setTimeout(() => { this.copied = false; }, 2000);
+        } catch { /* clipboard not available in non-secure context */ }
+      },
+    }));
+  });
+</script>
+
+<div class="w-full max-w-2xl mx-auto">
+  <!-- Label -->
+  <p class="text-xs font-mono text-ink-faint text-center mb-3 tracking-wide uppercase">
+    Live example — finding &amp; fix
+  </p>
+
+  <!-- Card -->
+  <div
+    x-data="snippetPreview"
+    class="bg-white border border-sand-200 rounded-xl overflow-hidden shadow-input"
+    role="region"
+    aria-label="Finding example"
+  >
+    <!-- Finding header -->
+    <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-sand-200">
+      <div class="flex items-center gap-3 min-w-0">
+        <!-- Fail indicator -->
+        <div class="w-5 h-5 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+          <svg class="w-3 h-3 text-orange-600" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <p class="font-mono text-sm font-medium text-ink truncate">TLS-HSTS-MISSING</p>
+          <p class="text-xs text-ink-muted mt-0.5">Strict-Transport-Security header not present</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <span class="severity-high">HIGH</span>
+        <span class="badge bg-green-50 text-green-700 border border-green-200">effort: low</span>
+      </div>
+    </div>
+
+    <!-- Stack tabs -->
+    <div class="flex items-center gap-1 px-5 pt-3 pb-0 overflow-x-auto">
+      <span class="text-xs text-ink-faint mr-2 flex-shrink-0">Fix for:</span>
+      {['nginx', 'apache', 'caddy', 'cloudflare', 'spring'].map(stack => (
+        <button
+          @click={`tab = '${stack}'`}
+          :class={`tab === '${stack}' ? 'tab-btn tab-btn-active' : 'tab-btn'`}
+          type="button"
+        >
+          {stack}
+        </button>
+      ))}
+    </div>
+
+    <!-- Code block -->
+    <div class="px-5 pt-3 pb-4">
+      <div class="relative bg-gray-950 rounded-lg px-4 py-3.5">
+        <!-- Dot decoration -->
+        <div class="flex gap-1.5 mb-3" aria-hidden="true">
+          <div class="w-2.5 h-2.5 rounded-full bg-gray-700"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-gray-700"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-gray-700"></div>
+        </div>
+
+        <pre
+          x-text="currentSnippet"
+          class="font-mono text-sm text-green-400 leading-relaxed whitespace-pre-wrap break-all"
+          aria-label="Configuration snippet"
+        ></pre>
+
+        <!-- Copy button -->
+        <button
+          @click="copy()"
+          type="button"
+          class="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md
+                 text-xs font-mono font-medium transition-all
+                 bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+          :aria-label="copied ? 'Copied!' : 'Copy to clipboard'"
+        >
+          <!-- Copy icon -->
+          <svg x-show="!copied" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z"/>
+            <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z"/>
+          </svg>
+          <!-- Check icon -->
+          <svg x-show="copied" class="w-3.5 h-3.5 text-green-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/>
+          </svg>
+          <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+        </button>
+      </div>
+
+      <!-- Verify command -->
+      <p class="mt-2.5 text-xs font-mono text-ink-faint">
+        <span class="text-ink-muted">verify:</span>
+        {' '}curl -sI https://example.com | grep -i strict
+      </p>
+    </div>
+  </div>
+</div>

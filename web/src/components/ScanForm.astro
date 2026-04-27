@@ -1,0 +1,104 @@
+---
+// ScanForm — Alpine.js island. POSTs to /api/v1/scans, redirects to /scan/{id}/.
+---
+<script>
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('scanForm', () => ({
+      target: '',
+      loading: false,
+      error: '',
+      async scan() {
+        const t = this.target.trim();
+        if (!t) return;
+        this.loading = true;
+        this.error = '';
+        try {
+          const res = await fetch('/api/v1/scans', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: t }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            this.error = data.detail ?? data.message ?? ('Error ' + res.status);
+            return;
+          }
+          window.location.href = '/scan/' + data.id + '/';
+        } catch {
+          this.error = 'Network error. Check your connection and try again.';
+        } finally {
+          this.loading = false;
+        }
+      },
+    }));
+  });
+</script>
+
+<div x-data="scanForm" class="w-full max-w-xl mx-auto">
+  <form
+    @submit.prevent="scan()"
+    class="flex items-center gap-2 bg-white border border-sand-200 rounded-xl px-4 py-3 shadow-input
+           focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/20 transition-all"
+  >
+    <!-- Prompt prefix -->
+    <span class="font-mono text-sm text-ink-faint select-none" aria-hidden="true">&gt;</span>
+
+    <!-- Domain input -->
+    <input
+      type="text"
+      x-model="target"
+      placeholder="example.com"
+      autocomplete="off"
+      autocapitalize="none"
+      spellcheck="false"
+      :disabled="loading"
+      class="flex-1 bg-transparent font-mono text-sm text-ink placeholder:text-ink-faint
+             focus:outline-none disabled:opacity-50 min-w-0"
+      aria-label="Target domain or URL"
+    />
+
+    <!-- Keyboard hint — hidden on mobile -->
+    <span class="hidden sm:flex items-center gap-0.5 text-xs text-ink-faint font-mono select-none" aria-hidden="true">
+      <kbd class="px-1.5 py-0.5 rounded border border-sand-200 bg-sand-100 text-ink-faint text-[10px]">⏎</kbd>
+    </span>
+
+    <!-- Submit -->
+    <button
+      type="submit"
+      :disabled="loading || !target.trim()"
+      class="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent text-white text-sm font-medium
+             transition-all hover:bg-accent-hover active:scale-95
+             disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 flex-shrink-0"
+    >
+      <span x-show="!loading">Scan</span>
+      <span x-show="loading" class="flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+        Scanning…
+      </span>
+    </button>
+  </form>
+
+  <!-- Error message -->
+  <p
+    x-show="error"
+    x-text="error"
+    x-transition
+    class="mt-2 text-xs text-red-600 text-center font-mono"
+    role="alert"
+  ></p>
+
+  <!-- Hint -->
+  <p x-show="!error" class="mt-2 text-xs text-ink-faint text-center">
+    Accepts a hostname or full URL — HTTP and HTTPS are both tested.
+  </p>
+
+  <noscript>
+    <p class="mt-3 text-xs text-ink-muted text-center">
+      JavaScript required.
+      Use the <a href="/api/v1/openapi.json" class="underline text-accent">REST API</a> directly or enable JS.
+    </p>
+  </noscript>
+</div>

@@ -1,0 +1,43 @@
+---
+interface Props {
+  current?: 'home' | 'checks' | 'about' | 'api';
+}
+const { current } = Astro.props;
+
+const links = [
+  { href: '/checks/', label: 'Checks', key: 'checks' },
+  { href: '/about/',  label: 'About',  key: 'about'  },
+  { href: '/docs/api/', label: 'API',  key: 'api'    },
+];
+---
+<header class="sticky top-0 z-50 bg-sand/90 backdrop-blur-sm border-b border-sand-200">
+  <nav class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+
+    <a href="/" class="flex items-center gap-2" aria-label="WebSec0 home">
+      <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 2L4 7v8c0 7.5 5.2 14.5 12 16.3C22.8 29.5 28 22.5 28 15V7L16 2z" fill="#2563EB"/>
+        <path d="M11 16l3 3 7-7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="font-semibold text-sm text-ink tracking-tight">WebSec0</span>
+    </a>
+
+    <ul class="flex items-center gap-0.5" role="list">
+      {links.map(({ href, label, key }) => (
+        <li>
+          <a
+            href={href}
+            class:list={[
+              'px-3 py-1.5 rounded-md text-sm transition-colors',
+              current === key
+                ? 'text-ink font-medium bg-sand-100'
+                : 'text-ink-muted hover:text-ink hover:bg-sand-100',
+            ]}
+          >
+            {label}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+  </nav>
+</header>

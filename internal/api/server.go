@@ -4,6 +4,7 @@ package api
 
 import (
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scanner"
 	"github.com/JoshuaMart/websec0/internal/scanner/safety"
 	"github.com/JoshuaMart/websec0/internal/storage"
+	"github.com/JoshuaMart/websec0/internal/webfs"
 	client "github.com/JoshuaMart/websec0/pkg/client"
 )
 
@@ -43,7 +45,8 @@ type Options struct {
 //
 //	chi.Router (request-id, recover, access-log, cors)
 //	├── GET /api/v1/scans/{guid}/events  — explicit SSE route
-//	└── *                                — ogen.Server (mounted at "/")
+//	├── /api/*                           — ogen.Server
+//	└── /*                               — embedded Astro static frontend
 //
 // The SSE endpoint is registered on chi directly (and matched first)
 // because it does not fit the OpenAPI request/response model: streaming,
@@ -92,6 +95,26 @@ func NewServer(opts Options) (http.Handler, error) {
 	// Explicit SSE route — takes precedence over the ogen mount below.
 	r.Get("/api/v1/scans/{guid}/events", h.SSEHandler)
 
-	r.Mount("/", ogenServer)
+	// All /api/* requests go to the ogen server.
+	r.Mount("/api", ogenServer)
+
+	// Frontend — embedded Astro static build.
+	// Falls back gracefully when dist/ is empty (pre-build).
+	staticFS, err := webfs.FS()
+	if err != nil {
+		return nil, fmt.Errorf("api: load embedded frontend: %w", err)
+	}
+	r.Handle("/*", frontendHandler(staticFS))
+
 	return r, nil
+}
+
+// frontendHandler serves static files from the embedded Astro dist/.
+// For paths that map to a directory, it tries index.html (Astro's default).
+// Unknown paths return 404 without panicking.
+func frontendHandler(fsys fs.FS) http.Handler {
+	fileServer := http.FileServerFS(fsys)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fileServer.ServeHTTP(w, r)
+	})
 }
