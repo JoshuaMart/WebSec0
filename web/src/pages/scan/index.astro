@@ -201,10 +201,10 @@ import Nav from '../../components/Nav.astro';
 
       <!-- ── Completed: 2-col layout ───────────────────────────── -->
       <div x-show="status === 'completed'" class="max-w-7xl mx-auto px-6 py-6">
-        <div class="grid lg:grid-cols-3 gap-8">
+        <div class="grid lg:grid-cols-4 gap-8">
 
-          <!-- ── Findings column (2/3) ─── -->
-          <div class="lg:col-span-2 space-y-8">
+          <!-- ── Findings column (3/4) ─── -->
+          <div class="lg:col-span-3 space-y-8">
 
             <!-- Severity sections -->
             <template x-for="sev in ['critical','high','medium','low','info']" :key="sev">
@@ -278,8 +278,8 @@ import Nav from '../../components/Nav.astro';
                               <div class="space-y-1.5">
                                 <template x-for="ref in (finding.remediation && finding.remediation.references) || []" :key="ref.url || ref.title">
                                   <a :href="ref.url" target="_blank" rel="noopener noreferrer"
-                                     class="flex items-start gap-1.5 text-sm text-accent hover:underline">
-                                    <span class="flex-shrink-0 mt-0.5 text-[10px]">↗</span>
+                                     class="flex items-start gap-1.5 text-sm text-ink hover:underline hover:text-ink-muted">
+                                    <span class="flex-shrink-0 mt-0.5 text-[10px] text-ink-faint">↗</span>
                                     <span x-text="ref.title"></span>
                                   </a>
                                 </template>
@@ -291,10 +291,10 @@ import Nav from '../../components/Nav.astro';
                         <!-- Evidence -->
                         <div x-show="finding.evidence && Object.keys(finding.evidence).length > 0"
                              class="rounded-xl border border-sand-200 overflow-hidden">
-                          <div class="px-4 py-2 border-b border-sand-200 bg-sand-50">
+                          <div class="px-4 py-2 border-b border-sand-200 bg-sand">
                             <span class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint">Evidence (live response)</span>
                           </div>
-                          <pre class="text-xs font-mono text-ink px-4 py-3 overflow-x-auto whitespace-pre-wrap break-all bg-white"
+                          <pre class="text-xs font-mono text-ink px-4 py-4 overflow-x-auto whitespace-pre-wrap break-all bg-sand"
                                x-text="JSON.stringify(finding.evidence, null, 2)"></pre>
                         </div>
 
@@ -394,12 +394,18 @@ import Nav from '../../components/Nav.astro';
                     <div>
                       <div class="flex items-center justify-between mb-1.5">
                         <span class="text-sm font-mono text-ink" x-text="item.family"></span>
-                        <span class="text-xs font-mono"
-                              :class="item.failed === 0 ? 'text-green-600' : item.failureRate > 50 ? 'text-red-600' : 'text-amber-600'"
-                              x-text="item.failed === 0 ? 'all pass' : item.failed + ' issue' + (item.failed > 1 ? 's' : '')"></span>
+                        <div class="flex items-center gap-2.5">
+                          <!-- Grade letter -->
+                          <span class="text-xs font-mono font-bold"
+                                :class="item.grade.charAt(0)==='A'?'text-accent':item.grade==='B'?'text-blue-600':item.grade==='C'?'text-amber-600':'text-red-600'"
+                                x-text="item.grade"></span>
+                          <!-- Issue count -->
+                          <span class="text-xs font-mono"
+                                :class="item.failed === 0 ? 'text-green-600' : item.failureRate > 50 ? 'text-red-600' : 'text-amber-600'"
+                                x-text="item.failed === 0 ? 'all pass' : item.failed + ' issue' + (item.failed > 1 ? 's' : '')"></span>
+                        </div>
                       </div>
                       <div class="h-1.5 bg-sand-200 rounded-full overflow-hidden">
-                        <!-- Bar shows failure proportion — red when >50% fail, amber otherwise -->
                         <div class="h-full rounded-full transition-all duration-700"
                              :class="item.failed === 0 ? 'bg-accent' : item.failureRate > 50 ? 'bg-red-500' : 'bg-amber-500'"
                              :style="'width:' + (item.failed === 0 ? 100 : item.failureRate) + '%'"></div>
@@ -597,10 +603,13 @@ import Nav from '../../components/Nav.astro';
           if (f.status === 'pass') map[f.family].passed++;
           else if (f.status === 'fail' || f.status === 'warn') map[f.family].failed++;
         }
-        return Object.values(map).map(item => ({
-          ...item,
-          failureRate: Math.round(item.failed / Math.max(1, item.passed + item.failed) * 100),
-        })).sort((a, b) => b.failed - a.failed); // worst first
+        return Object.values(map).map(item => {
+          const total = item.passed + item.failed;
+          const passRate = total > 0 ? item.passed / total : 0;
+          const failureRate = Math.round((1 - passRate) * 100);
+          const grade = passRate >= 0.97 ? 'A+' : passRate >= 0.9 ? 'A' : passRate >= 0.8 ? 'B' : passRate >= 0.7 ? 'C' : passRate >= 0.5 ? 'D' : 'F';
+          return { ...item, failureRate, grade };
+        }).sort((a, b) => b.failed - a.failed); // worst first
       },
 
       get filteredFailedCount() {
