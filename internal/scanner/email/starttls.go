@@ -38,7 +38,7 @@ func FetchSMTP(ctx context.Context, t *checks.Target) (*SMTPProbeResult, error) 
 	v, err := t.CacheValue(starttlsCacheKey, func() (any, error) {
 		r, fetchErr := Fetch(ctx, t)
 		if fetchErr != nil {
-			return &SMTPProbeResult{Err: fetchErr}, nil
+			return &SMTPProbeResult{Err: fetchErr}, nil //nolint:nilerr
 		}
 		if !r.HasMX || len(r.MX) == 0 {
 			return &SMTPProbeResult{}, nil

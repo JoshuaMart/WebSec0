@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -187,7 +188,7 @@ func checkSVGTinyPS(data []byte) []string {
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			issues = append(issues, "XML parse error: "+err.Error())

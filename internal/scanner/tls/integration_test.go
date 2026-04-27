@@ -25,11 +25,11 @@ import (
 type certKind int
 
 const (
-	kindRSA2048    certKind = iota
-	kindRSA1024             // weak
+	kindRSA2048 certKind = iota
+	kindRSA1024          // weak
 	kindECDSAP256
-	kindSelfSigned          // RSA leaf where Issuer == Subject
-	kindSCTEmbedded         // RSA leaf with CT SCT-list X.509 extension
+	kindSelfSigned  // RSA leaf where Issuer == Subject
+	kindSCTEmbedded // RSA leaf with CT SCT-list X.509 extension
 )
 
 type fixture struct {

@@ -205,9 +205,9 @@ func (hstsNoPreloadCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 	}
 
 	ev := map[string]any{
-		"has_preload":          p.Preload,
+		"has_preload":           p.Preload,
 		"has_includesubdomains": p.IncludeSubDomains,
-		"max_age_seconds":      int(p.MaxAge.Seconds()),
+		"max_age_seconds":       int(p.MaxAge.Seconds()),
 	}
 
 	eligible := p.Preload && p.IncludeSubDomains && p.MaxAge >= hstsPreloadMinMaxAge

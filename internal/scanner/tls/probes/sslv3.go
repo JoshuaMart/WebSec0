@@ -49,7 +49,7 @@ func craftSSLv3ClientHello() []byte {
 		0x0009, // TLS_RSA_WITH_DES_CBC_SHA
 		0x0003, // TLS_RSA_EXPORT_WITH_RC4_40_MD5
 	}
-	body = binary.BigEndian.AppendUint16(body, uint16(len(ciphers)*2))
+	body = binary.BigEndian.AppendUint16(body, uint16(len(ciphers)*2)) //nolint:gosec
 	for _, c := range ciphers {
 		body = binary.BigEndian.AppendUint16(body, c)
 	}
@@ -58,15 +58,15 @@ func craftSSLv3ClientHello() []byte {
 	body = append(body, 0x01, 0x00)
 
 	// Handshake message: type=ClientHello(0x01) + 3-byte length
-	var hs []byte
+	hs := make([]byte, 0, 4+len(body))
 	hs = append(hs, 0x01)
-	hs = append(hs, byte(len(body)>>16), byte(len(body)>>8), byte(len(body)))
+	hs = append(hs, byte(len(body)>>16), byte(len(body)>>8), byte(len(body))) //nolint:gosec
 	hs = append(hs, body...)
 
 	// TLS record: type=Handshake(0x16) + version SSLv3(0x0300) + 2-byte length
 	var rec []byte
 	rec = append(rec, 0x16, 0x03, 0x00)
-	rec = binary.BigEndian.AppendUint16(rec, uint16(len(hs)))
+	rec = binary.BigEndian.AppendUint16(rec, uint16(len(hs))) //nolint:gosec
 	rec = append(rec, hs...)
 	return rec
 }

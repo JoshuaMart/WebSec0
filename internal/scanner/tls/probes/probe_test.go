@@ -47,11 +47,11 @@ func buildServerHelloRecord(recVersion, helloVersion, cipher uint16) []byte {
 	var shBody []byte
 	shBody = binary.BigEndian.AppendUint16(shBody, helloVersion)
 	shBody = append(shBody, random...)
-	shBody = append(shBody, 0x00)                            // session_id_length = 0
-	shBody = binary.BigEndian.AppendUint16(shBody, cipher)  // cipher suite
-	shBody = append(shBody, 0x00)                            // compression = null
+	shBody = append(shBody, 0x00)                          // session_id_length = 0
+	shBody = binary.BigEndian.AppendUint16(shBody, cipher) // cipher suite
+	shBody = append(shBody, 0x00)                          // compression = null
 
-	var hs []byte
+	hs := make([]byte, 0, 4+len(shBody))
 	hs = append(hs, 0x02) // ServerHello
 	hs = append(hs, byte(len(shBody)>>16), byte(len(shBody)>>8), byte(len(shBody)))
 	hs = append(hs, shBody...)
@@ -147,19 +147,20 @@ func buildSSLv2ServerHello() []byte {
 	connID := []byte{0xAB, 0xCD}
 
 	var body []byte
-	body = append(body, 0x04)                                             // server_hello
-	body = append(body, 0x00)                                             // session_id_hit = 0
-	body = append(body, 0x01)                                             // certificate_type = X509
-	body = append(body, 0x00, 0x02)                                       // server_version = SSL 2.0
-	body = binary.BigEndian.AppendUint16(body, uint16(len(cert)))         // certificate_length
-	body = binary.BigEndian.AppendUint16(body, uint16(len(cipher)))       // cipher_specs_length
-	body = binary.BigEndian.AppendUint16(body, uint16(len(connID)))       // connection_id_length
+	body = append(body, 0x04)                                       // server_hello
+	body = append(body, 0x00)                                       // session_id_hit = 0
+	body = append(body, 0x01)                                       // certificate_type = X509
+	body = append(body, 0x00, 0x02)                                 // server_version = SSL 2.0
+	body = binary.BigEndian.AppendUint16(body, uint16(len(cert)))   // certificate_length
+	body = binary.BigEndian.AppendUint16(body, uint16(len(cipher))) // cipher_specs_length
+	body = binary.BigEndian.AppendUint16(body, uint16(len(connID))) // connection_id_length
 	body = append(body, cert...)
 	body = append(body, cipher...)
 	body = append(body, connID...)
 
 	bodyLen := uint16(len(body))
-	pkt := []byte{byte(0x80 | (bodyLen >> 8)), byte(bodyLen)}
+	pkt := make([]byte, 0, 2+len(body))
+	pkt = append(pkt, byte(0x80|(bodyLen>>8)), byte(bodyLen))
 	return append(pkt, body...)
 }
 
@@ -270,14 +271,14 @@ func TestProbeTLSHello_WeakCipherAccepted(t *testing.T) {
 
 func buildCertificateRecord() []byte {
 	cert := []byte{0x30, 0x03, 0x01, 0x02, 0x03} // minimal ASN.1 SEQUENCE
-	var body []byte
+	body := make([]byte, 0, 6+len(cert))
 	// certificate_list: 3-byte list length + per-cert (3-byte length + DER)
 	listLen := 3 + len(cert)
 	body = append(body, byte(listLen>>16), byte(listLen>>8), byte(listLen))
 	body = append(body, byte(len(cert)>>16), byte(len(cert)>>8), byte(len(cert)))
 	body = append(body, cert...)
 
-	var hs []byte
+	hs := make([]byte, 0, 4+len(body))
 	hs = append(hs, 0x0B) // Certificate
 	hs = append(hs, byte(len(body)>>16), byte(len(body)>>8), byte(len(body)))
 	hs = append(hs, body...)
@@ -291,8 +292,8 @@ func buildDHEServerKeyExchange(dhPrimeBytes int) []byte {
 	_, _ = rand.Read(prime)
 	prime[0] |= 0x80 // ensure MSB set (valid prime format)
 
-	g := []byte{0x02}                 // generator = 2
-	Ys := make([]byte, dhPrimeBytes)  // server public value
+	g := []byte{0x02}                // generator = 2
+	Ys := make([]byte, dhPrimeBytes) // server public value
 	_, _ = rand.Read(Ys)
 	sig := make([]byte, 64)
 	_, _ = rand.Read(sig)
@@ -308,7 +309,7 @@ func buildDHEServerKeyExchange(dhPrimeBytes int) []byte {
 	ske = binary.BigEndian.AppendUint16(ske, uint16(len(sig)))
 	ske = append(ske, sig...)
 
-	var hs []byte
+	hs := make([]byte, 0, 4+len(ske))
 	hs = append(hs, 0x0C) // ServerKeyExchange
 	hs = append(hs, byte(len(ske)>>16), byte(len(ske)>>8), byte(len(ske)))
 	hs = append(hs, ske...)
@@ -364,71 +365,6 @@ func TestProbeDHKeySize_2048bit(t *testing.T) {
 }
 
 // ---- EnumerateCipherSuites tests -------------------------------------------
-
-// servePickingCiphers returns a mock server that accepts connections, reads
-// one ClientHello, and replies with a ServerHello selecting the FIRST cipher
-// from the offered list that matches one in acceptSet (server preference order
-// = acceptSet order). Returns Alert if none match.
-func servePickingCiphers(t *testing.T, acceptSet []uint16) string {
-	t.Helper()
-	return serveTCP(t, func(conn net.Conn) {
-		defer conn.Close()
-
-		// Read and parse the ClientHello to find offered ciphers.
-		hdr := make([]byte, 5)
-		if _, err := io.ReadFull(conn, hdr); err != nil {
-			return
-		}
-		recLen := binary.BigEndian.Uint16(hdr[3:5])
-		body := make([]byte, recLen)
-		if _, err := io.ReadFull(conn, body); err != nil {
-			return
-		}
-
-		// Parse offered cipher suites from the ClientHello body.
-		// body[0]=HandshakeType, body[1:4]=length, body[4:6]=version, body[6:38]=random,
-		// body[38]=session_id_len, then 2-byte cipher_suites_len, then suites.
-		if len(body) < 43 {
-			_, _ = conn.Write(buildTLSAlert(0x0303))
-			return
-		}
-		sidLen := int(body[38])
-		base := 39 + sidLen
-		if len(body) < base+2 {
-			_, _ = conn.Write(buildTLSAlert(0x0303))
-			return
-		}
-		csLen := int(binary.BigEndian.Uint16(body[base : base+2]))
-		base += 2
-		if len(body) < base+csLen {
-			_, _ = conn.Write(buildTLSAlert(0x0303))
-			return
-		}
-		var offered []uint16
-		for i := 0; i+1 < csLen; i += 2 {
-			offered = append(offered, binary.BigEndian.Uint16(body[base+i:base+i+2]))
-		}
-
-		// Pick the first acceptSet cipher that appears in offered.
-		chosen := uint16(0)
-		for _, want := range acceptSet {
-			for _, got := range offered {
-				if got == want {
-					chosen = want
-					break
-				}
-			}
-			if chosen != 0 {
-				break
-			}
-		}
-		if chosen == 0 {
-			_, _ = conn.Write(buildTLSAlert(0x0303))
-			return
-		}
-		_, _ = conn.Write(buildServerHelloRecord(0x0303, 0x0303, chosen))
-	})
-}
 
 func TestEnumerateCipherSuites_ServerPreferenceTwoSuites(t *testing.T) {
 	// Server accepts 0xC02F and 0x002F (in that preference order).
@@ -575,10 +511,10 @@ func serveHeartbleedVulnerable(t *testing.T) string {
 		_, _ = rand.Read(leaked)
 
 		var respBody []byte
-		respBody = append(respBody, 0x02)                          // type = response
-		respBody = binary.BigEndian.AppendUint16(respBody, 1)      // payload_length = 1
-		respBody = append(respBody, 0xAB)                          // 1-byte payload
-		respBody = append(respBody, leaked...)                      // extra "leaked" bytes
+		respBody = append(respBody, 0x02)                     // type = response
+		respBody = binary.BigEndian.AppendUint16(respBody, 1) // payload_length = 1
+		respBody = append(respBody, 0xAB)                     // 1-byte payload
+		respBody = append(respBody, leaked...)                // extra "leaked" bytes
 
 		resp := []byte{0x18, 0x03, 0x02}
 		resp = binary.BigEndian.AppendUint16(resp, uint16(len(respBody)))
@@ -655,7 +591,7 @@ func TestProbeHeartbleed_Safe_MinimalResponse(t *testing.T) {
 		// Respond with 3-byte HeartbeatResponse (exact boundary, not vulnerable)
 		resp := []byte{
 			0x18, 0x03, 0x02, // Heartbeat record
-			0x00, 0x03,       // length = 3
+			0x00, 0x03, // length = 3
 			0x02, 0x00, 0x00, // type=response, payload_length=0
 		}
 		_, _ = conn.Write(resp)

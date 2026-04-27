@@ -24,14 +24,14 @@ type LegacyResult struct {
 	TLS11Cipher    uint16
 
 	// Weak cipher acceptance (probed at TLS 1.2 max-version)
-	NullAccepted    bool
-	NullCipher      uint16
-	ExportAccepted  bool
-	ExportCipher    uint16
-	RC4Accepted     bool
-	RC4Cipher       uint16
-	DESAccepted     bool
-	DESCipher       uint16
+	NullAccepted      bool
+	NullCipher        uint16
+	ExportAccepted    bool
+	ExportCipher      uint16
+	RC4Accepted       bool
+	RC4Cipher         uint16
+	DESAccepted       bool
+	DESCipher         uint16
 	TripleDESAccepted bool
 	TripleDESCipher   uint16
 

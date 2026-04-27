@@ -219,7 +219,7 @@ func (daneMismatchCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	// Need the certificate from STARTTLS to compare.
 	smtp, err := FetchSMTP(ctx, t)
 	if err != nil || !smtp.Connected || smtp.TLSCert == nil {
-		return skipped(IDDANEMismatch, checks.SeverityHigh,
+		return skipped(IDDANEMismatch, checks.SeverityHigh, //nolint:nilerr
 			"STARTTLS cert not available (port 25 blocked or TLS failed)"), nil
 	}
 

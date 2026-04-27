@@ -57,7 +57,7 @@ func craftTLSClientHello(maxVersion uint16, cipherSuites []uint16) []byte {
 	body = append(body, 0x00)
 	// cipher_suites + TLS_EMPTY_RENEGOTIATION_INFO_SCSV sentinel
 	suites := append(append([]uint16{}, cipherSuites...), 0x00FF)
-	body = binary.BigEndian.AppendUint16(body, uint16(len(suites)*2))
+	body = binary.BigEndian.AppendUint16(body, uint16(len(suites)*2)) //nolint:gosec
 	for _, s := range suites {
 		body = binary.BigEndian.AppendUint16(body, s)
 	}
@@ -65,15 +65,15 @@ func craftTLSClientHello(maxVersion uint16, cipherSuites []uint16) []byte {
 	body = append(body, 0x01, 0x00)
 
 	// Handshake message header: ClientHello (0x01) + 3-byte length
-	var hs []byte
+	hs := make([]byte, 0, 4+len(body))
 	hs = append(hs, 0x01)
-	hs = append(hs, byte(len(body)>>16), byte(len(body)>>8), byte(len(body)))
+	hs = append(hs, byte(len(body)>>16), byte(len(body)>>8), byte(len(body))) //nolint:gosec
 	hs = append(hs, body...)
 
 	// TLS record header: Handshake (0x16) + version 0x0301 + 2-byte length
 	var rec []byte
 	rec = append(rec, 0x16, 0x03, 0x01)
-	rec = binary.BigEndian.AppendUint16(rec, uint16(len(hs)))
+	rec = binary.BigEndian.AppendUint16(rec, uint16(len(hs))) //nolint:gosec
 	rec = append(rec, hs...)
 	return rec
 }
@@ -82,7 +82,7 @@ func craftTLSClientHello(maxVersion uint16, cipherSuites []uint16) []byte {
 func readTLSServerHello(conn net.Conn) (TLSHelloResult, error) {
 	hdr := make([]byte, 5)
 	if _, err := io.ReadFull(conn, hdr); err != nil {
-		return TLSHelloResult{}, nil // connection closed = rejected
+		return TLSHelloResult{}, nil //nolint:nilerr // connection closed = rejected
 	}
 
 	recordType := hdr[0]
@@ -93,7 +93,7 @@ func readTLSServerHello(conn net.Conn) (TLSHelloResult, error) {
 
 	body := make([]byte, recordLen)
 	if _, err := io.ReadFull(conn, body); err != nil {
-		return TLSHelloResult{}, nil
+		return TLSHelloResult{}, nil //nolint:nilerr
 	}
 
 	switch recordType {

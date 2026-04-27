@@ -39,20 +39,18 @@ func craftSSLv2ClientHello() []byte {
 	_, _ = rand.Read(challenge)
 
 	var body []byte
-	body = append(body, 0x01)                                              // msg_type = client_hello
-	body = append(body, 0x00, 0x02)                                        // version = SSL 2.0
-	body = binary.BigEndian.AppendUint16(body, uint16(len(sslv2Ciphers))) // cipher_specs_length
-	body = append(body, 0x00, 0x00)                                        // session_id_length = 0
-	body = append(body, 0x00, 0x10)                                        // challenge_length = 16
+	body = append(body, 0x01)                                             // msg_type = client_hello
+	body = append(body, 0x00, 0x02)                                       // version = SSL 2.0
+	body = binary.BigEndian.AppendUint16(body, uint16(len(sslv2Ciphers))) //nolint:gosec // cipher_specs_length
+	body = append(body, 0x00, 0x00)                                       // session_id_length = 0
+	body = append(body, 0x00, 0x10)                                       // challenge_length = 16
 	body = append(body, sslv2Ciphers...)
 	body = append(body, challenge...)
 
 	// 2-byte header: MSB set, length in lower 15 bits
-	bodyLen := uint16(len(body))
-	pkt := []byte{
-		byte(0x80 | (bodyLen >> 8)),
-		byte(bodyLen),
-	}
+	bodyLen := uint16(len(body)) //nolint:gosec
+	pkt := make([]byte, 0, 2+len(body))
+	pkt = append(pkt, byte(0x80|(bodyLen>>8)), byte(bodyLen)) //nolint:gosec
 	return append(pkt, body...)
 }
 

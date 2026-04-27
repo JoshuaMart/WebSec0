@@ -5,11 +5,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	stdtls "crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	stdtls "crypto/tls"
 	"time"
 
 	"github.com/JoshuaMart/websec0/internal/checks"
