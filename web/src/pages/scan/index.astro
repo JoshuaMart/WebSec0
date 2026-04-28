@@ -415,18 +415,6 @@ import Footer from '../../components/Footer.astro';
               <div class="pt-4 border-t border-sand-200">
                 <h3 class="text-[10px] font-mono font-semibold uppercase tracking-widest text-ink-faint mb-3">Scan metadata</h3>
                 <dl class="space-y-2.5">
-                  <div class="flex items-center justify-between gap-4">
-                    <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">target</dt>
-                    <dd class="text-xs font-mono text-ink truncate" x-text="target"></dd>
-                  </div>
-                  <div class="flex items-center justify-between gap-4" x-show="duration">
-                    <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">duration</dt>
-                    <dd class="text-xs font-mono text-ink" x-text="duration"></dd>
-                  </div>
-                  <div class="flex items-center justify-between gap-4">
-                    <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">checks</dt>
-                    <dd class="text-xs font-mono text-ink" x-text="findings.length + ' / 70'"></dd>
-                  </div>
                   <div class="flex items-start justify-between gap-4">
                     <dt class="text-[10px] font-mono text-ink-faint flex-shrink-0">scan id</dt>
                     <dd class="text-[10px] font-mono text-ink-faint break-all text-right" x-text="guid"></dd>
