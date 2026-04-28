@@ -242,24 +242,44 @@ func TestDefaultErrorPageDetected(t *testing.T) {
 func TestRobotsTxtHTMLDetected(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, &fixture{robotsCT: "text/html", robotsBody: "<html>oops SPA fallback</html>"})
-	if g := runCheck(t, scannerhttp.IDRobotsTxtInvalid, tgt); g.Status != checks.StatusFail {
+	g := runCheck(t, scannerhttp.IDRobotsTxtInvalid, tgt)
+	if g.Status != checks.StatusFail {
 		t.Errorf("ROBOTS-TXT-INVALID = %s, want fail", g.Status)
+	}
+	// Evidence must show the URL probed and a body excerpt — wrong
+	// content-type is reported via the earlier branch but the same
+	// fail Title here implies HTML body. We only assert the fields are
+	// populated, not the exact branch, since either is acceptable.
+	if g.Evidence["url"] == "" {
+		t.Errorf("evidence[url] is empty")
 	}
 }
 
 func TestRobotsTxtCleanPasses(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, &fixture{robotsBody: "User-agent: *\nDisallow: /admin\nSitemap: https://example.com/sitemap.xml\n"})
-	if g := runCheck(t, scannerhttp.IDRobotsTxtInvalid, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, scannerhttp.IDRobotsTxtInvalid, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("ROBOTS-TXT clean = %s, want pass", g.Status)
+	}
+	dirs, _ := g.Evidence["directives"].(map[string]int)
+	if dirs["user-agent"] != 1 || dirs["disallow"] != 1 || dirs["sitemap"] != 1 {
+		t.Errorf("directives histogram = %v, want one each of user-agent/disallow/sitemap", dirs)
 	}
 }
 
 func TestChangePasswordMissingDetected(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, &fixture{changePassCode: 404})
-	if g := runCheck(t, scannerhttp.IDChangePasswordMissing, tgt); g.Status != checks.StatusFail {
+	g := runCheck(t, scannerhttp.IDChangePasswordMissing, tgt)
+	if g.Status != checks.StatusFail {
 		t.Errorf("CHANGE-PASSWORD = %s, want fail", g.Status)
+	}
+	if g.Evidence["url"] == "" {
+		t.Errorf("evidence[url] is empty")
+	}
+	if status, _ := g.Evidence["status"].(int); status != 404 {
+		t.Errorf("evidence[status] = %v, want 404", g.Evidence["status"])
 	}
 }
 

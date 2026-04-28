@@ -151,6 +151,10 @@ func (noContactCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findin
 			Status:      checks.StatusFail,
 			Title:       "security.txt has no Contact",
 			Description: "RFC 9116 §2.5.3 mandates at least one Contact entry.",
+			Evidence: map[string]any{
+				"url":            res.FinalURL,
+				"fields_present": fieldsPresent(res.Parsed),
+			},
 		}, nil
 	}
 	return &checks.Finding{
@@ -192,6 +196,10 @@ func (noExpiresCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findin
 			Status:      checks.StatusFail,
 			Title:       "security.txt has no Expires",
 			Description: "RFC 9116 §2.5.5 mandates a single Expires field.",
+			Evidence: map[string]any{
+				"url":            res.FinalURL,
+				"fields_present": fieldsPresent(res.Parsed),
+			},
 		}, nil
 	}
 	return &checks.Finding{
@@ -275,6 +283,10 @@ func (noSignatureCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 			Status:      checks.StatusWarn,
 			Title:       "security.txt is not OpenPGP-signed",
 			Description: "Consider signing the file (RFC 9116 §3.3) so consumers can detect tampering.",
+			Evidence: map[string]any{
+				"url":    res.FinalURL,
+				"signed": false,
+			},
 		}, nil
 	}
 	return &checks.Finding{
@@ -323,4 +335,43 @@ func skippedFinding(id string, fam checks.Family, sev checks.Severity, reason st
 		Title:       "skipped: " + reason,
 		Description: "Dependent state was unavailable; nothing to evaluate.",
 	}
+}
+
+// fieldsPresent returns the names of RFC 9116 fields that the parsed
+// document carries values for. Used as evidence on NO-CONTACT / NO-EXPIRES
+// fail paths so the operator sees that the file was fetched and parsed —
+// just missing the specific required field.
+func fieldsPresent(p *SecurityTxt) []string {
+	if p == nil {
+		return nil
+	}
+	out := []string{}
+	if len(p.Contact) > 0 {
+		out = append(out, "Contact")
+	}
+	if p.Expires != nil {
+		out = append(out, "Expires")
+	}
+	if len(p.Encryption) > 0 {
+		out = append(out, "Encryption")
+	}
+	if len(p.Acknowledgments) > 0 {
+		out = append(out, "Acknowledgments")
+	}
+	if len(p.PreferredLanguages) > 0 {
+		out = append(out, "Preferred-Languages")
+	}
+	if len(p.Canonical) > 0 {
+		out = append(out, "Canonical")
+	}
+	if len(p.Policy) > 0 {
+		out = append(out, "Policy")
+	}
+	if len(p.Hiring) > 0 {
+		out = append(out, "Hiring")
+	}
+	if len(p.CSAF) > 0 {
+		out = append(out, "CSAF")
+	}
+	return out
 }

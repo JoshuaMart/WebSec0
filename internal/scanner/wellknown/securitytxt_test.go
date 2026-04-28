@@ -175,6 +175,18 @@ func TestNoContactFails(t *testing.T) {
 	if f.Status != checks.StatusFail {
 		t.Errorf("Status = %s, want fail", f.Status)
 	}
+	// Evidence must prove the file was fetched and parsed — only Contact
+	// is missing — so the operator sees Expires in fields_present.
+	if f.Evidence["url"] == "" {
+		t.Errorf("evidence[url] is empty")
+	}
+	fields, _ := f.Evidence["fields_present"].([]string)
+	if !contains(fields, "Expires") {
+		t.Errorf("fields_present = %v, want it to contain Expires", fields)
+	}
+	if contains(fields, "Contact") {
+		t.Errorf("fields_present = %v, must not list Contact", fields)
+	}
 }
 
 func TestNoExpiresFails(t *testing.T) {
@@ -188,6 +200,25 @@ func TestNoExpiresFails(t *testing.T) {
 	if f.Status != checks.StatusFail {
 		t.Errorf("Status = %s, want fail", f.Status)
 	}
+	if f.Evidence["url"] == "" {
+		t.Errorf("evidence[url] is empty")
+	}
+	fields, _ := f.Evidence["fields_present"].([]string)
+	if !contains(fields, "Contact") {
+		t.Errorf("fields_present = %v, want it to contain Contact", fields)
+	}
+	if contains(fields, "Expires") {
+		t.Errorf("fields_present = %v, must not list Expires", fields)
+	}
+}
+
+func contains(xs []string, want string) bool {
+	for _, x := range xs {
+		if x == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestNotHTTPSWhenOnlyOverHTTP(t *testing.T) {
@@ -216,6 +247,12 @@ func TestNoSignatureWarnsOnUnsignedFile(t *testing.T) {
 	f := runCheck(t, getCheck(t, wellknown.IDNoSignature), tgt)
 	if f.Status != checks.StatusWarn {
 		t.Errorf("Status = %s, want warn", f.Status)
+	}
+	if f.Evidence["url"] == "" {
+		t.Errorf("evidence[url] is empty")
+	}
+	if signed, _ := f.Evidence["signed"].(bool); signed {
+		t.Errorf("evidence[signed] = true, want false on warn")
 	}
 }
 

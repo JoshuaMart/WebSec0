@@ -36,29 +36,46 @@ func (robotsCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, 
 	if res.Robots.Status != 200 {
 		return skipped(IDRobotsTxtInvalid, checks.FamilyHTTP, checks.SeverityInfo, "no robots.txt"), nil
 	}
+	probedURL := res.Robots.URL
 	ct := strings.ToLower(res.Robots.Headers.Get("Content-Type"))
 	if ct != "" && !strings.Contains(ct, "text/plain") && !strings.Contains(ct, "text/x-robots") {
 		return fail(IDRobotsTxtInvalid, checks.FamilyHTTP, checks.SeverityInfo,
 			"robots.txt is not text/plain",
 			"Serve as `Content-Type: text/plain; charset=utf-8`.",
-			map[string]any{"content_type": ct}), nil
+			map[string]any{"url": probedURL, "content_type": ct}), nil
 	}
 	body := string(res.Robots.Body)
 	if strings.Contains(strings.ToLower(body), "<html") || strings.Contains(body, "<!doctype") {
 		return fail(IDRobotsTxtInvalid, checks.FamilyHTTP, checks.SeverityInfo,
 			"robots.txt body looks like HTML",
-			"Likely the SPA fallback handler is serving the index page on this path.", nil), nil
+			"Likely the SPA fallback handler is serving the index page on this path.",
+			map[string]any{
+				"url":          probedURL,
+				"content_type": ct,
+				"body_excerpt": bodyExcerpt(body, 200),
+			}), nil
 	}
-	if !looksLikeRobotsTxt(body) {
+	directives := robotsDirectiveHistogram(body)
+	if len(directives) == 0 {
 		return fail(IDRobotsTxtInvalid, checks.FamilyHTTP, checks.SeverityInfo,
 			"robots.txt has no recognised directive",
-			"Expected at least one `User-agent:` / `Disallow:` / `Allow:` / `Sitemap:` line.", nil), nil
+			"Expected at least one `User-agent:` / `Disallow:` / `Allow:` / `Sitemap:` line.",
+			map[string]any{
+				"url":          probedURL,
+				"content_type": ct,
+				"body_excerpt": bodyExcerpt(body, 200),
+			}), nil
 	}
 	return pass(IDRobotsTxtInvalid, checks.FamilyHTTP, checks.SeverityInfo,
-		"robots.txt parses cleanly", nil), nil
+		"robots.txt parses cleanly",
+		map[string]any{"url": probedURL, "directives": directives}), nil
 }
 
-func looksLikeRobotsTxt(body string) bool {
+// robotsDirectiveHistogram returns a map of recognised robots.txt
+// directive names → how many times each appeared. Empty map ↔ no
+// recognised directive.
+func robotsDirectiveHistogram(body string) map[string]int {
+	hist := map[string]int{}
 	for _, line := range strings.Split(body, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -71,8 +88,23 @@ func looksLikeRobotsTxt(body string) bool {
 		k := strings.ToLower(strings.TrimSpace(line[:colon]))
 		switch k {
 		case "user-agent", "disallow", "allow", "sitemap", "crawl-delay", "host":
-			return true
+			hist[k]++
 		}
 	}
-	return false
+	return hist
+}
+
+// bodyExcerpt returns a UTF-8-safe prefix of body, capped at limit
+// bytes, with surrounding whitespace trimmed and an ellipsis appended
+// when truncated. Used by failed robots / error-page checks so the
+// operator sees what was actually served.
+func bodyExcerpt(body string, limit int) string {
+	body = strings.TrimSpace(body)
+	if limit <= 0 || len(body) <= limit {
+		return body
+	}
+	for limit > 0 && limit < len(body) && (body[limit]&0xC0) == 0x80 {
+		limit--
+	}
+	return body[:limit] + "…"
 }
