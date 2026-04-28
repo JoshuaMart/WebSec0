@@ -68,6 +68,70 @@ func warn(id string, sev checks.Severity, title, desc string, ev map[string]any)
 	}
 }
 
+// --- evidence helpers ------------------------------------------------
+
+// dsRecord renders one DNSSEC DS record as an evidence row. Algorithm
+// is reported both as the IANA number and as a human label so the
+// operator doesn't need a lookup table at hand.
+func dsRecord(ds *mdns.DS) map[string]any {
+	return map[string]any{
+		"key_tag":        ds.KeyTag,
+		"algorithm":      ds.Algorithm,
+		"algorithm_name": algorithmName(ds.Algorithm),
+		"digest_type":    ds.DigestType,
+	}
+}
+
+func dsRecords(dss []*mdns.DS) []map[string]any {
+	out := make([]map[string]any, 0, len(dss))
+	for _, ds := range dss {
+		out = append(out, dsRecord(ds))
+	}
+	return out
+}
+
+// algorithmName maps DNSSEC algorithm IDs to RFC 8624 names.
+// Returns the empty string for unknown values so callers can decide
+// whether to inline the number alone.
+func algorithmName(alg uint8) string {
+	if name, weak := weakDSAlgo[alg]; weak {
+		return name
+	}
+	switch alg {
+	case 8:
+		return "RSASHA256"
+	case 10:
+		return "RSASHA512"
+	case 13:
+		return "ECDSA-P256"
+	case 14:
+		return "ECDSA-P384"
+	case 15:
+		return "Ed25519"
+	case 16:
+		return "Ed448"
+	}
+	return ""
+}
+
+// caaRecord renders one CAA record. Tag is the directive name
+// ("issue", "iodef", …); Value is its argument.
+func caaRecord(c *mdns.CAA) map[string]any {
+	return map[string]any{
+		"flag":  c.Flag,
+		"tag":   c.Tag,
+		"value": c.Value,
+	}
+}
+
+func caaRecords(rs []*mdns.CAA) []map[string]any {
+	out := make([]map[string]any, 0, len(rs))
+	for _, r := range rs {
+		out = append(out, caaRecord(r))
+	}
+	return out
+}
+
 // --- DNS-DNSSEC-MISSING ----------------------------------------------
 
 type dnssecMissingCheck struct{}
@@ -93,7 +157,7 @@ func (dnssecMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 	}
 	return pass(IDDNSSECMissing, checks.SeverityMedium,
 		"DNSSEC is enabled (DS records present)",
-		map[string]any{"ds_count": len(r.DS)}), nil
+		map[string]any{"ds_records": dsRecords(r.DS)}), nil
 }
 
 // --- DNS-DNSSEC-WEAK-ALGO --------------------------------------------
@@ -126,20 +190,24 @@ func (dnssecWeakAlgoCheck) Run(ctx context.Context, t *checks.Target) (*checks.F
 	if len(r.DS) == 0 {
 		return skipped(IDDNSSECWeakAlgo, checks.SeverityHigh, "no DNSSEC"), nil
 	}
-	var weak []string
+	var weak []map[string]any
 	for _, ds := range r.DS {
-		if name, isWeak := weakDSAlgo[ds.Algorithm]; isWeak {
-			weak = append(weak, name)
+		if _, isWeak := weakDSAlgo[ds.Algorithm]; isWeak {
+			weak = append(weak, dsRecord(ds))
 		}
 	}
 	if len(weak) > 0 {
 		return fail(IDDNSSECWeakAlgo, checks.SeverityHigh,
 			"DNSSEC uses a deprecated algorithm",
 			"Re-sign with ECDSA-P256 (alg 13) or Ed25519 (alg 15).",
-			map[string]any{"weak_algos": weak}), nil
+			map[string]any{
+				"weak_records": weak,
+				"ds_records":   dsRecords(r.DS),
+			}), nil
 	}
 	return pass(IDDNSSECWeakAlgo, checks.SeverityHigh,
-		"DNSSEC algorithms are modern", nil), nil
+		"DNSSEC algorithms are modern",
+		map[string]any{"ds_records": dsRecords(r.DS)}), nil
 }
 
 // --- DNS-DNSSEC-BROKEN -----------------------------------------------
@@ -163,20 +231,34 @@ func (dnssecBrokenCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	if len(r.DS) == 0 {
 		return skipped(IDDNSSECBroken, checks.SeverityCritical, "no DNSSEC"), nil
 	}
+	resolver := resolverAddr(t)
 	if r.SOAErr != nil {
 		// A SERVFAIL from a validating resolver IS the symptom we want
 		// to flag; the lookup error is part of the finding, not a fault.
 		return fail(IDDNSSECBroken, checks.SeverityCritical, //nolint:nilerr // intentional
 			"validating resolver returned an error",
-			r.SOAErr.Error(), nil), nil
+			r.SOAErr.Error(),
+			map[string]any{
+				"resolver": resolver,
+				"ad":       false,
+				"soa_err":  r.SOAErr.Error(),
+			}), nil
 	}
 	if !r.AD {
 		return fail(IDDNSSECBroken, checks.SeverityCritical,
 			"validating resolver did not set the AD flag",
-			"DNSSEC chain validation appears to be broken.", nil), nil
+			"DNSSEC chain validation appears to be broken.",
+			map[string]any{
+				"resolver": resolver,
+				"ad":       false,
+			}), nil
 	}
 	return pass(IDDNSSECBroken, checks.SeverityCritical,
-		"DNSSEC validation succeeded (AD set)", nil), nil
+		"DNSSEC validation succeeded (AD set)",
+		map[string]any{
+			"resolver": resolver,
+			"ad":       true,
+		}), nil
 }
 
 // --- DNS-CAA-MISSING & DNS-CAA-NO-IODEF -------------------------------
@@ -204,7 +286,7 @@ func (caaMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	}
 	return pass(IDCAAMissing, checks.SeverityLow,
 		"CAA records present",
-		map[string]any{"count": len(r.CAA)}), nil
+		map[string]any{"records": caaRecords(r.CAA)}), nil
 }
 
 type caaNoIODEFCheck struct{}
@@ -230,11 +312,16 @@ func (caaNoIODEFCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 		if strings.EqualFold(c.Tag, "iodef") {
 			return pass(IDCAANoIODEF, checks.SeverityInfo,
 				"CAA iodef contact present",
-				map[string]any{"value": c.Value}), nil
+				map[string]any{
+					"iodef":   c.Value,
+					"records": caaRecords(r.CAA),
+				}), nil
 		}
 	}
 	return fail(IDCAANoIODEF, checks.SeverityInfo,
-		"CAA records have no iodef tag", "", nil), nil
+		"CAA records have no iodef tag",
+		"Add `iodef \"mailto:abuse@…\"` so CAs can report mis-issuance attempts.",
+		map[string]any{"records": caaRecords(r.CAA)}), nil
 }
 
 // --- DNS-AAAA-MISSING ------------------------------------------------
@@ -260,9 +347,13 @@ func (aaaaMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 			"no AAAA records",
 			"Add IPv6 connectivity (`AAAA`) to reach IPv6-only networks.", nil), nil
 	}
+	addrs := make([]string, 0, len(r.AAAA))
+	for _, ip := range r.AAAA {
+		addrs = append(addrs, ip.String())
+	}
 	return pass(IDAAAAMissing, checks.SeverityLow,
 		"IPv6 reachable",
-		map[string]any{"count": len(r.AAAA)}), nil
+		map[string]any{"addresses": addrs}), nil
 }
 
 // --- DNS-WILDCARD-DETECTED -------------------------------------------
@@ -293,7 +384,8 @@ func (wildcardCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding
 			map[string]any{"probe": r.Wildcard.QueryName}), nil
 	}
 	return pass(IDWildcardDetect, checks.SeverityInfo,
-		"random subdomain returned NXDOMAIN", nil), nil
+		"random subdomain returned NXDOMAIN",
+		map[string]any{"probe": r.Wildcard.QueryName}), nil
 }
 
 // --- DNS-DANGLING-CNAME ----------------------------------------------
@@ -337,6 +429,10 @@ func (danglingCNAMECheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 	if len(r.CNAME) == 0 {
 		return skipped(IDDanglingCNAME, checks.SeverityHigh, "no CNAME on the apex"), nil
 	}
+	// outcomes accumulates one row per CNAME so the pass branch can
+	// surface which targets were checked against SaaS-takeover patterns
+	// and which actually resolved.
+	outcomes := make([]map[string]any, 0, len(r.CNAME))
 	for _, target := range r.CNAME {
 		matched := ""
 		lower := strings.ToLower(target)
@@ -347,6 +443,11 @@ func (danglingCNAMECheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 			}
 		}
 		if matched == "" {
+			outcomes = append(outcomes, map[string]any{
+				"target":       target,
+				"saas_pattern": "",
+				"resolved":     true,
+			})
 			continue
 		}
 		// CNAME points at a SaaS pattern. Re-resolve target → if NXDOMAIN
@@ -356,18 +457,23 @@ func (danglingCNAMECheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 			return warn(IDDanglingCNAME, checks.SeverityHigh,
 				"CNAME target resolution failed",
 				qerr.Error(),
-				map[string]any{"cname_target": target, "matched": matched}), nil
+				map[string]any{"cname_target": target, "saas_pattern": matched}), nil
 		}
 		if resp == nil || resp.Rcode == mdns.RcodeNameError || len(resp.Answer) == 0 {
 			return fail(IDDanglingCNAME, checks.SeverityHigh,
 				"CNAME points at an unclaimed SaaS endpoint",
 				"The CNAME target is NXDOMAIN or empty — re-register or remove the CNAME.",
-				map[string]any{"cname_target": target, "matched": matched}), nil
+				map[string]any{"cname_target": target, "saas_pattern": matched}), nil
 		}
+		outcomes = append(outcomes, map[string]any{
+			"target":       target,
+			"saas_pattern": matched,
+			"resolved":     true,
+		})
 	}
 	return pass(IDDanglingCNAME, checks.SeverityHigh,
 		"all CNAMEs resolve",
-		map[string]any{"cnames": r.CNAME}), nil
+		map[string]any{"cnames": outcomes}), nil
 }
 
 // --- DNS-NS-DIVERSITY-LOW --------------------------------------------
@@ -396,11 +502,17 @@ func (nsDiversityCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 		return fail(IDNSDiversityLow, checks.SeverityLow,
 			"fewer than 2 distinct nameservers",
 			"Publish at least two NS hostnames per RFC 2182.",
-			map[string]any{"ns": r.NS}), nil
+			map[string]any{
+				"nameservers": r.NS,
+				"distinct":    len(uniq),
+			}), nil
 	}
 	return pass(IDNSDiversityLow, checks.SeverityLow,
 		"≥ 2 distinct nameservers",
-		map[string]any{"ns": r.NS}), nil
+		map[string]any{
+			"nameservers": r.NS,
+			"distinct":    len(uniq),
+		}), nil
 }
 
 // --- DNS-TTL-ABERRANT ------------------------------------------------

@@ -37,15 +37,15 @@ hints which path is weak when only one branch is at fault.
 
 ## DNS
 
-- [ ] `DNS-DNSSEC-MISSING` — both paths return only a count, not the actual DS records. Tags: b (dns/checks.go:84)
-- [ ] `DNS-DNSSEC-WEAK-ALGO` — pass path returns nil Evidence; fail path lists algorithm names but not key tags or digest values. Tags: a,b (dns/checks.go:121)
-- [ ] `DNS-DNSSEC-BROKEN` — fail path on AD-flag failure returns nil Evidence. Tags: a (dns/checks.go:158)
-- [ ] `DNS-CAA-MISSING` — both paths return only a count, not the actual CAA records. Tags: b (dns/checks.go:195)
-- [ ] `DNS-CAA-NO-IODEF` — fail path returns nil Evidence when the `iodef` tag is missing. Tags: a (dns/checks.go:221)
-- [ ] `DNS-AAAA-MISSING` — both paths return only a count, not the actual AAAA addresses. Tags: b (dns/checks.go:253)
-- [ ] `DNS-WILDCARD-DETECTED` — pass path returns nil Evidence (no record of which probe label was tried). Tags: a (dns/checks.go:281)
-- [ ] `DNS-DANGLING-CNAME` — pass path lists CNAMEs without resolution outcome; fail/warn only show the matched pattern, not the dangling target. Tags: b (dns/checks.go:332)
-- [ ] `DNS-NS-DIVERSITY-LOW` — Evidence has the NS list but no network/ASN diversity data — that's the actual signal. Tags: c (dns/checks.go:386)
+- [x] `DNS-DNSSEC-MISSING` — both paths return only a count, not the actual DS records. Tags: b (dns/checks.go:84)
+- [x] `DNS-DNSSEC-WEAK-ALGO` — pass path returns nil Evidence; fail path lists algorithm names but not key tags or digest values. Tags: a,b (dns/checks.go:121)
+- [x] `DNS-DNSSEC-BROKEN` — fail path on AD-flag failure returns nil Evidence. Tags: a (dns/checks.go:158)
+- [x] `DNS-CAA-MISSING` — both paths return only a count, not the actual CAA records. Tags: b (dns/checks.go:195)
+- [x] `DNS-CAA-NO-IODEF` — fail path returns nil Evidence when the `iodef` tag is missing. Tags: a (dns/checks.go:221)
+- [x] `DNS-AAAA-MISSING` — both paths return only a count, not the actual AAAA addresses. Tags: b (dns/checks.go:253)
+- [x] `DNS-WILDCARD-DETECTED` — pass path returns nil Evidence (no record of which probe label was tried). Tags: a (dns/checks.go:281)
+- [x] `DNS-DANGLING-CNAME` — pass path lists CNAMEs without resolution outcome; fail/warn only show the matched pattern, not the dangling target. Tags: b (dns/checks.go:332)
+- [x] `DNS-NS-DIVERSITY-LOW` — Evidence has the NS list but no network/ASN diversity data — that's the actual signal. Tags: c (dns/checks.go:386)
 
 ## EMAIL
 

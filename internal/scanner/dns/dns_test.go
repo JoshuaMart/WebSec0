@@ -143,8 +143,21 @@ func TestDSPresentMeansDNSSECPresent(t *testing.T) {
 		return reply(req, mdns.RcodeSuccess, ds)
 	})
 	tgt := newTarget(t, "example.com", srv)
-	if g := runCheck(t, scannerdns.IDDNSSECMissing, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, scannerdns.IDDNSSECMissing, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("DNSSEC-MISSING = %s, want pass", g.Status)
+	}
+	// Pass evidence must surface the DS records as structured rows with
+	// human algorithm labels — not just a count.
+	rows, _ := g.Evidence["ds_records"].([]map[string]any)
+	if len(rows) != 1 {
+		t.Fatalf("ds_records = %v, want 1 row", rows)
+	}
+	if rows[0]["algorithm_name"] != "ECDSA-P256" {
+		t.Errorf("algorithm_name = %v, want ECDSA-P256", rows[0]["algorithm_name"])
+	}
+	if rows[0]["key_tag"] != uint16(12345) {
+		t.Errorf("key_tag = %v, want 12345", rows[0]["key_tag"])
 	}
 	if g := runCheck(t, scannerdns.IDDNSSECWeakAlgo, tgt); g.Status != checks.StatusPass {
 		t.Errorf("DNSSEC-WEAK-ALGO with alg 13 = %s, want pass", g.Status)
@@ -191,11 +204,20 @@ func TestCAAPresentAndIODEF(t *testing.T) {
 		return reply(req, mdns.RcodeSuccess, caa...)
 	})
 	tgt := newTarget(t, "example.com", srv)
-	if g := runCheck(t, scannerdns.IDCAAMissing, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, scannerdns.IDCAAMissing, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("CAA-MISSING = %s, want pass", g.Status)
 	}
-	if g := runCheck(t, scannerdns.IDCAANoIODEF, tgt); g.Status != checks.StatusPass {
-		t.Errorf("CAA-NO-IODEF = %s, want pass", g.Status)
+	recs, _ := g.Evidence["records"].([]map[string]any)
+	if len(recs) != 2 {
+		t.Fatalf("records = %v, want 2 rows", recs)
+	}
+	gi := runCheck(t, scannerdns.IDCAANoIODEF, tgt)
+	if gi.Status != checks.StatusPass {
+		t.Errorf("CAA-NO-IODEF = %s, want pass", gi.Status)
+	}
+	if gi.Evidence["iodef"] != "mailto:abuse@example.com" {
+		t.Errorf("iodef = %v, want mailto:abuse@example.com", gi.Evidence["iodef"])
 	}
 }
 
@@ -223,8 +245,13 @@ func TestAAAAPresentPasses(t *testing.T) {
 		return reply(req, mdns.RcodeSuccess, aaaa)
 	})
 	tgt := newTarget(t, "example.com", srv)
-	if g := runCheck(t, scannerdns.IDAAAAMissing, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, scannerdns.IDAAAAMissing, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("AAAA-MISSING = %s, want pass", g.Status)
+	}
+	addrs, _ := g.Evidence["addresses"].([]string)
+	if len(addrs) != 1 || addrs[0] != "2001:db8::1" {
+		t.Errorf("addresses = %v, want [2001:db8::1]", addrs)
 	}
 }
 
@@ -242,8 +269,12 @@ func TestNSDiversity(t *testing.T) {
 		return reply(req, mdns.RcodeSuccess, ns...)
 	})
 	tgt := newTarget(t, "example.com", srv)
-	if g := runCheck(t, scannerdns.IDNSDiversityLow, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, scannerdns.IDNSDiversityLow, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("NS-DIVERSITY = %s, want pass", g.Status)
+	}
+	if d, _ := g.Evidence["distinct"].(int); d != 2 {
+		t.Errorf("distinct = %v, want 2", g.Evidence["distinct"])
 	}
 }
 
