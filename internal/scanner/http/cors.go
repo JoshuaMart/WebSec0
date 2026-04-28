@@ -40,7 +40,8 @@ func (corsWildcardCredCheck) Run(ctx context.Context, t *checks.Target) (*checks
 	if acao == "*" && acac == "true" {
 		return fail(IDCORSWildcardCredentials, checks.FamilyHTTP, checks.SeverityHigh,
 			"CORS wildcard with credentials",
-			"Switch to a strict allowlist or drop credentials.", nil), nil
+			"Switch to a strict allowlist or drop credentials.",
+			map[string]any{"acao": acao, "acac": acac}), nil
 	}
 	return pass(IDCORSWildcardCredentials, checks.FamilyHTTP, checks.SeverityHigh,
 		"no wildcard+credentials combination",
@@ -76,8 +77,9 @@ func (corsReflectedCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 		}
 		return skipped(IDCORSOriginReflected, checks.FamilyHTTP, checks.SeverityHigh, reason), nil
 	}
+	const probeOrigin = "https://websec0-test.invalid"
 	acao := strings.TrimSpace(res.CORSReflect.Headers.Get("Access-Control-Allow-Origin"))
-	if acao == "https://websec0-test.invalid" {
+	if acao == probeOrigin {
 		acac := strings.ToLower(strings.TrimSpace(res.CORSReflect.Headers.Get("Access-Control-Allow-Credentials")))
 		sev := checks.SeverityMedium
 		if acac == "true" {
@@ -86,11 +88,15 @@ func (corsReflectedCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 		return fail(IDCORSOriginReflected, checks.FamilyHTTP, sev,
 			"CORS reflects the Origin header",
 			"Replace dynamic reflection with an allowlist of trusted origins.",
-			map[string]any{"reflected": acao, "acac": acac}), nil
+			map[string]any{
+				"origin_sent":    probeOrigin,
+				"reflected_acao": acao,
+				"acac":           acac,
+			}), nil
 	}
 	return pass(IDCORSOriginReflected, checks.FamilyHTTP, checks.SeverityHigh,
 		"CORS does not reflect Origin",
-		map[string]any{"acao": acao}), nil
+		map[string]any{"origin_sent": probeOrigin, "acao": acao}), nil
 }
 
 // --- HTTP-CORS-NULL-ORIGIN -------------------------------------------
@@ -120,9 +126,11 @@ func (corsNullCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding
 	acao := strings.TrimSpace(res.CORSNull.Headers.Get("Access-Control-Allow-Origin"))
 	if acao == "null" {
 		return fail(IDCORSNullOrigin, checks.FamilyHTTP, checks.SeverityHigh,
-			"CORS accepts `null` origin", "", nil), nil
+			"CORS accepts `null` origin",
+			"Reject the `null` origin in your CORS allowlist.",
+			map[string]any{"origin_sent": "null", "acao": acao}), nil
 	}
 	return pass(IDCORSNullOrigin, checks.FamilyHTTP, checks.SeverityHigh,
 		"CORS does not echo `null` origin",
-		map[string]any{"acao": acao}), nil
+		map[string]any{"origin_sent": "null", "acao": acao}), nil
 }

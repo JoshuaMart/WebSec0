@@ -95,17 +95,17 @@ hints which path is weak when only one branch is at fault.
 
 ## HTTP
 
-- [ ] `HTTP-CORS-WILDCARD-CREDENTIALS` — fail path returns nil Evidence (no captured ACAO + credentials combo). Tags: a (http/cors.go:30)
-- [ ] `HTTP-CORS-ORIGIN-REFLECTED` — fail path doesn't include the probe `Origin` we sent, only the reflected `ACAO`. Tags: b (http/cors.go:67)
-- [ ] `HTTP-CORS-NULL-ORIGIN` — fail path returns nil Evidence. Tags: a (http/cors.go:112)
-- [ ] `HTTP-OPTIONS-DANGEROUS-METHODS` — pass path doesn't enumerate which methods were actually allowed. Tags: b (http/methods.go:27)
-- [ ] `HTTP-TRACE-ENABLED` — fail path stores only the status code; should include the response body excerpt that confirms TRACE echo. Tags: b (http/methods.go:75)
-- [ ] `HTTP-404-STACK-TRACE` — fail path records only the matching regex pattern, not the actual matched body excerpt. Tags: b,d (http/error_pages.go:66)
-- [ ] `HTTP-404-DEFAULT-ERROR-PAGE` — fail path records only the signal pattern, not the body excerpt. Tags: b,d (http/error_pages.go:100)
-- [ ] `HTTP-HTTP2-MISSING` — fail path returns nil Evidence (negotiated protocol not stored). Tags: a (http/protocol_checks.go:24)
-- [ ] `HTTP-HTTP3-MISSING` — fail path returns nil Evidence. Tags: a (http/protocol_checks.go:62)
-- [ ] `HTTP-COMPRESSION-NONE` — fail path returns nil Evidence. Tags: a (http/protocol_checks.go:94)
-- [ ] `HTTP-MIXED-CONTENT` — Evidence lists deduplicated resources but not which element type or position raised it. Tags: c (http/html.go:138)
+- [x] `HTTP-CORS-WILDCARD-CREDENTIALS` — fail path returns nil Evidence (no captured ACAO + credentials combo). Tags: a (http/cors.go:30)
+- [x] `HTTP-CORS-ORIGIN-REFLECTED` — fail path doesn't include the probe `Origin` we sent, only the reflected `ACAO`. Tags: b (http/cors.go:67)
+- [x] `HTTP-CORS-NULL-ORIGIN` — fail path returns nil Evidence. Tags: a (http/cors.go:112)
+- [x] `HTTP-OPTIONS-DANGEROUS-METHODS` — pass path doesn't enumerate which methods were actually allowed. Tags: b (http/methods.go:27)
+- [x] `HTTP-TRACE-ENABLED` — fail path stores only the status code; should include the response body excerpt that confirms TRACE echo. Tags: b (http/methods.go:75)
+- [x] `HTTP-404-STACK-TRACE` — fail path records only the matching regex pattern, not the actual matched body excerpt. Tags: b,d (http/error_pages.go:66)
+- [x] `HTTP-404-DEFAULT-ERROR-PAGE` — fail path records only the signal pattern, not the body excerpt. Tags: b,d (http/error_pages.go:100)
+- [x] `HTTP-HTTP2-MISSING` — fail path returns nil Evidence (negotiated protocol not stored). Tags: a (http/protocol_checks.go:24)
+- [x] `HTTP-HTTP3-MISSING` — fail path returns nil Evidence. Tags: a (http/protocol_checks.go:62)
+- [x] `HTTP-COMPRESSION-NONE` — fail path returns nil Evidence. Tags: a (http/protocol_checks.go:94)
+- [x] `HTTP-MIXED-CONTENT` — Evidence lists deduplicated resources but not which element type or position raised it. Tags: c (http/html.go:138)
 
 ## Other (ROBOTS / SRI)
 

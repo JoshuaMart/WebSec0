@@ -170,8 +170,13 @@ func TestOptionsDangerousMethodsDetected(t *testing.T) {
 func TestOptionsSafeAllowPasses(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, &fixture{optionsAllow: "GET, HEAD, OPTIONS"})
-	if g := runCheck(t, scannerhttp.IDOptionsDangerousMethods, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, scannerhttp.IDOptionsDangerousMethods, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("OPTIONS = %s, want pass", g.Status)
+	}
+	methods, _ := g.Evidence["methods"].([]string)
+	if len(methods) != 3 || methods[0] != "GET" || methods[2] != "OPTIONS" {
+		t.Errorf("methods = %v, want [GET HEAD OPTIONS]", methods)
 	}
 }
 
@@ -191,8 +196,12 @@ func TestCORSWildcardCredentialsDetected(t *testing.T) {
 			"Access-Control-Allow-Credentials": "true",
 		},
 	})
-	if g := runCheck(t, scannerhttp.IDCORSWildcardCredentials, tgt); g.Status != checks.StatusFail {
+	g := runCheck(t, scannerhttp.IDCORSWildcardCredentials, tgt)
+	if g.Status != checks.StatusFail {
 		t.Errorf("CORS-WILDCARD-CREDS = %s, want fail", g.Status)
+	}
+	if g.Evidence["acao"] != "*" || g.Evidence["acac"] != "true" {
+		t.Errorf("evidence = %v, want acao=* acac=true", g.Evidence)
 	}
 }
 
@@ -226,8 +235,17 @@ func TestCORSNullOriginDetected(t *testing.T) {
 func TestStackTrace404Detected(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, &fixture{notFoundBody: "Traceback (most recent call last):\n  File \"app.py\", line 42, in handler\n"})
-	if g := runCheck(t, scannerhttp.ID404StackTrace, tgt); g.Status != checks.StatusFail {
+	g := runCheck(t, scannerhttp.ID404StackTrace, tgt)
+	if g.Status != checks.StatusFail {
 		t.Errorf("404-STACK-TRACE = %s, want fail", g.Status)
+	}
+	matched, _ := g.Evidence["matched_text"].(string)
+	if matched != "Traceback (most recent call last)" {
+		t.Errorf("matched_text = %q, want the traceback prefix", matched)
+	}
+	window, _ := g.Evidence["matched_window"].(string)
+	if !strings.Contains(window, "app.py") {
+		t.Errorf("matched_window = %q, want it to include the surrounding stack frame", window)
 	}
 }
 
@@ -294,10 +312,30 @@ func TestChangePasswordRedirectPasses(t *testing.T) {
 func TestMixedContentDetected(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, &fixture{
-		homepageBody: `<!doctype html><html><body><script src="http://evil.example/x.js"></script></body></html>`,
+		homepageBody: `<!doctype html><html><body><script src="http://evil.example/x.js"></script><img src="http://evil.example/p.png"></body></html>`,
 	})
-	if g := runCheck(t, scannerhttp.IDMixedContent, tgt); g.Status != checks.StatusFail {
+	g := runCheck(t, scannerhttp.IDMixedContent, tgt)
+	if g.Status != checks.StatusFail {
 		t.Errorf("MIXED-CONTENT = %s, want fail", g.Status)
+	}
+	rows, _ := g.Evidence["resources"].([]map[string]any)
+	if len(rows) != 2 {
+		t.Fatalf("resources = %v, want 2 rows", rows)
+	}
+	// Script must be flagged as active (executes), img as passive.
+	for _, r := range rows {
+		switch r["element"] {
+		case "script":
+			if r["active"] != true {
+				t.Errorf("script active = %v, want true", r["active"])
+			}
+		case "img":
+			if r["active"] != false {
+				t.Errorf("img active = %v, want false", r["active"])
+			}
+		default:
+			t.Errorf("unexpected element %v", r["element"])
+		}
 	}
 }
 

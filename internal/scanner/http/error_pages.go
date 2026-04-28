@@ -73,15 +73,48 @@ func (stackTraceCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	}
 	body := string(res.NotFound.Body)
 	for _, re := range stackTraceRegexes {
-		if re.FindStringIndex(body) != nil {
+		if loc := re.FindStringIndex(body); loc != nil {
 			return fail(ID404StackTrace, checks.FamilyHTTP, checks.SeverityHigh,
 				"404 page contains stack-trace markers",
 				"Disable debug renderers and ship a generic error page.",
-				map[string]any{"signal": re.String()}), nil
+				map[string]any{
+					"url":            res.NotFound.URL,
+					"status":         res.NotFound.Status,
+					"signal":         re.String(),
+					"matched_text":   body[loc[0]:loc[1]],
+					"matched_window": windowAround(body, loc[0], loc[1], 80),
+				}), nil
 		}
 	}
 	return pass(ID404StackTrace, checks.FamilyHTTP, checks.SeverityHigh,
-		"404 page is clean", nil), nil
+		"404 page is clean",
+		map[string]any{
+			"url":    res.NotFound.URL,
+			"status": res.NotFound.Status,
+		}), nil
+}
+
+// windowAround returns the body slice [start-pad, end+pad] clipped to
+// the body bounds, with leading/trailing whitespace trimmed and an
+// ellipsis on each end when truncation actually happened. Used to give
+// the operator a few words of context around a regex hit on a 404 body.
+func windowAround(body string, start, end, pad int) string {
+	if start < 0 || end > len(body) || start > end {
+		return ""
+	}
+	from := start - pad
+	prefix := "…"
+	if from <= 0 {
+		from = 0
+		prefix = ""
+	}
+	to := end + pad
+	suffix := "…"
+	if to >= len(body) {
+		to = len(body)
+		suffix = ""
+	}
+	return prefix + strings.TrimSpace(body[from:to]) + suffix
 }
 
 // --- HTTP-404-DEFAULT-ERROR-PAGE -------------------------------------
@@ -107,13 +140,22 @@ func (defaultErrorPageCheck) Run(ctx context.Context, t *checks.Target) (*checks
 	}
 	body := string(res.NotFound.Body)
 	for _, sig := range defaultErrorPageSignals {
-		if strings.Contains(body, sig) {
+		if idx := strings.Index(body, sig); idx >= 0 {
 			return warn(ID404DefaultErrorPage, checks.FamilyHTTP, checks.SeverityLow,
 				"404 page is the framework default",
 				"Replace with a branded custom 404.",
-				map[string]any{"signal": sig}), nil
+				map[string]any{
+					"url":            res.NotFound.URL,
+					"status":         res.NotFound.Status,
+					"signal":         sig,
+					"matched_window": windowAround(body, idx, idx+len(sig), 60),
+				}), nil
 		}
 	}
 	return pass(ID404DefaultErrorPage, checks.FamilyHTTP, checks.SeverityLow,
-		"404 page is custom", nil), nil
+		"404 page is custom",
+		map[string]any{
+			"url":    res.NotFound.URL,
+			"status": res.NotFound.Status,
+		}), nil
 }

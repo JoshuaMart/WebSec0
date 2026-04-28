@@ -39,8 +39,10 @@ func (optionsCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding,
 	allow := res.Options.Headers.Get("Allow")
 	if allow == "" {
 		return pass(IDOptionsDangerousMethods, checks.FamilyHTTP, checks.SeverityMedium,
-			"no Allow header on OPTIONS", nil), nil
+			"no Allow header on OPTIONS",
+			map[string]any{"allow_present": false}), nil
 	}
+	parsed := parseAllowHeader(allow)
 	upper := strings.ToUpper(allow)
 	var found []string
 	for _, m := range dangerousMethods {
@@ -52,11 +54,28 @@ func (optionsCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding,
 		return fail(IDOptionsDangerousMethods, checks.FamilyHTTP, checks.SeverityMedium,
 			"OPTIONS advertises dangerous methods",
 			"Restrict the public root to GET / HEAD / OPTIONS.",
-			map[string]any{"allow": allow, "dangerous": found}), nil
+			map[string]any{
+				"allow":     allow,
+				"methods":   parsed,
+				"dangerous": found,
+			}), nil
 	}
 	return pass(IDOptionsDangerousMethods, checks.FamilyHTTP, checks.SeverityMedium,
 		"OPTIONS Allow looks safe",
-		map[string]any{"allow": allow}), nil
+		map[string]any{"allow": allow, "methods": parsed}), nil
+}
+
+// parseAllowHeader splits a comma-separated `Allow:` header into a
+// uppercased list of HTTP method tokens.
+func parseAllowHeader(allow string) []string {
+	parts := strings.Split(allow, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if m := strings.ToUpper(strings.TrimSpace(p)); m != "" {
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 // --- HTTP-TRACE-ENABLED ----------------------------------------------
@@ -88,7 +107,10 @@ func (traceCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, e
 		return fail(IDTraceEnabled, checks.FamilyHTTP, checks.SeverityMedium,
 			"TRACE returns 2xx",
 			"Disable TRACE in your reverse-proxy / framework.",
-			map[string]any{"status": res.Trace.Status}), nil
+			map[string]any{
+				"status":       res.Trace.Status,
+				"body_excerpt": bodyExcerpt(string(res.Trace.Body), 200),
+			}), nil
 	}
 	return pass(IDTraceEnabled, checks.FamilyHTTP, checks.SeverityMedium,
 		"TRACE refused",

@@ -29,21 +29,23 @@ func (http2MissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	if !res.Reachable {
 		return skipped(IDHTTP2Missing, checks.FamilyHTTP, checks.SeverityLow, "homepage unreachable"), nil
 	}
+	altSvc := res.Header("Alt-Svc")
 	if res.ProtoMajor >= 2 {
 		return pass(IDHTTP2Missing, checks.FamilyHTTP, checks.SeverityLow,
 			"HTTP/2 (or higher) negotiated",
-			map[string]any{"proto": res.ProtoMajor}), nil
+			map[string]any{"proto": res.ProtoMajor, "alt_svc": altSvc}), nil
 	}
 	// Fallback: an Alt-Svc with h2 still indicates HTTP/2 capability even
 	// if our client happened to fall back to HTTP/1.1.
-	if strings.Contains(res.Header("Alt-Svc"), "h2") {
+	if strings.Contains(altSvc, "h2") {
 		return pass(IDHTTP2Missing, checks.FamilyHTTP, checks.SeverityLow,
-			"HTTP/2 advertised via Alt-Svc", nil), nil
+			"HTTP/2 advertised via Alt-Svc",
+			map[string]any{"proto": res.ProtoMajor, "alt_svc": altSvc}), nil
 	}
 	return fail(IDHTTP2Missing, checks.FamilyHTTP, checks.SeverityLow,
 		"HTTP/2 not negotiated and not advertised",
 		"Enable HTTP/2 at your reverse proxy or CDN.",
-		map[string]any{"proto": res.ProtoMajor}), nil
+		map[string]any{"proto": res.ProtoMajor, "alt_svc": altSvc}), nil
 }
 
 // --- HTTP-HTTP3-MISSING ----------------------------------------------
@@ -75,7 +77,8 @@ func (http3MissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	}
 	return fail(IDHTTP3Missing, checks.FamilyHTTP, checks.SeverityInfo,
 		"HTTP/3 not advertised",
-		"Add `Alt-Svc: h3=\":443\"; ma=86400` and enable QUIC on the edge.", nil), nil
+		"Add `Alt-Svc: h3=\":443\"; ma=86400` and enable QUIC on the edge.",
+		map[string]any{"alt_svc": alt}), nil
 }
 
 // --- HTTP-COMPRESSION-NONE -------------------------------------------
@@ -109,5 +112,6 @@ func (compressionCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 	}
 	return fail(IDCompressionNone, checks.FamilyHTTP, checks.SeverityInfo,
 		"no Content-Encoding compression",
-		"Enable gzip / brotli at the edge.", nil), nil
+		"Enable gzip / brotli at the edge.",
+		map[string]any{"content_encoding": enc}), nil
 }

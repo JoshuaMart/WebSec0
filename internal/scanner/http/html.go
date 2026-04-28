@@ -15,7 +15,7 @@ import (
 type htmlAssets struct {
 	Scripts       []scriptAsset
 	Stylesheets   []linkAsset
-	HTTPResources []string // absolute http:// URLs found in src/href on a https page
+	HTTPResources []mixedRef // plain-http sub-resources, with element-type context
 }
 
 type scriptAsset struct {
@@ -28,6 +28,17 @@ type linkAsset struct {
 	Href      string
 	Integrity string
 	Crossorig string
+}
+
+// mixedRef captures one plain-http sub-resource on a HTTPS page.
+// Active=true means the element type can execute / control the page
+// (script, link[stylesheet], iframe). Active=false means passive
+// content (img, audio, video, source) — still a problem, but a softer
+// one that browsers downgrade rather than block outright.
+type mixedRef struct {
+	URL         string
+	ElementType string
+	Active      bool
 }
 
 func parseAssets(body []byte) *htmlAssets {
@@ -61,7 +72,8 @@ func walk(n *html.Node, a *htmlAssets) {
 			if s.Src != "" {
 				a.Scripts = append(a.Scripts, s)
 				if strings.HasPrefix(strings.ToLower(s.Src), "http://") {
-					a.HTTPResources = append(a.HTTPResources, s.Src)
+					a.HTTPResources = append(a.HTTPResources,
+						mixedRef{URL: s.Src, ElementType: "script", Active: true})
 				}
 			}
 		case "link":
@@ -82,14 +94,18 @@ func walk(n *html.Node, a *htmlAssets) {
 			if strings.Contains(rel, "stylesheet") && l.Href != "" {
 				a.Stylesheets = append(a.Stylesheets, l)
 				if strings.HasPrefix(strings.ToLower(l.Href), "http://") {
-					a.HTTPResources = append(a.HTTPResources, l.Href)
+					a.HTTPResources = append(a.HTTPResources,
+						mixedRef{URL: l.Href, ElementType: "link[stylesheet]", Active: true})
 				}
 			}
 		case "img", "iframe", "audio", "video", "source":
+			elem := strings.ToLower(n.Data)
+			active := elem == "iframe"
 			for _, attr := range n.Attr {
 				if strings.EqualFold(attr.Key, "src") {
 					if strings.HasPrefix(strings.ToLower(attr.Val), "http://") {
-						a.HTTPResources = append(a.HTTPResources, attr.Val)
+						a.HTTPResources = append(a.HTTPResources,
+							mixedRef{URL: attr.Val, ElementType: elem, Active: active})
 					}
 				}
 			}
@@ -148,10 +164,31 @@ func (mixedContentCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 		return fail(IDMixedContent, checks.FamilyHTTP, checks.SeverityHigh,
 			"homepage references plain-HTTP sub-resources",
 			"Replace `http://` with `https://` (or with relative URLs).",
-			map[string]any{"resources": uniq(a.HTTPResources)}), nil
+			map[string]any{"resources": uniqMixedRefs(a.HTTPResources)}), nil
 	}
 	return pass(IDMixedContent, checks.FamilyHTTP, checks.SeverityHigh,
 		"no mixed content detected", nil), nil
+}
+
+// uniqMixedRefs deduplicates by URL — the same asset can appear several
+// times in a page (e.g. <img> repeated in different sections); we want
+// one row per distinct resource. Renders each row to a JSON-friendly
+// map for evidence emission.
+func uniqMixedRefs(refs []mixedRef) []map[string]any {
+	seen := map[string]struct{}{}
+	out := make([]map[string]any, 0, len(refs))
+	for _, r := range refs {
+		if _, ok := seen[r.URL]; ok {
+			continue
+		}
+		seen[r.URL] = struct{}{}
+		out = append(out, map[string]any{
+			"url":     r.URL,
+			"element": r.ElementType,
+			"active":  r.Active,
+		})
+	}
+	return out
 }
 
 // --- SRI-EXTERNAL-RESOURCE-NO-INTEGRITY ------------------------------
