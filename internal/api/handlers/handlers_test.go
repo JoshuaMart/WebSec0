@@ -475,9 +475,9 @@ func (stubCheck) DefaultSeverity() checks.Severity { return checks.SeverityLow }
 func (stubCheck) Run(_ context.Context, _ *checks.Target) (*checks.Finding, error) {
 	return &checks.Finding{ID: "STUB-CHECK", Status: checks.StatusPass}, nil
 }
-func (stubCheck) Title() string         { return "stub" }
-func (stubCheck) Description() string   { return "stub description" }
-func (stubCheck) RFCRefs() []string     { return []string{"RFC TEST"} }
+func (stubCheck) Title() string       { return "stub" }
+func (stubCheck) Description() string { return "stub description" }
+func (stubCheck) RFCRefs() []string   { return []string{"RFC TEST"} }
 
 type noopScanService struct{}
 

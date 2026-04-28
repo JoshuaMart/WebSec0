@@ -50,7 +50,7 @@ type fakeWriter struct {
 	h http.Header
 }
 
-func (f *fakeWriter) Header() http.Header        { return f.h }
+func (f *fakeWriter) Header() http.Header         { return f.h }
 func (f *fakeWriter) Write(b []byte) (int, error) { return len(b), nil }
 func (f *fakeWriter) WriteHeader(int)             {}
 

@@ -86,12 +86,12 @@ func buildServerHelloFixture() []byte {
 
 	// ServerHello body.
 	hello := make([]byte, 0, 64)
-	hello = append(hello, 0x03, 0x03)              // legacy_version = TLS 1.2
-	hello = append(hello, make([]byte, 32)...)     // random
-	hello = append(hello, 0x00)                    // session_id len = 0
-	hello = append(hello, 0xc0, 0x30)              // cipher_suite
-	hello = append(hello, 0x00)                    // compression_method
-	hello = append(hello, 0x00, 0x00)              // extensions len = 0
+	hello = append(hello, 0x03, 0x03)          // legacy_version = TLS 1.2
+	hello = append(hello, make([]byte, 32)...) // random
+	hello = append(hello, 0x00)                // session_id len = 0
+	hello = append(hello, 0xc0, 0x30)          // cipher_suite
+	hello = append(hello, 0x00)                // compression_method
+	hello = append(hello, 0x00, 0x00)          // extensions len = 0
 
 	// Patch the 24-bit length.
 	n := len(hello)

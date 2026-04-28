@@ -305,9 +305,9 @@ func TestBroker_SubscriberDropOnSlowness(t *testing.T) {
 	}
 }
 
-func drainNonBlocking(ch <-chan Event, max int) []Event {
-	out := make([]Event, 0, max)
-	for i := 0; i < max; i++ {
+func drainNonBlocking(ch <-chan Event, maxEvents int) []Event {
+	out := make([]Event, 0, maxEvents)
+	for i := 0; i < maxEvents; i++ {
 		select {
 		case e, ok := <-ch:
 			if !ok {

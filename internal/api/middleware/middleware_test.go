@@ -239,12 +239,12 @@ func TestCORS_ExplicitAllowlist(t *testing.T) {
 
 func TestJoinOriginList(t *testing.T) {
 	cases := map[string][]string{
-		"":                     nil,
-		"   ":                  nil,
-		"a":                    {"a"},
-		"a,b":                  {"a", "b"},
-		" a , b , ":            {"a", "b"},
-		"https://x.example,*":  {"https://x.example", "*"},
+		"":                    nil,
+		"   ":                 nil,
+		"a":                   {"a"},
+		"a,b":                 {"a", "b"},
+		" a , b , ":           {"a", "b"},
+		"https://x.example,*": {"https://x.example", "*"},
 	}
 	for in, want := range cases {
 		got := JoinOriginList(in)
