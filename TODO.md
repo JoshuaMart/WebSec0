@@ -408,19 +408,10 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 
 ## Backlog (post-0.1.0, hors scope MVP)
 
-- [ ] Tech detection riche (Fingerprinter sidecar Chromium ou wappalyzergo pure Go)
-- [ ] Scan de ports actif (22, 25, 80, 443, 3306, 5432, 6379, 8080, 27017)
-- [ ] Open redirects par fuzzing de paramètres
-- [ ] Clear-Site-Data sur logout (nécessite crawl auth léger)
 - [ ] HTTP/3 handshake complet via `quic-go`
 - [ ] DROWN, ROBOT, Ticketbleed, Lucky13, RACCOON actifs
 - [ ] Readiness post-quantique (X25519MLKEM768)
 - [ ] MCP server `websec0-mcp`
-- [ ] OAuth/OIDC + multi-tenancy + comptes utilisateurs
 - [ ] GitHub Action officielle, GitLab CI template, Jenkins plugin
 - [ ] Helm chart Kubernetes
 - [ ] Plugins WebSec0 (framework de checks tiers)
-- [ ] Corrélation stack détectée ↔ CVE actives (OSV/NVD)
-- [ ] Mode authenticated scan
-- [ ] Scoring contextuel (e-commerce vs blog vs app interne)
-- [ ] Dashboard d'observabilité métier (Grafana template)
