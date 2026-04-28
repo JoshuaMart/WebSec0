@@ -218,7 +218,7 @@ A reference `config.yaml` lives in [`docs/self-hosting.md`](./self-hosting.md#co
 
 ## Further reading
 
-- Full spec: [`SPECIFICATIONS.md`](../SPECIFICATIONS.md) (§2 architecture, §4 backend stack, §11 ops security)
 - API: [`docs/api/`](./api/) and the live `/api/v1/openapi.json`
 - Per-check pages: [`docs/checks/`](./checks/)
 - Self-hosting: [`docs/self-hosting.md`](./self-hosting.md)
+- Contributing a check: [`docs/contributing/checks.md`](./contributing/checks.md)

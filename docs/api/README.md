@@ -128,8 +128,9 @@ The full schemas live in `components.schemas` of
 - `Check` (catalog entry), `CheckMeta`
 - `Health`, `Version`, `Error`
 
-A reference rendering of the `Finding` shape is in
-[SPECIFICATIONS §6.2](../../SPECIFICATIONS.md#62-schéma-dun-finding).
+A worked example of the `Finding` shape (with `evidence`, `remediation`,
+`snippets`-by-stack, and `references`) is rendered inline in
+[`docs/ai-agents.md` § "Why findings are LLM-ready"](../ai-agents.md#why-findings-are-llm-ready).
 
 ## Code generation
 

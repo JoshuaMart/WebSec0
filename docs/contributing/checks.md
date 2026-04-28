@@ -40,9 +40,10 @@ the old via a `status: skipped` shim if you must.
 | `exposures`  | `internal/scanner/exposures/`      | Sensitive paths (Phase 11, WIP)             |
 | `http`       | `internal/scanner/http/`           | CORS, OPTIONS/TRACE, 404 probe, mixed content, HTTP/2 |
 
-Severity guidance lives in [SPECIFICATIONS §3.1](../../SPECIFICATIONS.md#31-système-de-finding).
-Default penalties: critical = -25, high = -10, medium = -5, low = -2,
-info = 0.
+Severity vocabulary lives in [`internal/checks/types.go`](../../internal/checks/types.go)
+(`SeverityCritical` … `SeverityInfo`). Default scoring penalties: critical
+= -25, high = -10, medium = -5, low = -2, info = 0 — implemented in
+[`internal/report/grade.go`](../../internal/report/grade.go).
 
 ## 3. Implement `checks.Check`
 
@@ -148,7 +149,10 @@ If you create a brand-new family, add three call sites:
 
 ## 5. Build a useful `Finding`
 
-The schema is in [SPECIFICATIONS §6.2](../../SPECIFICATIONS.md#62-schéma-dun-finding).
+The struct is defined in [`internal/checks/types.go`](../../internal/checks/types.go);
+the worked example with full `evidence` / `remediation.snippets` /
+`references` is in
+[`docs/ai-agents.md` § "Why findings are LLM-ready"](../ai-agents.md#why-findings-are-llm-ready).
 What matters operationally:
 
 - **`Evidence`** — observed values, expected values, and a raw excerpt.
@@ -228,11 +232,16 @@ Add a line under `Unreleased` → `Added` in [`CHANGELOG.md`](../../CHANGELOG.md
 - **Heavy retry logic.** A timeout is information.
 - **Adding a 5th severity tier.** Five is the contract (`info` → `critical`).
 
+Also worth checking: anything outside MVP scope (active probing, port
+scanning beyond 443/25/465/587, fuzzing) needs an architectural
+discussion in an issue first — passive-only is non-negotiable.
+
 ## See also
 
-- [Specifications §3 — Catalogue des checks](../../SPECIFICATIONS.md#3-catalogue-des-checks)
-- [Specifications §6.2 — Schéma d'un finding](../../SPECIFICATIONS.md#62-schéma-dun-finding)
+- [Catalog of currently-supported checks](../checks/)
 - [Architecture](../architecture.md)
+- [API documentation](../api/) — the `Finding` schema is served live
+  via `/api/v1/openapi.json`
 - Reference implementations:
   - Simple HTTP probe: [`internal/scanner/wellknown/securitytxt.go`](../../internal/scanner/wellknown/securitytxt.go)
   - Stateful family: [`internal/scanner/email/spf.go`](../../internal/scanner/email/spf.go)

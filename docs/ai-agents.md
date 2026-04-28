@@ -136,8 +136,9 @@ The agent will:
 
 ## Why findings are LLM-ready
 
-A single finding object (excerpted; see [SPEC §6.2](../SPECIFICATIONS.md#62-schéma-dun-finding)
-for the full schema):
+A single finding object (excerpted; see the
+[Schemas section in `docs/api/`](./api/#schemas) and the live
+`/api/v1/openapi.json` for the full shape):
 
 ```json
 {
@@ -197,7 +198,6 @@ API integrations, encode them in your system prompt:
 ## See also
 
 - [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills)
-- [`skills/websec0/SKILL.md`](../skills/websec0/SKILL.md) — the shipped skill (Phase 19, WIP)
+- [`skills/websec0/SKILL.md`](../skills/websec0/SKILL.md) — the shipped skill
 - [API documentation](./api/) — endpoints and schemas
 - [Checks catalog](./checks/) — full list of supported checks
-- [SPECIFICATIONS §10 — SKILL.md pour agents IA](../SPECIFICATIONS.md#10-skillmd-pour-agents-ia)
