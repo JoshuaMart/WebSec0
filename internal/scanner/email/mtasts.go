@@ -115,14 +115,18 @@ func (mtastsModeTestingCheck) Run(ctx context.Context, t *checks.Target) (*check
 	switch p.Mode {
 	case "enforce":
 		return pass(IDMTASTSModeTesting, checks.SeverityMedium,
-			"MTA-STS in enforce mode", nil), nil
+			"MTA-STS in enforce mode",
+			map[string]any{"mode": p.Mode}), nil
 	case "testing":
 		return fail(IDMTASTSModeTesting, checks.SeverityMedium,
 			"MTA-STS in `testing` mode",
-			"Move to `mode: enforce` once telemetry is clean.", nil), nil
+			"Move to `mode: enforce` once telemetry is clean.",
+			map[string]any{"mode": p.Mode}), nil
 	case "none":
 		return fail(IDMTASTSModeTesting, checks.SeverityMedium,
-			"MTA-STS in `none` mode (effectively disabled)", "", nil), nil
+			"MTA-STS in `none` mode (effectively disabled)",
+			"Switch the policy file to `mode: enforce`.",
+			map[string]any{"mode": p.Mode}), nil
 	default:
 		return warn(IDMTASTSModeTesting, checks.SeverityMedium,
 			"MTA-STS mode unrecognised",

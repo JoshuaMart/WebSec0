@@ -106,7 +106,8 @@ func (spfMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	if len(r.SPF) == 0 {
 		return fail(IDSPFMissing, checks.SeverityHigh,
 			"no SPF record",
-			"Publish a TXT record `v=spf1 …` on the apex.", nil), nil
+			"Publish a TXT record `v=spf1 …` on the apex.",
+			map[string]any{"queried": t.Hostname}), nil
 	}
 	return pass(IDSPFMissing, checks.SeverityHigh,
 		"SPF record present",
@@ -210,7 +211,8 @@ func (spfNoAllCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding
 	if parsed == nil || !parsed.HasAll {
 		return fail(IDSPFNoAll, checks.SeverityMedium,
 			"no `all` mechanism",
-			"Append `-all` (or `~all`) to the record.", nil), nil
+			"Append `-all` (or `~all`) to the record.",
+			map[string]any{"raw": r.SPF[0]}), nil
 	}
 	return pass(IDSPFNoAll, checks.SeverityMedium,
 		"SPF terminates with `all`",
@@ -245,7 +247,8 @@ func (spfPassAllCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	if parsed != nil && parsed.HasAll && parsed.AllQualifier == '+' {
 		return fail(IDSPFPassAll, checks.SeverityHigh,
 			"SPF ends with `+all`",
-			"Tighten to `-all` or `~all`.", nil), nil
+			"Tighten to `-all` or `~all`.",
+			map[string]any{"raw": r.SPF[0], "qualifier": "+"}), nil
 	}
 	return pass(IDSPFPassAll, checks.SeverityHigh,
 		"SPF does not pass-all", nil), nil
@@ -279,7 +282,8 @@ func (spfSoftfailAllCheck) Run(ctx context.Context, t *checks.Target) (*checks.F
 	if parsed != nil && parsed.HasAll && parsed.AllQualifier == '~' {
 		return warn(IDSPFSoftfailAll, checks.SeverityLow,
 			"SPF ends with `~all` (softfail)",
-			"Consider tightening to `-all` once you've confirmed all senders are listed.", nil), nil
+			"Consider tightening to `-all` once you've confirmed all senders are listed.",
+			map[string]any{"raw": r.SPF[0], "qualifier": "~"}), nil
 	}
 	return pass(IDSPFSoftfailAll, checks.SeverityLow,
 		"SPF doesn't softfail", nil), nil
@@ -317,7 +321,8 @@ func (spfPTRCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, 
 		if term.Name == "ptr" {
 			return fail(IDSPFPTRMechanism, checks.SeverityMedium,
 				"SPF uses the deprecated `ptr` mechanism",
-				"Replace with `a` / `mx` / `ip4` / `ip6` / `include`.", nil), nil
+				"Replace with `a` / `mx` / `ip4` / `ip6` / `include`.",
+				map[string]any{"raw": r.SPF[0], "term": term.Raw}), nil
 		}
 	}
 	return pass(IDSPFPTRMechanism, checks.SeverityMedium,

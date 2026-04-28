@@ -37,7 +37,8 @@ func (tlsrptMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 	if r.TLSRPT == "" {
 		return fail(IDTLSRPTMissing, checks.SeverityLow,
 			"no TLS-RPT record",
-			"Publish a TXT record `v=TLSRPTv1; rua=mailto:tlsrpt@<domain>` on `_smtp._tls.<domain>`.", nil), nil
+			"Publish a TXT record `v=TLSRPTv1; rua=mailto:tlsrpt@<domain>` on `_smtp._tls.<domain>`.",
+			map[string]any{"queried": "_smtp._tls." + t.Hostname}), nil
 	}
 	return pass(IDTLSRPTMissing, checks.SeverityLow,
 		"TLS-RPT record present",
@@ -70,7 +71,8 @@ func (bimiMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 	if r.BIMI == "" {
 		return fail(IDBIMIMissing, checks.SeverityInfo,
 			"no BIMI record",
-			"Publish a TXT record `v=BIMI1; l=https://…/logo.svg` on `default._bimi.<domain>`.", nil), nil
+			"Publish a TXT record `v=BIMI1; l=https://…/logo.svg` on `default._bimi.<domain>`.",
+			map[string]any{"queried": "default._bimi." + t.Hostname}), nil
 	}
 	return pass(IDBIMIMissing, checks.SeverityInfo,
 		"BIMI record present",

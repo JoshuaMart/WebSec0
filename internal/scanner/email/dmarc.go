@@ -46,6 +46,24 @@ func ParseDMARC(raw string) *DMARC {
 	return d
 }
 
+// dmarcTagNames returns the set of DMARC tag keys present on the parsed
+// record, in a stable order. Used as evidence on findings where the
+// record exists but lacks a specific tag (NO-RUA), so the operator can
+// see what's there.
+func dmarcTagNames(d *DMARC) []string {
+	if d == nil {
+		return nil
+	}
+	want := []string{"v", "p", "sp", "pct", "rua", "ruf", "fo", "adkim", "aspf", "rf", "ri"}
+	out := make([]string, 0, len(d.Tags))
+	for _, k := range want {
+		if _, ok := d.Tags[k]; ok {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
 // --- EMAIL-DMARC-MISSING ---------------------------------------------
 
 type dmarcMissingCheck struct{}
@@ -70,7 +88,8 @@ func (dmarcMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	if r.DMARC == "" {
 		f := fail(IDDMARCMissing, checks.SeverityHigh,
 			"no DMARC record",
-			"Publish a TXT record `v=DMARC1; p=reject; rua=mailto:…` on `_dmarc.<domain>`.", nil)
+			"Publish a TXT record `v=DMARC1; p=reject; rua=mailto:…` on `_dmarc.<domain>`.",
+			map[string]any{"queried": "_dmarc." + t.Hostname})
 		f.Remediation = map[string]any{
 			"why_it_matters": "DMARC tells receiving mail servers how to handle messages that fail SPF or DKIM checks. Without it, anyone can send email appearing to come from your domain, enabling phishing attacks against your users and partners.",
 			"impact":         "Enables impersonation of your brand in phishing campaigns. Also required by Google and Yahoo for bulk senders. No DMARC means no reporting visibility into who is sending on your behalf.",
@@ -208,7 +227,8 @@ func (dmarcPolicyWeakCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 	case "quarantine":
 		return warn(IDDMARCPolicyWeak, checks.SeverityLow,
 			"DMARC at quarantine",
-			"Tighten to `p=reject` when ready.", nil), nil
+			"Tighten to `p=reject` when ready.",
+			map[string]any{"policy": p, "pct": pct}), nil
 	default:
 		return skipped(IDDMARCPolicyWeak, checks.SeverityLow, "policy is none"), nil
 	}
@@ -245,7 +265,8 @@ func (dmarcNoRUACheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	if strings.TrimSpace(parsed.Tags["rua"]) == "" {
 		return fail(IDDMARCNoRUA, checks.SeverityLow,
 			"no `rua=` tag",
-			"Add `rua=mailto:dmarc-aggregate@<domain>` to receive daily reports.", nil), nil
+			"Add `rua=mailto:dmarc-aggregate@<domain>` to receive daily reports.",
+			map[string]any{"raw": parsed.Raw, "tags_present": dmarcTagNames(parsed)}), nil
 	}
 	return pass(IDDMARCNoRUA, checks.SeverityLow,
 		"`rua=` tag present",

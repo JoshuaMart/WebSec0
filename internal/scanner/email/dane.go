@@ -128,7 +128,22 @@ func (daneMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 		return errFinding(IDDANEMissing, checks.SeverityLow, err), nil
 	}
 	total := totalTLSARecords(dane)
-	ev := map[string]any{"tlsa_record_count": total}
+	probes := make([]map[string]any, 0, len(r.MX))
+	for _, mx := range r.MX {
+		probe := map[string]any{
+			"mx_host":      mx,
+			"queried":      "_25._tcp." + mx,
+			"record_count": len(dane.Records[mx]),
+		}
+		if e, ok := dane.Errors[mx]; ok && e != nil {
+			probe["error"] = e.Error()
+		}
+		probes = append(probes, probe)
+	}
+	ev := map[string]any{
+		"tlsa_record_count": total,
+		"probes":            probes,
+	}
 	if total == 0 {
 		return fail(IDDANEMissing, checks.SeverityLow,
 			"no DANE/TLSA records for any MX host",
@@ -229,17 +244,39 @@ func (daneMismatchCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 			"no TLSA records for probed MX host"), nil
 	}
 
+	candidates := make([]map[string]any, 0, len(mxRecs))
 	for _, rec := range mxRecs {
+		row := map[string]any{
+			"usage":     rec.Usage,
+			"selector":  rec.Selector,
+			"matchtype": rec.MatchType,
+			"data":      rec.DataHex,
+		}
+		candidates = append(candidates, row)
 		if matches, _ := tlsaMatchesCert(rec, smtp.TLSCert); matches {
 			return pass(IDDANEMismatch, checks.SeverityHigh,
 				"TLSA record matches the MX certificate",
-				map[string]any{"mx_host": smtp.MXHost}), nil
+				map[string]any{
+					"mx_host":          smtp.MXHost,
+					"matched":          row,
+					"records_examined": len(mxRecs),
+				}), nil
 		}
 	}
+	// Compute the SHA-256 of the SubjectPublicKeyInfo (the most common
+	// TLSA selector/matchtype combo) so the operator can compare it
+	// against their candidate records without re-running openssl.
+	spkiSha256 := sha256.Sum256(smtp.TLSCert.RawSubjectPublicKeyInfo)
 	return fail(IDDANEMismatch, checks.SeverityHigh,
 		"no TLSA record matches the MX certificate",
 		"Update TLSA records to match the current MX TLS certificate. Use `openssl` or `tlsa` tool to compute the record.",
-		map[string]any{"mx_host": smtp.MXHost}), nil
+		map[string]any{
+			"mx_host":          smtp.MXHost,
+			"tlsa_records":     candidates,
+			"cert_subject":     smtp.TLSCert.Subject.String(),
+			"cert_spki_sha256": hex.EncodeToString(spkiSha256[:]),
+			"cert_not_after":   smtp.TLSCert.NotAfter,
+		}), nil
 }
 
 // tlsaMatchesCert computes whether the TLSA record's certificate association

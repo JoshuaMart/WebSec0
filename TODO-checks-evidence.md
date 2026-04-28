@@ -49,20 +49,20 @@ hints which path is weak when only one branch is at fault.
 
 ## EMAIL
 
-- [ ] `EMAIL-DMARC-MISSING` — fail path omits Evidence (no record of which DNS query was made). Tags: a (email/dmarc.go:71)
-- [ ] `EMAIL-DMARC-POLICY-WEAK` — warn branch (`p=quarantine`) omits Evidence. Tags: a (email/dmarc.go:209)
-- [ ] `EMAIL-DMARC-NO-RUA` — fail path omits Evidence (no parsed DMARC record shown). Tags: a (email/dmarc.go:246)
-- [ ] `EMAIL-SPF-MISSING` — fail path omits Evidence. Tags: a (email/spf.go:107)
-- [ ] `EMAIL-SPF-NO-ALL` — fail path omits Evidence (no parsed SPF record). Tags: a (email/spf.go:211)
-- [ ] `EMAIL-SPF-PASS-ALL` — fail path omits Evidence. Tags: a (email/spf.go:246)
-- [ ] `EMAIL-SPF-SOFTFAIL-ALL` — warn path omits Evidence. Tags: a (email/spf.go:280)
-- [ ] `EMAIL-SPF-PTR-MECHANISM` — fail path omits Evidence (no quoted SPF fragment). Tags: a (email/spf.go:318)
-- [ ] `EMAIL-DANE-MISSING` — fail path Evidence is just `tlsa_record_count`; no list of MX hosts probed nor DNSSEC state. Tags: b (email/dane.go:133)
-- [ ] `EMAIL-DANE-MISMATCH` — fail path only carries `mx_host`; no TLSA record or cert hash that failed to match. Tags: b (email/dane.go:239)
-- [ ] `EMAIL-STARTTLS-FAIL` — fail path omits Evidence (no protocol error captured). Tags: a (email/starttls.go:197)
-- [ ] `EMAIL-MTASTS-MODE-TESTING` — pass branch (`mode=enforce`) omits Evidence. Tags: a (email/mtasts.go:117)
-- [ ] `EMAIL-TLSRPT-MISSING` — fail path omits Evidence. Tags: a (email/tlsrpt_bimi.go:38)
-- [ ] `EMAIL-BIMI-MISSING` — fail path omits Evidence. Tags: a (email/tlsrpt_bimi.go:71)
+- [x] `EMAIL-DMARC-MISSING` — fail path omits Evidence (no record of which DNS query was made). Tags: a (email/dmarc.go:71)
+- [x] `EMAIL-DMARC-POLICY-WEAK` — warn branch (`p=quarantine`) omits Evidence. Tags: a (email/dmarc.go:209)
+- [x] `EMAIL-DMARC-NO-RUA` — fail path omits Evidence (no parsed DMARC record shown). Tags: a (email/dmarc.go:246)
+- [x] `EMAIL-SPF-MISSING` — fail path omits Evidence. Tags: a (email/spf.go:107)
+- [x] `EMAIL-SPF-NO-ALL` — fail path omits Evidence (no parsed SPF record). Tags: a (email/spf.go:211)
+- [x] `EMAIL-SPF-PASS-ALL` — fail path omits Evidence. Tags: a (email/spf.go:246)
+- [x] `EMAIL-SPF-SOFTFAIL-ALL` — warn path omits Evidence. Tags: a (email/spf.go:280)
+- [x] `EMAIL-SPF-PTR-MECHANISM` — fail path omits Evidence (no quoted SPF fragment). Tags: a (email/spf.go:318)
+- [x] `EMAIL-DANE-MISSING` — fail path Evidence is just `tlsa_record_count`; no list of MX hosts probed nor DNSSEC state. Tags: b (email/dane.go:133)
+- [x] `EMAIL-DANE-MISMATCH` — fail path only carries `mx_host`; no TLSA record or cert hash that failed to match. Tags: b (email/dane.go:239)
+- [x] `EMAIL-STARTTLS-FAIL` — fail path omits Evidence (no protocol error captured). Tags: a (email/starttls.go:197)
+- [x] `EMAIL-MTASTS-MODE-TESTING` — pass branch (`mode=enforce`) omits Evidence. Tags: a (email/mtasts.go:117)
+- [x] `EMAIL-TLSRPT-MISSING` — fail path omits Evidence. Tags: a (email/tlsrpt_bimi.go:38)
+- [x] `EMAIL-BIMI-MISSING` — fail path omits Evidence. Tags: a (email/tlsrpt_bimi.go:71)
 
 ## HEADER
 

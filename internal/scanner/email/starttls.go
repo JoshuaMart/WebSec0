@@ -189,7 +189,13 @@ func (startTLSFailCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 		return skipped(IDSTARTTLSFail, checks.SeverityHigh,
 			"port 25 unreachable (firewall or ISP blocking)"), nil
 	}
-	ev := map[string]any{"mx_host": smtp.MXHost}
+	ev := map[string]any{
+		"mx_host":             smtp.MXHost,
+		"starttls_advertised": smtp.STARTTLSAdv,
+	}
+	if smtp.Err != nil {
+		ev["error"] = smtp.Err.Error()
+	}
 	if smtp.STARTTLSAdv {
 		return pass(IDSTARTTLSFail, checks.SeverityHigh,
 			"STARTTLS advertised by MX", ev), nil
