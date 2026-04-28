@@ -43,6 +43,7 @@ build-all: web build
 
 web:
 	cd $(WEB_DIR) && pnpm install --frozen-lockfile && pnpm build
+	@touch internal/webfs/dist/.gitkeep
 
 web-dev:
 	cd $(WEB_DIR) && pnpm dev
