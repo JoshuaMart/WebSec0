@@ -1,12 +1,12 @@
 // Package config loads the websec0 configuration from defaults, an optional
-// YAML file, environment variables prefixed with WEBSEC101_, and CLI flags.
+// YAML file, environment variables prefixed with WEBSEC0_, and CLI flags.
 //
 // Precedence (lowest to highest): defaults < YAML < env < flags.
 //
 // Env variables use double underscores to denote key nesting:
 //
-//	WEBSEC101_SERVER__LISTEN=":9090"        // → server.listen
-//	WEBSEC101_SCANNER__PER_CHECK_TIMEOUT=5s // → scanner.per_check_timeout
+//	WEBSEC0_SERVER__LISTEN=":9090"        // → server.listen
+//	WEBSEC0_SCANNER__PER_CHECK_TIMEOUT=5s // → scanner.per_check_timeout
 package config
 
 import (
@@ -27,7 +27,7 @@ import (
 )
 
 // EnvPrefix is the env-var prefix used for configuration overrides.
-const EnvPrefix = "WEBSEC101_"
+const EnvPrefix = "WEBSEC0_"
 
 // Config is the typed configuration tree. It mirrors the YAML schema
 // documented in SPECIFICATIONS.md §4.6.
@@ -164,7 +164,7 @@ func Load(opts LoadOptions) (*Config, error) {
 	return cfg, nil
 }
 
-// envKeyTransform maps WEBSEC101_FOO__BAR_BAZ → foo.bar_baz.
+// envKeyTransform maps WEBSEC0_FOO__BAR_BAZ → foo.bar_baz.
 // Single underscores are preserved (they are part of key names like
 // "read_timeout"); double underscores denote nesting.
 func envKeyTransform(s string) string {

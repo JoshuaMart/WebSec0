@@ -1,4 +1,4 @@
-// Package dns implements the DNS-hardening family of WebSec101 checks
+// Package dns implements the DNS-hardening family of WebSec0 checks
 // (DNSSEC presence, CAA, AAAA/IPv6, wildcard, dangling CNAME, NS
 // diversity, TTL hygiene).
 package dns

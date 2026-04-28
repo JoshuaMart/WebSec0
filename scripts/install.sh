@@ -1,5 +1,5 @@
 #!/bin/sh
-# WebSec101 installer
+# WebSec0 installer
 # Usage: curl -sSL https://raw.githubusercontent.com/JoshuaMart/websec0/main/scripts/install.sh | sh
 #
 # Options (via environment variables):

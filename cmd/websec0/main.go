@@ -1,4 +1,4 @@
-// Command websec0 is the WebSec101 server binary. It hosts the HTTP API
+// Command websec0 is the WebSec0 server binary. It hosts the HTTP API
 // (and, in later phases, the embedded frontend).
 package main
 

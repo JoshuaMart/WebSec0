@@ -103,7 +103,7 @@ func TestMarkdownContainsAllSections(t *testing.T) {
 	r := sample(findings)
 	md := report.Markdown(r)
 	for _, want := range []string{
-		"# WebSec101 Scan Report",
+		"# WebSec0 Scan Report",
 		"**Grade**:",
 		"## Summary",
 		"## Quick wins",
@@ -134,7 +134,7 @@ func TestSARIFShape(t *testing.T) {
 		t.Fatalf("Runs = %d", len(doc.Runs))
 	}
 	run := doc.Runs[0]
-	if run.Tool.Driver.Name != "WebSec101" {
+	if run.Tool.Driver.Name != "WebSec0" {
 		t.Errorf("driver name = %q", run.Tool.Driver.Name)
 	}
 	if len(run.Results) != 2 {

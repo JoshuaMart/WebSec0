@@ -167,7 +167,7 @@ func runStandalone(ctx context.Context, hostname string, waitSec int, unsafe boo
 func runOnline(ctx context.Context, hostname string, waitSec int) (*report.Report, error) {
 	apiKey := globals.apiKey
 	if apiKey == "" {
-		apiKey = os.Getenv("WEBSEC101_API_KEY")
+		apiKey = os.Getenv("WEBSEC0_API_KEY")
 	}
 	cli, err := client.NewClient(globals.server, client.WithClient(authClient(apiKey)))
 	if err != nil {

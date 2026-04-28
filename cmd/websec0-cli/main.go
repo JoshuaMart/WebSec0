@@ -1,5 +1,5 @@
 // Command websec0-cli is the standalone command-line interface for
-// WebSec101. It can drive a remote websec0 server (default mode) or
+// WebSec0. It can drive a remote websec0 server (default mode) or
 // run a scan in-process via --standalone.
 package main
 

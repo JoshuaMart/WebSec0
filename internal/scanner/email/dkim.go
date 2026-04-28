@@ -69,7 +69,7 @@ func (dkimNoneFoundCheck) Family() checks.Family            { return checks.Fami
 func (dkimNoneFoundCheck) DefaultSeverity() checks.Severity { return checks.SeverityMedium }
 func (dkimNoneFoundCheck) Title() string                    { return "DKIM key published on at least one common selector" }
 func (dkimNoneFoundCheck) Description() string {
-	return "WebSec101 probes ~25 common DKIM selectors. None matching means DKIM is either unconfigured or uses a non-conventional selector name."
+	return "WebSec0 probes ~25 common DKIM selectors. None matching means DKIM is either unconfigured or uses a non-conventional selector name."
 }
 func (dkimNoneFoundCheck) RFCRefs() []string { return []string{"RFC 6376"} }
 

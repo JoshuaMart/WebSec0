@@ -1,4 +1,4 @@
-// Package headers implements the HTTP-headers family of WebSec101
+// Package headers implements the HTTP-headers family of WebSec0
 // checks. All checks share a single homepage fetch via Target.CacheValue.
 package headers
 

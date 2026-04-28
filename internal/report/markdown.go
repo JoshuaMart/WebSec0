@@ -14,13 +14,13 @@ import (
 func Markdown(r *Report) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "# WebSec101 Scan Report — %s\n\n", r.Scan.Target)
+	fmt.Fprintf(&b, "# WebSec0 Scan Report — %s\n\n", r.Scan.Target)
 	fmt.Fprintf(&b, "**Date**: %s  \n", r.Scan.StartedAt.UTC().Format(time.RFC3339))
 	fmt.Fprintf(&b, "**Grade**: %s (%d/100)  \n", r.Summary.Grade, r.Summary.Score)
 	if r.Scan.DurationSeconds > 0 {
 		fmt.Fprintf(&b, "**Duration**: %ds  \n", r.Scan.DurationSeconds)
 	}
-	fmt.Fprintf(&b, "**Scanner**: WebSec101 %s\n\n", r.Scan.ScannerVersion)
+	fmt.Fprintf(&b, "**Scanner**: WebSec0 %s\n\n", r.Scan.ScannerVersion)
 
 	// Summary table.
 	b.WriteString("## Summary\n\n")

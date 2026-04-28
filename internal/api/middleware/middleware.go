@@ -1,5 +1,5 @@
 // Package middleware exposes the chi-compatible middlewares used by the
-// WebSec101 HTTP server: request-id, panic recovery, slog access log,
+// WebSec0 HTTP server: request-id, panic recovery, slog access log,
 // and a CORS allowlist.
 package middleware
 

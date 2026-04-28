@@ -85,7 +85,7 @@ func ToSARIF(r *Report) *SARIF {
 	}
 	run := SARIFRun{
 		Tool: SARIFTool{Driver: SARIFDriver{
-			Name:           "WebSec101",
+			Name:           "WebSec0",
 			Version:        r.Scan.ScannerVersion,
 			InformationURI: "https://websec0.example",
 		}},

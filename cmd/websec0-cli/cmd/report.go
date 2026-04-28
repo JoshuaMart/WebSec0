@@ -27,7 +27,7 @@ func reportCmd() *cobra.Command {
 			ctx := context.Background()
 			apiKey := globals.apiKey
 			if apiKey == "" {
-				apiKey = os.Getenv("WEBSEC101_API_KEY")
+				apiKey = os.Getenv("WEBSEC0_API_KEY")
 			}
 			cli, err := client.NewClient(globals.server, client.WithClient(authClient(apiKey)))
 			if err != nil {

@@ -1,4 +1,4 @@
-// Package tls implements the TLS family of WebSec101 checks: modern
+// Package tls implements the TLS family of WebSec0 checks: modern
 // handshake (TLS 1.2 and 1.3 via crypto/tls), certificate validation,
 // HSTS, and the HTTP→HTTPS redirect probe.
 //

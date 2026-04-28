@@ -1,6 +1,6 @@
-# Self-hosting WebSec101
+# Self-hosting WebSec0
 
-WebSec101 ships as a single statically-linked binary with the frontend embedded.
+WebSec0 ships as a single statically-linked binary with the frontend embedded.
 No Node.js, no database, no external services required at runtime.
 
 ## Prerequisites
@@ -109,10 +109,10 @@ make build-all        # builds frontend then Go binaries → bin/websec0 + bin/w
 
 ## Configuration
 
-WebSec101 loads configuration from (highest priority first):
+WebSec0 loads configuration from (highest priority first):
 
 1. CLI flags
-2. Environment variables prefixed `WEBSEC101_`
+2. Environment variables prefixed `WEBSEC0_`
 3. Config file (`/etc/websec0/config.yaml` or path from `--config`)
 4. Built-in defaults
 
@@ -129,7 +129,7 @@ scanner:
   max_concurrent_checks_per_scan: 10
   per_check_timeout: 8s
   per_scan_timeout: 120s
-  user_agent: "WebSec101/1.0 (+https://your-instance.example/about; passive-scan)"
+  user_agent: "WebSec0/1.0 (+https://your-instance.example/about; passive-scan)"
 
 storage:
   backend: memory        # memory | ristretto | redis
@@ -167,18 +167,18 @@ logging:
 
 | Variable                             | Default  | Description                       |
 |--------------------------------------|----------|-----------------------------------|
-| `WEBSEC101_SERVER_LISTEN`            | `:8080`  | Listen address                    |
-| `WEBSEC101_STORAGE_BACKEND`          | `memory` | `memory`, `ristretto`, or `redis` |
-| `WEBSEC101_STORAGE_REDIS_URL`        | —        | Redis URL (if backend=redis)      |
-| `WEBSEC101_SECURITY_REFUSE_PRIVATE_RANGES` | `true` | Block SSRF to private IPs   |
-| `WEBSEC101_LOGGING_LEVEL`            | `info`   | `debug`, `info`, `warn`, `error`  |
-| `WEBSEC101_LOGGING_LOG_TARGETS`      | `false`  | Log scanned domains               |
+| `WEBSEC0_SERVER_LISTEN`            | `:8080`  | Listen address                    |
+| `WEBSEC0_STORAGE_BACKEND`          | `memory` | `memory`, `ristretto`, or `redis` |
+| `WEBSEC0_STORAGE_REDIS_URL`        | —        | Redis URL (if backend=redis)      |
+| `WEBSEC0_SECURITY_REFUSE_PRIVATE_RANGES` | `true` | Block SSRF to private IPs   |
+| `WEBSEC0_LOGGING_LEVEL`            | `info`   | `debug`, `info`, `warn`, `error`  |
+| `WEBSEC0_LOGGING_LOG_TARGETS`      | `false`  | Log scanned domains               |
 
 ---
 
 ## Reverse proxy setup
 
-WebSec101 serves HTTP only. Terminate TLS at the reverse proxy.
+WebSec0 serves HTTP only. Terminate TLS at the reverse proxy.
 
 ### Nginx
 
@@ -218,15 +218,15 @@ websec0.example.com {
 
 ## Opting out of scans
 
-If you want to prevent WebSec101 from scanning your domain, add the following
+If you want to prevent WebSec0 from scanning your domain, add the following
 to your `robots.txt`:
 
 ```
-User-agent: WebSec101
+User-agent: WebSec0
 Disallow: /
 ```
 
-WebSec101 respects this directive and cancels the scan with an explanatory message.
+WebSec0 respects this directive and cancels the scan with an explanatory message.
 
 ---
 
@@ -247,6 +247,6 @@ Re-run the installer — it always fetches the latest release unless
 
 ## Reporting abuse
 
-If you believe WebSec101 is being used to scan your infrastructure without
+If you believe WebSec0 is being used to scan your infrastructure without
 authorization, contact **abuse@websec0.example** (replace with your instance's
 address). We target a response time under 72 hours.

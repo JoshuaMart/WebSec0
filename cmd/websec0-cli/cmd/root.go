@@ -8,7 +8,7 @@ import (
 // Persistent flag values (read by every sub-command).
 type rootOpts struct {
 	server string // websec0 server URL for online mode
-	apiKey string // optional bearer token (env: WEBSEC101_API_KEY)
+	apiKey string // optional bearer token (env: WEBSEC0_API_KEY)
 }
 
 var globals rootOpts
@@ -18,7 +18,7 @@ func Root() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "websec0-cli",
 		Short: "Web security configuration scanner — CLI",
-		Long: `websec0-cli runs WebSec101 scans against a target hostname.
+		Long: `websec0-cli runs WebSec0 scans against a target hostname.
 
 By default it talks to a remote websec0 server (--server). Pass
 --standalone to run the scan in-process without any server.
@@ -36,7 +36,7 @@ Examples:
 	root.PersistentFlags().StringVar(&globals.server, "server",
 		"http://localhost:8080", "websec0 server URL (online mode)")
 	root.PersistentFlags().StringVar(&globals.apiKey, "api-key", "",
-		"bearer token (env WEBSEC101_API_KEY)")
+		"bearer token (env WEBSEC0_API_KEY)")
 
 	root.AddCommand(scanCmd())
 	root.AddCommand(reportCmd())

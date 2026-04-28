@@ -1,4 +1,4 @@
-# WebSec101 — Specifications
+# WebSec0 — Specifications
 
 > **Statut** : Spécification de référence pour la version 0.1.0 (MVP).
 > **Licence** : MIT.
@@ -10,7 +10,7 @@
 
 ### 1.1 Objectif
 
-WebSec101 est un scanner de configuration de sécurité web open-source qui combine, dans un seul outil léger et auto-hébergeable, la couverture qu'offrent séparément SSL Labs (TLS), Hardenize (TLS+DNS+email+headers), securityheaders.com (headers HTTP) et internet.nl (compliance), enrichie de checks customs (security.txt, fichiers sensibles exposés, CORS misconfig, etc.). Il produit un rapport orienté **« quick wins »** — c'est-à-dire priorisé par ROI sécurité/effort plutôt qu'exhaustif — accompagné de **snippets de remédiation copy-paste-ready par stack** (Nginx, Apache, Caddy, HAProxy, Cloudflare, Express, Fastify, Spring Security, IIS).
+WebSec0 est un scanner de configuration de sécurité web open-source qui combine, dans un seul outil léger et auto-hébergeable, la couverture qu'offrent séparément SSL Labs (TLS), Hardenize (TLS+DNS+email+headers), securityheaders.com (headers HTTP) et internet.nl (compliance), enrichie de checks customs (security.txt, fichiers sensibles exposés, CORS misconfig, etc.). Il produit un rapport orienté **« quick wins »** — c'est-à-dire priorisé par ROI sécurité/effort plutôt qu'exhaustif — accompagné de **snippets de remédiation copy-paste-ready par stack** (Nginx, Apache, Caddy, HAProxy, Cloudflare, Express, Fastify, Spring Security, IIS).
 
 ### 1.2 Audience
 
@@ -21,7 +21,7 @@ Deux audiences de premier rang, traitées à parité dès la conception :
 
 ### 1.3 Périmètre passif strict
 
-WebSec101 reste un **scanner de configuration passif**. Cette discipline de scope est non-négociable pour le MVP : elle simplifie radicalement les aspects légaux, l'ergonomie produit, et les dépendances opérationnelles.
+WebSec0 reste un **scanner de configuration passif**. Cette discipline de scope est non-négociable pour le MVP : elle simplifie radicalement les aspects légaux, l'ergonomie produit, et les dépendances opérationnelles.
 
 **Sont autorisés au MVP** :
 
@@ -48,7 +48,7 @@ Total ≤ **~50 requêtes HTTP par scan**, étalées dans le temps (cf. §11.3).
 
 ### 1.4 Différenciateurs
 
-WebSec101 ne cherche pas à inventer la roue. Le créneau est qu'aucun outil OSS ne combine **simultanément** :
+WebSec0 ne cherche pas à inventer la roue. Le créneau est qu'aucun outil OSS ne combine **simultanément** :
 
 1. **Couverture multi-domaines** (TLS + Headers + Cookies + DNS + Email + Custom)
 2. **Snippets de remédiation indexés par stack** (le différenciateur produit principal)
@@ -630,7 +630,7 @@ Le cache DNS (`map[string][]net.IP` protégé par `sync.RWMutex`) est partagé p
 
 ### 4.6 Configuration
 
-Fichier YAML par défaut, surchargeable par variables d'environnement préfixées `WEBSEC101_*`, surchargeables par flags CLI :
+Fichier YAML par défaut, surchargeable par variables d'environnement préfixées `WEBSEC0_*`, surchargeables par flags CLI :
 
 ```yaml
 # /etc/websec0/config.yaml
@@ -644,7 +644,7 @@ scanner:
   max_concurrent_checks_per_scan: 10
   per_check_timeout: 8s
   per_scan_timeout: 120s
-  user_agent: "WebSec101/1.0 (+https://websec0.example/about; passive-scan)"
+  user_agent: "WebSec0/1.0 (+https://websec0.example/about; passive-scan)"
 
 storage:
   backend: memory      # memory | ristretto | redis
@@ -808,7 +808,7 @@ WebSocket exclu : flux unidirectionnel, SSE est plus simple à proxifier et comp
     "completed_at": "2026-04-25T15:31:42Z",
     "duration_seconds": 102,
     "scanner_version": "0.1.0",
-    "scanner_user_agent": "WebSec101/1.0 (+...)"
+    "scanner_user_agent": "WebSec0/1.0 (+...)"
   },
   "summary": {
     "grade": "B+",
@@ -1002,12 +1002,12 @@ Endpoint qui expose **le catalogue complet des checks supportés**, avec leurs m
 Endpoint `GET /api/v1/scans/{guid}/markdown` retourne `text/markdown; charset=utf-8`. Format optimisé pour la lecture humaine **et** la consommation par un agent IA. Structure :
 
 ```markdown
-# WebSec101 Scan Report — example.com
+# WebSec0 Scan Report — example.com
 
 **Date**: 2026-04-25T15:30:00Z  
 **Grade**: B+ (82/100)  
 **Duration**: 102s  
-**Scanner**: WebSec101 0.1.0
+**Scanner**: WebSec0 0.1.0
 
 ## Summary
 
@@ -1052,7 +1052,7 @@ TLS 1.0 was deprecated by RFC 8996 (March 2021). Server currently accepts TLS 1.
 
 Endpoint `GET /api/v1/scans/{guid}/sarif` retourne `application/sarif+json`. Format adapté pour l'intégration GitHub Code Scanning (Code Quality), Azure DevOps, Sonatype, et tout outil DevSecOps standard. Mappings :
 
-- `runs[].tool.driver.name` = `"WebSec101"`
+- `runs[].tool.driver.name` = `"WebSec0"`
 - `runs[].tool.driver.version` = version du scanner
 - `runs[].tool.driver.rules` = catalogue des checks (un rule par check ID)
 - `runs[].results` = findings avec `level` (mapping `critical`/`high` → `error`, `medium` → `warning`, `low`/`info` → `note`)
@@ -1067,7 +1067,7 @@ Binaire séparé `websec0-cli` (peut aussi être invoqué via `websec0 scan` qua
 
 ```
 $ websec0-cli --help
-WebSec101 CLI — passive web security scanner
+WebSec0 CLI — passive web security scanner
 
 Usage:
   websec0-cli [command]
@@ -1080,8 +1080,8 @@ Available Commands:
   help        Help about any command
 
 Flags:
-  -s, --server string    WebSec101 server URL (default "http://localhost:8080")
-  -k, --api-key string   API key (env: WEBSEC101_API_KEY)
+  -s, --server string    WebSec0 server URL (default "http://localhost:8080")
+  -k, --api-key string   API key (env: WEBSEC0_API_KEY)
       --json             output JSON
       --markdown         output Markdown (default for `report`)
       --sarif            output SARIF
@@ -1105,7 +1105,7 @@ Full report: http://localhost:8080/scan/f3a1c2b8-9e4d-4f6a-bcde-0123456789ab
 
 Modes :
 
-- **Mode online** (défaut) : appelle un serveur WebSec101 via son API. `--server` et `--api-key` configurables.
+- **Mode online** (défaut) : appelle un serveur WebSec0 via son API. `--server` et `--api-key` configurables.
 - **Mode standalone** : `websec0-cli scan --standalone example.com` lance un scan sans serveur, en process unique. Pratique pour CI/CD.
 - **Mode CI** : `websec0-cli scan --standalone --sarif example.com > report.sarif` produit du SARIF directement consommable par GitHub Code Scanning. Code de sortie 0 si pass, 1 si findings critical/high, configurable via `--fail-on=critical,high`.
 
@@ -1187,7 +1187,7 @@ Pour le rate-limiting, l'IP source est conservée pendant **7 jours maximum**, *
 
 ## 10. SKILL.md pour agents IA
 
-WebSec101 livre un dossier Skill conforme à la spécification Agent Skills d'Anthropic (publiée le 18 décembre 2025, désormais adoptée par Claude, Codex CLI, Cursor, Copilot, OpenCode).
+WebSec0 livre un dossier Skill conforme à la spécification Agent Skills d'Anthropic (publiée le 18 décembre 2025, désormais adoptée par Claude, Codex CLI, Cursor, Copilot, OpenCode).
 
 ### 10.1 Layout
 
@@ -1218,7 +1218,7 @@ description: |
   "securityheaders.com equivalent", "DMARC", "SPF", "CSP".
 ---
 
-# WebSec101 Skill
+# WebSec0 Skill
 
 ## Safety and ethics
 
@@ -1296,7 +1296,7 @@ Refus avec statut HTTP 451 (`Unavailable For Legal Reasons`) avec message expliq
 
 ### 11.3 Rate limiting et étiquette de scan
 
-- **User-Agent identifiable** : `WebSec101/{version} (+https://websec0.example/about; passive-scan)`. La page `/about` explique le scanner et permet l'opt-out (instructions pour bloquer ce User-Agent côté serveur scanné).
+- **User-Agent identifiable** : `WebSec0/{version} (+https://websec0.example/about; passive-scan)`. La page `/about` explique le scanner et permet l'opt-out (instructions pour bloquer ce User-Agent côté serveur scanné).
 - **Rate limiting par IP cliente** : 10 scans/h/IP anonyme, 100 scans/h avec API key valide.
 - **Rate limiting par cible scannée** : 1 scan tous les 5 minutes par hostname (toutes IPs sources confondues).
 - **Étalement intra-scan** : ~50 requêtes étalées sur 30-60 secondes, max 5 requêtes simultanées vers la même cible.
@@ -1304,7 +1304,7 @@ Refus avec statut HTTP 451 (`Unavailable For Legal Reasons`) avec message expliq
 
 ### 11.4 robots.txt côté cible
 
-WebSec101 ne respecte **pas** `robots.txt` pour le scan single-domain initié manuellement par l'utilisateur. C'est l'approche universelle des scanners de sécurité (SSL Labs, Mozilla Observatory, securityheaders.com, Hardenize, Internet.nl). Exception : si un User-Agent `WebSec101` est explicitement disallowed dans le `robots.txt` de la cible, le scan est annulé avec un message expliquant pourquoi. Détection via fetch de `/robots.txt` en première étape du scan, parsing des règles `User-agent: WebSec101` ou `User-agent: *` avec `Disallow: /`.
+WebSec0 ne respecte **pas** `robots.txt` pour le scan single-domain initié manuellement par l'utilisateur. C'est l'approche universelle des scanners de sécurité (SSL Labs, Mozilla Observatory, securityheaders.com, Hardenize, Internet.nl). Exception : si un User-Agent `WebSec0` est explicitement disallowed dans le `robots.txt` de la cible, le scan est annulé avec un message expliquant pourquoi. Détection via fetch de `/robots.txt` en première étape du scan, parsing des règles `User-agent: WebSec0` ou `User-agent: *` avec `Disallow: /`.
 
 ### 11.5 Détection d'abus
 
@@ -1455,7 +1455,7 @@ Fichier `docs/legal/privacy.md`. Sections obligatoires :
 
 Disclaimer visible en footer de tout rapport :
 
-> *WebSec101 is a passive configuration scanner. Findings are based on observed configuration and known best practices; they are not a substitute for a full security assessment. WebSec101 makes no guarantee regarding the absence of vulnerabilities not covered by its checks. The user is responsible for ensuring they have authorization to scan the target.*
+> *WebSec0 is a passive configuration scanner. Findings are based on observed configuration and known best practices; they are not a substitute for a full security assessment. WebSec0 makes no guarantee regarding the absence of vulnerabilities not covered by its checks. The user is responsible for ensuring they have authorization to scan the target.*
 
 ## 15. Roadmap V2 et au-delà
 
@@ -1478,7 +1478,7 @@ Disclaimer visible en footer de tout rapport :
 - Détection de subdomain takeover proactive avec brute-force DNS contrôlé
 - Crawling profond léger (max 50 pages) pour trouver les endpoints intéressants
 - Scoring contextuel : recommandations adaptées au type de site (e-commerce, app interne, blog)
-- Plugins WebSec101 : framework pour des checks tiers contribués
+- Plugins WebSec0 : framework pour des checks tiers contribués
 - Intégration avec OSV/NVD pour corréler la stack détectée avec des CVE actives
 - Helm chart Kubernetes officiel
 - Dashboard d'observabilité métier (Grafana template)

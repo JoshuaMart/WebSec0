@@ -6,8 +6,8 @@
 *.dll
 *.so
 *.dylib
-/websec101
-/websec101-cli
+/websec0
+/websec0-cli
 
 # Go
 *.test

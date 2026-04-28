@@ -39,7 +39,7 @@ type Options struct {
 	CORSOrigin     []string // CORS allowlist; nil → "https://*"
 }
 
-// NewServer returns the root http.Handler for the WebSec101 API.
+// NewServer returns the root http.Handler for the WebSec0 API.
 //
 // Layout:
 //

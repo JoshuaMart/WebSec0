@@ -1,4 +1,4 @@
-// Package http implements the Web/Custom family of WebSec101 checks
+// Package http implements the Web/Custom family of WebSec0 checks
 // (HTTP/2-3, mixed content, dangerous methods, CORS, 404 hygiene,
 // compression, robots.txt, change-password well-known, SRI).
 //

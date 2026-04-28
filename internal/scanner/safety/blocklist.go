@@ -1,4 +1,4 @@
-// Package safety implements WebSec101's anti-SSRF defences: hostname /
+// Package safety implements WebSec0's anti-SSRF defences: hostname /
 // IP blocklists, DNS-rebinding-resistant resolution (pin-and-recheck),
 // and a custom net.Dialer that re-validates every outbound connection
 // at the syscall level.

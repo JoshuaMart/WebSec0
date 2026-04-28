@@ -1,5 +1,5 @@
 // Package client is the ogen-generated Go server + client for the
-// WebSec101 API.
+// WebSec0 API.
 //
 // It hosts both the server-side Handler interface (implemented internally
 // by cmd/websec0) and the Client struct (importable by external Go

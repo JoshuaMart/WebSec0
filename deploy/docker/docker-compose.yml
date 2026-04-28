@@ -8,13 +8,13 @@ services:
     volumes:
       - ./config.yaml:/etc/websec0/config.yaml:ro
     environment:
-      # Override individual settings via env vars (prefix: WEBSEC101_)
-      - WEBSEC101_SERVER_LISTEN=:8080
-      - WEBSEC101_LOGGING_LEVEL=info
-      - WEBSEC101_LOGGING_FORMAT=json
+      # Override individual settings via env vars (prefix: WEBSEC0_)
+      - WEBSEC0_SERVER_LISTEN=:8080
+      - WEBSEC0_LOGGING_LEVEL=info
+      - WEBSEC0_LOGGING_FORMAT=json
       # Uncomment to persist reports across restarts (requires redis backend)
-      # - WEBSEC101_STORAGE_BACKEND=redis
-      # - WEBSEC101_STORAGE_REDIS_URL=redis://redis:6379/0
+      # - WEBSEC0_STORAGE_BACKEND=redis
+      # - WEBSEC0_STORAGE_REDIS_URL=redis://redis:6379/0
     healthcheck:
       test: ["/websec0", "healthcheck"]
       interval: 30s

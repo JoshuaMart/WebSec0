@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: WebSec101 API
+  title: WebSec0 API
   version: 0.1.0
   description: |
     Open-source web security configuration scanner.

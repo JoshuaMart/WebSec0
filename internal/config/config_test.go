@@ -84,8 +84,8 @@ func TestEnvOverridesYAML(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	t.Setenv("WEBSEC101_SERVER__LISTEN", ":7777")
-	t.Setenv("WEBSEC101_SCANNER__PER_CHECK_TIMEOUT", "3s")
+	t.Setenv("WEBSEC0_SERVER__LISTEN", ":7777")
+	t.Setenv("WEBSEC0_SCANNER__PER_CHECK_TIMEOUT", "3s")
 
 	cfg, err := Load(LoadOptions{ConfigPath: path})
 	if err != nil {
@@ -100,7 +100,7 @@ func TestEnvOverridesYAML(t *testing.T) {
 }
 
 func TestFlagOverridesEnv(t *testing.T) {
-	t.Setenv("WEBSEC101_SERVER__LISTEN", ":7777")
+	t.Setenv("WEBSEC0_SERVER__LISTEN", ":7777")
 
 	flags := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	flags.String("server.listen", "", "")
@@ -118,7 +118,7 @@ func TestFlagOverridesEnv(t *testing.T) {
 }
 
 func TestValidateRejectsBadValues(t *testing.T) {
-	t.Setenv("WEBSEC101_STORAGE__BACKEND", "etcd")
+	t.Setenv("WEBSEC0_STORAGE__BACKEND", "etcd")
 	if _, err := Load(LoadOptions{}); err == nil {
 		t.Fatal("expected validation error for unknown storage backend")
 	}
