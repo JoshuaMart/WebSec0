@@ -31,7 +31,8 @@ func (xssProtectionCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 	v := strings.TrimSpace(res.Header("X-XSS-Protection"))
 	if v == "" || v == "0" {
 		return passFinding(IDXSSProtectionDeprec, checks.SeverityInfo,
-			"X-XSS-Protection absent or disabled", nil), nil
+			"X-XSS-Protection absent or disabled",
+			map[string]any{"value": v}), nil
 	}
 	return warnFinding(IDXSSProtectionDeprec, checks.SeverityInfo,
 		"deprecated X-XSS-Protection enabled",
@@ -63,15 +64,21 @@ func (hpkpCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, er
 	if v := strings.TrimSpace(res.Header("Public-Key-Pins")); v != "" {
 		return failFinding(IDHPKPDeprecated, checks.SeverityMedium,
 			"deprecated Public-Key-Pins header set",
-			"Remove Public-Key-Pins; rely on Certificate Transparency instead.", nil), nil
+			"Remove Public-Key-Pins; rely on Certificate Transparency instead.",
+			map[string]any{"value": v}), nil
 	}
 	if v := strings.TrimSpace(res.Header("Public-Key-Pins-Report-Only")); v != "" {
 		return warnFinding(IDHPKPDeprecated, checks.SeverityMedium,
 			"deprecated Public-Key-Pins-Report-Only set",
-			"Drop the legacy report-only HPKP header.", nil), nil
+			"Drop the legacy report-only HPKP header.",
+			map[string]any{"value": v}), nil
 	}
 	return passFinding(IDHPKPDeprecated, checks.SeverityMedium,
-		"no HPKP header", nil), nil
+		"no HPKP header",
+		map[string]any{
+			"public_key_pins":             "",
+			"public_key_pins_report_only": "",
+		}), nil
 }
 
 // --- HEADER-EXPECT-CT-DEPRECATED -------------------------------------
@@ -102,5 +109,6 @@ func (expectCTCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding
 			map[string]any{"value": v}), nil
 	}
 	return passFinding(IDExpectCTDeprecated, checks.SeverityInfo,
-		"no Expect-CT header", nil), nil
+		"no Expect-CT header",
+		map[string]any{"value": ""}), nil
 }

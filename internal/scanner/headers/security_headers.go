@@ -28,14 +28,17 @@ func (xctoCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, er
 	if !res.Reachable {
 		return skippedFinding(IDXCTOMissing, checks.SeverityMedium, "homepage unreachable"), nil
 	}
-	v := strings.ToLower(strings.TrimSpace(res.Header("X-Content-Type-Options")))
+	raw := res.Header("X-Content-Type-Options")
+	v := strings.ToLower(strings.TrimSpace(raw))
 	if v != "nosniff" {
 		return failFinding(IDXCTOMissing, checks.SeverityMedium,
 			"X-Content-Type-Options not set to nosniff",
-			"Add `X-Content-Type-Options: nosniff`.", nil), nil
+			"Add `X-Content-Type-Options: nosniff`.",
+			map[string]any{"value": raw}), nil
 	}
 	return passFinding(IDXCTOMissing, checks.SeverityMedium,
-		"X-Content-Type-Options: nosniff", nil), nil
+		"X-Content-Type-Options: nosniff",
+		map[string]any{"value": raw}), nil
 }
 
 // --- HEADER-XFO-MISSING ----------------------------------------------
@@ -61,25 +64,29 @@ func (xfoCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, err
 	}
 	// CSP frame-ancestors supersedes X-Frame-Options when present.
 	if csp := ParseCSP(res.Header("Content-Security-Policy")); csp != nil {
-		if _, ok := csp.Directives["frame-ancestors"]; ok {
+		if sources, ok := csp.Directives["frame-ancestors"]; ok {
 			return passFinding(IDXFOMissing, checks.SeverityMedium,
-				"CSP frame-ancestors supersedes X-Frame-Options", nil), nil
+				"CSP frame-ancestors supersedes X-Frame-Options",
+				map[string]any{"frame_ancestors": sources}), nil
 		}
 	}
-	v := strings.ToLower(strings.TrimSpace(res.Header("X-Frame-Options")))
+	raw := res.Header("X-Frame-Options")
+	v := strings.ToLower(strings.TrimSpace(raw))
 	switch v {
 	case "deny", "sameorigin":
 		return passFinding(IDXFOMissing, checks.SeverityMedium,
-			"X-Frame-Options: "+v, nil), nil
+			"X-Frame-Options: "+v,
+			map[string]any{"value": raw}), nil
 	case "":
 		return failFinding(IDXFOMissing, checks.SeverityMedium,
 			"X-Frame-Options not set",
-			"Add `X-Frame-Options: DENY` or `SAMEORIGIN`.", nil), nil
+			"Add `X-Frame-Options: DENY` or `SAMEORIGIN`.",
+			map[string]any{"value": ""}), nil
 	default:
 		return failFinding(IDXFOMissing, checks.SeverityMedium,
 			"X-Frame-Options has an invalid value",
 			"`ALLOW-FROM` is obsolete; use DENY/SAMEORIGIN.",
-			map[string]any{"value": v}), nil
+			map[string]any{"value": raw}), nil
 	}
 }
 
@@ -114,14 +121,16 @@ func (referrerPolicyMissingCheck) Run(ctx context.Context, t *checks.Target) (*c
 	if !res.Reachable {
 		return skippedFinding(IDReferrerPolicyMissing, checks.SeverityLow, "homepage unreachable"), nil
 	}
-	if v := strings.TrimSpace(res.Header("Referrer-Policy")); v == "" {
+	v := strings.TrimSpace(res.Header("Referrer-Policy"))
+	if v == "" {
 		return failFinding(IDReferrerPolicyMissing, checks.SeverityLow,
 			"Referrer-Policy not set",
-			"Add `Referrer-Policy: strict-origin-when-cross-origin` (modern default).", nil), nil
+			"Add `Referrer-Policy: strict-origin-when-cross-origin` (modern default).",
+			map[string]any{"value": ""}), nil
 	}
 	return passFinding(IDReferrerPolicyMissing, checks.SeverityLow,
 		"Referrer-Policy is set",
-		map[string]any{"value": res.Header("Referrer-Policy")}), nil
+		map[string]any{"value": v}), nil
 }
 
 type referrerPolicyUnsafeCheck struct{}
@@ -151,12 +160,15 @@ func (referrerPolicyUnsafeCheck) Run(ctx context.Context, t *checks.Target) (*ch
 		tok = strings.TrimSpace(tok)
 		if tok == "unsafe-url" {
 			return failFinding(IDReferrerPolicyUnsafe, checks.SeverityMedium,
-				"Referrer-Policy includes `unsafe-url`", "", map[string]any{"value": v}), nil
+				"Referrer-Policy includes `unsafe-url`",
+				"`unsafe-url` leaks the full URL on every cross-origin request — switch to `strict-origin-when-cross-origin`.",
+				map[string]any{"value": v, "unsafe_token": tok}), nil
 		}
 		if !safeReferrerPolicies[tok] {
 			return warnFinding(IDReferrerPolicyUnsafe, checks.SeverityMedium,
 				"Referrer-Policy includes a non-standard token",
-				"Token "+tok+" is not in the W3C list.", map[string]any{"value": v}), nil
+				"Token "+tok+" is not in the W3C list.",
+				map[string]any{"value": v, "non_standard_token": tok}), nil
 		}
 	}
 	return passFinding(IDReferrerPolicyUnsafe, checks.SeverityMedium,
@@ -185,14 +197,16 @@ func (permissionsPolicyMissingCheck) Run(ctx context.Context, t *checks.Target) 
 	if !res.Reachable {
 		return skippedFinding(IDPermissionsPolicyMiss, checks.SeverityLow, "homepage unreachable"), nil
 	}
-	if strings.TrimSpace(res.Header("Permissions-Policy")) == "" {
+	v := strings.TrimSpace(res.Header("Permissions-Policy"))
+	if v == "" {
 		return failFinding(IDPermissionsPolicyMiss, checks.SeverityLow,
 			"Permissions-Policy not set",
-			"Even an empty allowlist (`camera=()`) is better than nothing.", nil), nil
+			"Even an empty allowlist (`camera=()`) is better than nothing.",
+			map[string]any{"value": ""}), nil
 	}
 	return passFinding(IDPermissionsPolicyMiss, checks.SeverityLow,
 		"Permissions-Policy is set",
-		map[string]any{"value": res.Header("Permissions-Policy")}), nil
+		map[string]any{"value": v}), nil
 }
 
 // --- HEADER-FEATURE-POLICY-DEPRECATED --------------------------------
@@ -216,13 +230,16 @@ func (featurePolicyDeprecatedCheck) Run(ctx context.Context, t *checks.Target) (
 	if !res.Reachable {
 		return skippedFinding(IDFeaturePolicyDeprec, checks.SeverityInfo, "homepage unreachable"), nil
 	}
-	if strings.TrimSpace(res.Header("Feature-Policy")) != "" {
+	v := strings.TrimSpace(res.Header("Feature-Policy"))
+	if v != "" {
 		return warnFinding(IDFeaturePolicyDeprec, checks.SeverityInfo,
 			"deprecated Feature-Policy header is set",
-			"Migrate to Permissions-Policy.", nil), nil
+			"Migrate to Permissions-Policy.",
+			map[string]any{"value": v}), nil
 	}
 	return passFinding(IDFeaturePolicyDeprec, checks.SeverityInfo,
-		"no deprecated Feature-Policy", nil), nil
+		"no deprecated Feature-Policy",
+		map[string]any{"value": ""}), nil
 }
 
 // --- HEADER-COOP/COEP/CORP --------------------------------------------
@@ -311,7 +328,9 @@ func (reportingEndpointsCheck) Run(ctx context.Context, t *checks.Target) (*chec
 			map[string]any{"value": v}), nil
 	}
 	return failFinding(IDReportingEndpointsNo, checks.SeverityInfo,
-		"no reporting endpoint configured", "", nil), nil
+		"no reporting endpoint configured",
+		"Add `Reporting-Endpoints: default=\"https://example.com/csp-reports\"` and reference it from CSP `report-to`.",
+		map[string]any{"reporting_endpoints": "", "report_to": ""}), nil
 }
 
 type nelCheck struct{}
@@ -340,11 +359,13 @@ func simplePresenceCheck(ctx context.Context, t *checks.Target, id string, sev c
 	if !res.Reachable {
 		return skippedFinding(id, sev, "homepage unreachable"), nil
 	}
-	if strings.TrimSpace(res.Header(headerName)) == "" {
+	v := strings.TrimSpace(res.Header(headerName))
+	if v == "" {
 		return failFinding(id, sev,
-			headerName+" not set", suggestion, nil), nil
+			headerName+" not set", suggestion,
+			map[string]any{"value": ""}), nil
 	}
 	return passFinding(id, sev,
 		headerName+" is set",
-		map[string]any{"value": res.Header(headerName)}), nil
+		map[string]any{"value": v}), nil
 }

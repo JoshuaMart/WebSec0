@@ -43,7 +43,8 @@ func (c disclosureCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	v := strings.TrimSpace(res.Header(c.header))
 	if v == "" {
 		return passFinding(c.id, c.severity,
-			c.header+" not set", nil), nil
+			c.header+" not set",
+			map[string]any{"value": ""}), nil
 	}
 	if c.matchVersion {
 		if !versionRegex.MatchString(v) {

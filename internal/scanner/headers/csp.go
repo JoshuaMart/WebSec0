@@ -95,7 +95,8 @@ func (cspMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	raw := res.Header("Content-Security-Policy")
 	if raw == "" {
 		f := failFinding(IDCSPMissing, checks.SeverityMedium,
-			"no Content-Security-Policy header", "No Content-Security-Policy header was found in the HTTP response.", nil)
+			"no Content-Security-Policy header", "No Content-Security-Policy header was found in the HTTP response.",
+			map[string]any{"value": ""})
 		f.Remediation = map[string]any{
 			"why_it_matters": "Content-Security-Policy restricts the origins from which scripts, styles, fonts, and other resources can load. It is the primary browser-enforced defence against Cross-Site Scripting (XSS).",
 			"impact":         "Without CSP, any injected JavaScript executes with full page privileges — enabling session cookie theft, credential harvesting, cryptomining, and data exfiltration to attacker-controlled servers.",
@@ -114,8 +115,36 @@ func (cspMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 		}
 		return f, nil
 	}
+	parsed := ParseCSP(raw)
 	return passFinding(IDCSPMissing, checks.SeverityMedium,
-		"CSP present", map[string]any{"raw": raw}), nil
+		"CSP present",
+		map[string]any{
+			"raw":             raw,
+			"directive_count": len(parsed.Directives),
+			"directives":      cspDirectiveNames(parsed),
+		}), nil
+}
+
+// cspDirectiveNames returns the directive keys sorted, used as
+// evidence so the operator can scan what's present without parsing
+// the raw header by eye.
+func cspDirectiveNames(c *CSP) []string {
+	if c == nil {
+		return nil
+	}
+	out := make([]string, 0, len(c.Directives))
+	for k := range c.Directives {
+		out = append(out, k)
+	}
+	// Stable order — alphabetical is fine since keys are normalised.
+	for i := 0; i < len(out); i++ {
+		for j := i + 1; j < len(out); j++ {
+			if out[i] > out[j] {
+				out[i], out[j] = out[j], out[i]
+			}
+		}
+	}
+	return out
 }
 
 // helper: shared lookup for CSP-derived checks
@@ -152,13 +181,18 @@ func (cspUnsafeInlineCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 	if skip != nil {
 		return skip, nil
 	}
-	if containsToken(csp.effective("script-src"), "'unsafe-inline'") {
+	sources := csp.effective("script-src")
+	ev := map[string]any{
+		"directive": "script-src",
+		"sources":   sources,
+	}
+	if containsToken(sources, "'unsafe-inline'") {
 		return failFinding(IDCSPUnsafeInline, checks.SeverityHigh,
 			"script-src allows 'unsafe-inline'",
-			"Use nonces or hashes instead of 'unsafe-inline'.", nil), nil
+			"Use nonces or hashes instead of 'unsafe-inline'.", ev), nil
 	}
 	return passFinding(IDCSPUnsafeInline, checks.SeverityHigh,
-		"script-src does not allow 'unsafe-inline'", nil), nil
+		"script-src does not allow 'unsafe-inline'", ev), nil
 }
 
 // --- HEADER-CSP-UNSAFE-EVAL ------------------------------------------
@@ -179,13 +213,18 @@ func (cspUnsafeEvalCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 	if skip != nil {
 		return skip, nil
 	}
-	if containsToken(csp.effective("script-src"), "'unsafe-eval'") {
+	sources := csp.effective("script-src")
+	ev := map[string]any{
+		"directive": "script-src",
+		"sources":   sources,
+	}
+	if containsToken(sources, "'unsafe-eval'") {
 		return failFinding(IDCSPUnsafeEval, checks.SeverityHigh,
 			"script-src allows 'unsafe-eval'",
-			"Refactor away from eval()/Function() and drop 'unsafe-eval'.", nil), nil
+			"Refactor away from eval()/Function() and drop 'unsafe-eval'.", ev), nil
 	}
 	return passFinding(IDCSPUnsafeEval, checks.SeverityHigh,
-		"script-src does not allow 'unsafe-eval'", nil), nil
+		"script-src does not allow 'unsafe-eval'", ev), nil
 }
 
 // --- HEADER-CSP-WILDCARD-SRC -----------------------------------------
@@ -206,16 +245,22 @@ func (cspWildcardCheck) Run(ctx context.Context, t *checks.Target) (*checks.Find
 	if skip != nil {
 		return skip, nil
 	}
-	for _, dir := range []string{"default-src", "script-src", "connect-src"} {
-		if containsToken(csp.effective(dir), "*") {
+	dirsChecked := []string{"default-src", "script-src", "connect-src"}
+	for _, dir := range dirsChecked {
+		sources := csp.effective(dir)
+		if containsToken(sources, "*") {
 			return failFinding(IDCSPWildcardSrc, checks.SeverityMedium,
 				"CSP uses wildcard `*` for "+dir,
 				"Replace `*` with an explicit allowlist.",
-				map[string]any{"directive": dir}), nil
+				map[string]any{
+					"directive": dir,
+					"sources":   sources,
+				}), nil
 		}
 	}
 	return passFinding(IDCSPWildcardSrc, checks.SeverityMedium,
-		"no wildcard in active-content directives", nil), nil
+		"no wildcard in active-content directives",
+		map[string]any{"directives_checked": dirsChecked}), nil
 }
 
 // --- HEADER-CSP-NO-OBJECT-SRC ----------------------------------------
@@ -238,9 +283,14 @@ func (cspNoObjectSrcCheck) Run(ctx context.Context, t *checks.Target) (*checks.F
 	}
 	tokens := csp.effective("object-src")
 	if len(tokens) == 0 {
+		_, hasDefault := csp.Directives["default-src"]
 		return failFinding(IDCSPNoObjectSrc, checks.SeverityLow,
 			"no object-src directive (and no default-src fallback)",
-			"Add `object-src 'none';` to disable plugin embeds.", nil), nil
+			"Add `object-src 'none';` to disable plugin embeds.",
+			map[string]any{
+				"directives_present": cspDirectiveNames(csp),
+				"has_default_src":    hasDefault,
+			}), nil
 	}
 	return passFinding(IDCSPNoObjectSrc, checks.SeverityLow,
 		"object-src is restricted",
@@ -265,13 +315,16 @@ func (cspNoBaseURICheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	if skip != nil {
 		return skip, nil
 	}
-	if _, ok := csp.Directives["base-uri"]; !ok {
+	v, ok := csp.Directives["base-uri"]
+	if !ok {
 		return failFinding(IDCSPNoBaseURI, checks.SeverityLow,
 			"no base-uri directive",
-			"Add `base-uri 'none'` or `base-uri 'self'`.", nil), nil
+			"Add `base-uri 'none'` or `base-uri 'self'`.",
+			map[string]any{"directives_present": cspDirectiveNames(csp)}), nil
 	}
 	return passFinding(IDCSPNoBaseURI, checks.SeverityLow,
-		"base-uri is set", nil), nil
+		"base-uri is set",
+		map[string]any{"sources": v}), nil
 }
 
 // --- HEADER-CSP-NO-FRAME-ANCESTORS -----------------------------------
@@ -292,11 +345,14 @@ func (cspNoFrameAncestorsCheck) Run(ctx context.Context, t *checks.Target) (*che
 	if skip != nil {
 		return skip, nil
 	}
-	if _, ok := csp.Directives["frame-ancestors"]; !ok {
+	sources, ok := csp.Directives["frame-ancestors"]
+	if !ok {
 		return failFinding(IDCSPNoFrameAncestors, checks.SeverityMedium,
 			"no frame-ancestors directive",
-			"Add `frame-ancestors 'none'` (or 'self') unless you need cross-origin embedding.", nil), nil
+			"Add `frame-ancestors 'none'` (or 'self') unless you need cross-origin embedding.",
+			map[string]any{"directives_present": cspDirectiveNames(csp)}), nil
 	}
 	return passFinding(IDCSPNoFrameAncestors, checks.SeverityMedium,
-		"frame-ancestors is set", nil), nil
+		"frame-ancestors is set",
+		map[string]any{"sources": sources}), nil
 }
