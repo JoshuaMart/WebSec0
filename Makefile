@@ -1,4 +1,4 @@
-.PHONY: build build-all web test test-race test-e2e test-e2e-fixture bench cover lint audit clean run gen docs help
+.PHONY: build build-all web test test-race test-e2e test-e2e-fixture bench cover lint audit licenses clean run gen docs help
 .DEFAULT_GOAL := help
 
 BIN_DIR    := bin
@@ -27,7 +27,8 @@ help:
 	@echo "  test-e2e-fixture  Bring up the legacy fixture, run the gated E2E test, tear down"
 	@echo "  bench      Run benchmarks (TLS probes, CSP parser, SPF parser)"
 	@echo "  cover      Print per-package coverage on internal/"
-	@echo "  audit      Run gosec + govulncheck + osv-scanner"
+	@echo "  audit      Run gosec + govulncheck + osv-scanner + go-licenses"
+	@echo "  licenses   Refuse GPL/AGPL/MPL transitively (go-licenses)"
 	@echo "  lint       Run golangci-lint"
 	@echo "  gen        Run all go:generate directives"
 	@echo "  docs       Regenerate per-check docs under docs/checks/"
@@ -86,7 +87,7 @@ lint:
 
 # audit: static + supply-chain. Each tool is run separately so a failure
 # is attributed cleanly. govulncheck and osv-scanner must be on $PATH;
-# gosec is auto-bootstrapped via `go run` if missing.
+# gosec and go-licenses are auto-bootstrapped via `go run` if missing.
 audit:
 	@echo "→ gosec (HIGH severity gate)"
 	go run github.com/securego/gosec/v2/cmd/gosec@latest -severity=high ./internal/... ./cmd/... ./pkg/...
@@ -96,6 +97,21 @@ audit:
 	osv-scanner scan source --lockfile=go.mod
 	@echo "→ osv-scanner (frontend lockfile)"
 	-osv-scanner scan source --lockfile=web/pnpm-lock.yaml
+	@echo "→ go-licenses (refuse GPL/AGPL/MPL transitively)"
+	$(MAKE) licenses
+
+# licenses: fail when a transitive dep introduces a copyleft license.
+# `forbidden` covers proprietary/contradictory, `restricted` covers GPL
+# family, `reciprocal` covers MPL/EPL. github.com/segmentio/asm is
+# pulled in transitively by go-faster/jx and ships under MIT-0
+# (MIT No Attribution); go-licenses 1.x has no classifier for that
+# SPDX id and reports it as Unknown — a tooling gap, not a license
+# risk. Re-evaluate the ignore the next time go-licenses is bumped.
+licenses:
+	go run github.com/google/go-licenses@latest check \
+	  --disallowed_types=forbidden,restricted,reciprocal \
+	  --ignore=github.com/segmentio/asm \
+	  ./cmd/websec0 ./cmd/websec0-cli
 
 gen:
 	cp -f api/openapi.yaml internal/api/spec/openapi.yaml

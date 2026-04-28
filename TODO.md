@@ -26,10 +26,6 @@ and live in `git log`; this file tracks only the remaining work.
 
 - [ ] Test the skill with Claude Code and Cursor (real session)
 
-## Phase 21 — Quality (last item)
-
-- [ ] License audit: `go-licenses` — refuse GPL/AGPL in deps
-
 ## Phase 22 — 0.1.0 pre-release
 
 - [ ] Manual walkthrough of every check vs. its check ID — every
