@@ -74,6 +74,12 @@ func fullRegistry(t *testing.T) *checks.Registry {
 // the rendered Report. insecure relaxes the HTTP client TLS verification
 // (needed for badssl.com targets with deliberately broken certs so that
 // the HSTS / redirect / mixed-content probes do not abort early).
+//
+// host accepts a bare hostname, a `host:port`, or a URL. For loopback
+// fixtures on non-standard ports we skip safety pinning because
+// Target.DialAddress discards the input port whenever PinnedIPs is set
+// (it re-joins with the passed-in default port "443"). Anti-SSRF is
+// also moot on 127.0.0.1 by definition.
 func runFullScan(t *testing.T, host string, insecure bool) *report.Report {
 	t.Helper()
 
@@ -82,16 +88,25 @@ func runFullScan(t *testing.T, host string, insecure bool) *report.Report {
 		t.Fatalf("NewTarget(%q): %v", host, err)
 	}
 
-	// SSRF gate. Permissive() is used so the local legacy fixture
-	// (loopback / RFC 1918) is allowed; metadata IPs remain blocked.
-	policy := safety.Permissive()
-	pinned, decision := safety.ResolveAndValidate(context.Background(), tgt.Hostname, policy, nil)
-	if decision != nil {
-		t.Fatalf("target %q blocked: %s", host, decision.HumanError())
-	}
-	tgt.PinnedIPs = pinned
+	// Detect a non-standard port. When present, skip the pinning step.
+	_, port, splitErr := net.SplitHostPort(tgt.Host)
+	customPort := splitErr == nil && port != "" && port != "443"
 
-	if insecure {
+	var pinned []net.IP
+	if !customPort {
+		// SSRF gate. Permissive() is used so the local legacy fixture
+		// (loopback / RFC 1918) is allowed; metadata IPs remain blocked.
+		policy := safety.Permissive()
+		var decision *safety.Decision
+		pinned, decision = safety.ResolveAndValidate(context.Background(), tgt.Hostname, policy, nil)
+		if decision != nil {
+			t.Fatalf("target %q blocked: %s", host, decision.HumanError())
+		}
+		tgt.PinnedIPs = pinned
+	}
+
+	switch {
+	case insecure:
 		tgt.HTTPClient = &http.Client{
 			Timeout: 15 * time.Second,
 			Transport: &http.Transport{
@@ -101,7 +116,15 @@ func runFullScan(t *testing.T, host string, insecure bool) *report.Report {
 				return http.ErrUseLastResponse
 			},
 		}
-	} else {
+	case customPort:
+		tgt.HTTPClient = &http.Client{
+			Timeout: 15 * time.Second,
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+	default:
+		policy := safety.Permissive()
 		tgt.HTTPClient = safety.HTTPClient(tgt.Hostname, pinned, policy)
 	}
 

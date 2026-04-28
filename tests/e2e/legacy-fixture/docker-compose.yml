@@ -1,16 +1,37 @@
 services:
   legacy-nginx:
     image: nginx:1.18-alpine
-    container_name: websec0-legacy-fixture
+    container_name: websec0-legacy-nginx
     ports:
       - "127.0.0.1:18080:80"
       - "127.0.0.1:18443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./tls:/etc/nginx/tls:ro
-      - ./www:/var/www/html:ro
+      - ./nginx/www:/var/www/html:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "--no-check-certificate", "https://localhost/"]
+      # Alpine 1.18 busybox wget does not accept --no-check-certificate
+      # and busybox nc lacks -z; spider HTTP (port 80) instead, which
+      # is also bound by the fixture.
+      test: ["CMD-SHELL", "wget --spider -q -T 2 http://127.0.0.1:80/ || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 5
+
+  legacy-apache:
+    image: httpd:2.4
+    container_name: websec0-legacy-apache
+    ports:
+      - "127.0.0.1:18180:80"
+      - "127.0.0.1:18543:443"
+    volumes:
+      - ./apache/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+      - ./tls:/usr/local/apache2/conf/tls:ro
+      - ./apache/www:/usr/local/apache2/htdocs:ro
+    healthcheck:
+      # httpd:2.4 image has bash but neither curl nor wget; use the
+      # /dev/tcp trick to verify the listener is up.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/443' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

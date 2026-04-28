@@ -1,0 +1,10 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>WebSec0 Apache fixture</title></head>
+<body>
+  <h1>WebSec0 Apache fixture</h1>
+  <p>Deliberately misconfigured Apache HTTPD for E2E tests. Do not deploy.</p>
+  <!-- mixed content (HTTP-MIXED-CONTENT fail) -->
+  <img src="http://example.com/insecure.png" alt="">
+  <!-- external script without integrity (SRI-EXTERNAL-RESOURCE-NO-INTEGRITY fail) -->
+  <script src="https://cdn.example.com/lib.js"></script>
+</body></html>

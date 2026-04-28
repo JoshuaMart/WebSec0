@@ -385,7 +385,7 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 - [x] Test suite end-to-end contre badssl.com (toutes les variantes) — `tests/e2e/badssl_e2e_test.go`, full-orchestrator (126 checks) sur 8 variantes badssl + hsts/redirect, validé manuellement (15 s par scan)
 - [x] Tests E2E contre cibles de référence (mozilla.org, github.com, cloudflare.com → A+) — `tests/e2e/reference_e2e_test.go`, hard-gate sur critical, soft-gate sur high, score ≥ 70
 - [x] Tests E2E contre cibles « legacy » connues (à identifier sans nuire, ou container fixture local) — fixture Docker local sous `tests/e2e/legacy-fixture/` (nginx 1.18, TLS 1.0/1.1, ciphers faibles, headers absents, .git/config exposé), test gated par `WEBSEC0_LEGACY_FIXTURE_HOST`, intégré dans `make test-e2e-fixture`
-- [ ] Test fixtures dockerisées : nginx 1.18 mal configuré, Apache vulnérable, etc.
+- [x] Test fixtures dockerisées : nginx 1.18 mal configuré, Apache vulnérable, etc. — `tests/e2e/legacy-fixture/{nginx,apache}/`, docker-compose multi-services, sub-test gated par env var (`WEBSEC0_LEGACY_FIXTURE_HOST`, `WEBSEC0_APACHE_FIXTURE_HOST`), Apache cible TraceEnable On + CORS reflection + ServerTokens Full, intégré dans `make test-e2e-fixture`. Helper `runFullScan` corrigé pour respecter les ports custom (skip safety pinning car DialAddress jette le port quand PinnedIPs est set).
 - [ ] Couverture de tests Go ≥ 70 % sur `internal/`
 - [ ] Tests `go test -race` propres
 - [ ] Bench critiques (`internal/scanner/tls/probes`, parsing CSP, parsing SPF)

@@ -15,10 +15,13 @@ build tag (`e2e`).
 |---|---|---|
 | `badssl_e2e_test.go` | Asserts each badssl.com subdomain triggers the matching finding (`expired`, `self-signed`, `tls-v1-0`, `rc4`, `dh1024`, …). Plus pass-cases for `hsts.badssl.com` and `badssl.com` (redirect). | badssl.com |
 | `reference_e2e_test.go` | Full scan against `cloudflare.com`, `github.com`, `mozilla.org`. Hard gate: zero `critical` findings. Per-check gate: 20+ legacy/weak checks must not fail. Score gate: ≥ 70. | reference vendors |
-| `legacy_fixture_e2e_test.go` | Drives the local Nginx fixture under `legacy-fixture/`. Asserts the deliberately-broken setup is flagged correctly (legacy TLS, self-signed, no HSTS, missing headers, exposed `.git/config`, info disclosure). Score gate: < 50. | localhost only |
+| `legacy_fixture_e2e_test.go` | Drives the local Nginx 1.18 fixture under `legacy-fixture/nginx/`. Asserts the deliberately-broken setup is flagged correctly (legacy TLS, self-signed, no HSTS, missing headers, exposed `.git/config`, info disclosure). Score gate: < 80 (loopback math). | localhost only |
+| `apache_fixture_e2e_test.go` | Drives the local Apache 2.4 fixture under `legacy-fixture/apache/`. Asserts Apache-distinct findings: `HTTP-TRACE-ENABLED`, `HTTP-CORS-ORIGIN-REFLECTED`, `HEADER-INFO-SERVER` (full banner via `ServerTokens Full`), mixed content. Score gate: < 80. | localhost only |
 
-The legacy suite is **opt-in**: it runs only when
-`WEBSEC0_LEGACY_FIXTURE_HOST` is set. CI without Docker simply skips.
+The fixture suites are **opt-in**: each runs only when its env var is
+set (`WEBSEC0_LEGACY_FIXTURE_HOST`, `WEBSEC0_APACHE_FIXTURE_HOST`). CI
+without Docker simply skips. Both env vars accept `host:port` form (the
+fixtures bind to non-standard ports).
 
 ## Run
 

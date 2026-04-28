@@ -58,7 +58,10 @@ test-e2e:
 test-e2e-fixture:
 	$(MAKE) -C tests/e2e/legacy-fixture up
 	WEBSEC0_LEGACY_FIXTURE_HOST=localhost:18443 \
-	  go test -tags e2e -count=1 -v -run TestE2E_LegacyFixture ./tests/e2e/...; \
+	WEBSEC0_APACHE_FIXTURE_HOST=localhost:18543 \
+	  go test -tags e2e -count=1 -v \
+	    -run 'TestE2E_(LegacyFixture|ApacheFixture)' \
+	    ./tests/e2e/...; \
 	  status=$$?; \
 	  $(MAKE) -C tests/e2e/legacy-fixture down; \
 	  exit $$status
