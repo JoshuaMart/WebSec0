@@ -7,7 +7,7 @@ const (
 	IDCSPMissing            = "HEADER-CSP-MISSING"
 	IDCSPUnsafeInline       = "HEADER-CSP-UNSAFE-INLINE"
 	IDCSPUnsafeEval         = "HEADER-CSP-UNSAFE-EVAL"
-	IDCSPWildcardSrc        = "HEADER-CSP-WILDCARD-SRC"
+	IDCSPWildcardSrc        = "HEADER-CSP-WILDCARD-SRC" //#nosec G101 -- public check identifier, not a credential
 	IDCSPNoObjectSrc        = "HEADER-CSP-NO-OBJECT-SRC"
 	IDCSPNoBaseURI          = "HEADER-CSP-NO-BASE-URI"
 	IDCSPNoFrameAncestors   = "HEADER-CSP-NO-FRAME-ANCESTORS"

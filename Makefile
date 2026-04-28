@@ -1,4 +1,4 @@
-.PHONY: build build-all web test test-race test-e2e test-e2e-fixture bench cover lint clean run gen docs help
+.PHONY: build build-all web test test-race test-e2e test-e2e-fixture bench cover lint audit clean run gen docs help
 .DEFAULT_GOAL := help
 
 BIN_DIR    := bin
@@ -27,6 +27,7 @@ help:
 	@echo "  test-e2e-fixture  Bring up the legacy fixture, run the gated E2E test, tear down"
 	@echo "  bench      Run benchmarks (TLS probes, CSP parser, SPF parser)"
 	@echo "  cover      Print per-package coverage on internal/"
+	@echo "  audit      Run gosec + govulncheck + osv-scanner"
 	@echo "  lint       Run golangci-lint"
 	@echo "  gen        Run all go:generate directives"
 	@echo "  docs       Regenerate per-check docs under docs/checks/"
@@ -82,6 +83,19 @@ test-e2e-fixture:
 
 lint:
 	golangci-lint run ./...
+
+# audit: static + supply-chain. Each tool is run separately so a failure
+# is attributed cleanly. govulncheck and osv-scanner must be on $PATH;
+# gosec is auto-bootstrapped via `go run` if missing.
+audit:
+	@echo "→ gosec (HIGH severity gate)"
+	go run github.com/securego/gosec/v2/cmd/gosec@latest -severity=high ./internal/... ./cmd/... ./pkg/...
+	@echo "→ govulncheck"
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@echo "→ osv-scanner (Go modules)"
+	osv-scanner scan source --lockfile=go.mod
+	@echo "→ osv-scanner (frontend lockfile)"
+	-osv-scanner scan source --lockfile=web/pnpm-lock.yaml
 
 gen:
 	cp -f api/openapi.yaml internal/api/spec/openapi.yaml

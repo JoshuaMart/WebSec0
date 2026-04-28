@@ -8,7 +8,7 @@ const (
 	IDSPFMultiple        = "EMAIL-SPF-MULTIPLE-RECORDS"
 	IDSPFInvalidSyntax   = "EMAIL-SPF-INVALID-SYNTAX"
 	IDSPFNoAll           = "EMAIL-SPF-NO-ALL-MECHANISM"
-	IDSPFPassAll         = "EMAIL-SPF-PASS-ALL"
+	IDSPFPassAll         = "EMAIL-SPF-PASS-ALL" //#nosec G101 -- public check identifier, not a credential
 	IDSPFSoftfailAll     = "EMAIL-SPF-SOFTFAIL-ALL"
 	IDSPFPTRMechanism    = "EMAIL-SPF-PTR-MECHANISM"
 	IDDKIMNoneFound      = "EMAIL-DKIM-NONE-FOUND"

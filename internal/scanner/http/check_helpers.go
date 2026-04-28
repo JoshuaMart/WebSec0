@@ -9,7 +9,7 @@ const (
 	IDMixedContent            = "HTTP-MIXED-CONTENT"
 	IDOptionsDangerousMethods = "HTTP-OPTIONS-DANGEROUS-METHODS"
 	IDTraceEnabled            = "HTTP-TRACE-ENABLED"
-	IDCORSWildcardCredentials = "HTTP-CORS-WILDCARD-CREDENTIALS"
+	IDCORSWildcardCredentials = "HTTP-CORS-WILDCARD-CREDENTIALS" //#nosec G101 -- public check identifier, not a credential
 	IDCORSOriginReflected     = "HTTP-CORS-ORIGIN-REFLECTED"
 	IDCORSNullOrigin          = "HTTP-CORS-NULL-ORIGIN"
 	ID404StackTrace           = "HTTP-404-STACK-TRACE"
