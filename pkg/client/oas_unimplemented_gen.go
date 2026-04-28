@@ -50,6 +50,18 @@ func (UnimplementedHandler) GetHealth(ctx context.Context) (r *Health, _ error) 
 	return r, ht.ErrNotImplemented
 }
 
+// GetInstance implements getInstance operation.
+//
+// Returns the contact email and User-Agent string the operator has
+// configured for this instance. The frontend reads this endpoint to
+// render legal / about pages without baking deployment-specific
+// values into the embedded HTML.
+//
+// GET /api/v1/instance
+func (UnimplementedHandler) GetInstance(ctx context.Context) (r *Instance, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetOpenAPI implements getOpenAPI operation.
 //
 // Embedded OpenAPI 3.0 specification.

@@ -6,7 +6,7 @@ import Footer from '../../../components/Footer.astro';
 <Base title="Privacy Policy" description="WebSec0 Privacy Policy — what data is collected and how it is used.">
   <Nav />
 
-  <main class="max-w-6xl mx-auto px-6 py-16">
+  <main class="max-w-6xl mx-auto px-6 py-16" x-data>
     <h1 class="text-3xl font-bold text-ink tracking-tight mb-2">Privacy Policy</h1>
     <p class="text-xs font-mono text-ink-faint mb-12">Last updated: 2026-04-27 · Version 0.1</p>
 
@@ -53,7 +53,7 @@ import Footer from '../../../components/Footer.astro';
         <p>
           Under GDPR arts. 15–17, you have the right to access, rectify, or erase data held about you.
           To exercise these rights, email
-          <a href="mailto:privacy@websec0.example" class="text-accent hover:underline font-mono text-xs">privacy@websec0.example</a>.
+          <a :href="'mailto:' + $store.instance.contactEmail" x-text="$store.instance.contactEmail" class="text-accent hover:underline font-mono text-xs">operator@example.invalid</a>.
           We will respond within 30 days.
         </p>
         <p class="mt-2">
@@ -67,7 +67,7 @@ import Footer from '../../../components/Footer.astro';
         <p>
           Reports are automatically deleted after 24 hours on the public instance.
           To request early deletion of a specific scan, send the scan GUID to
-          <a href="mailto:privacy@websec0.example" class="text-accent hover:underline font-mono text-xs">privacy@websec0.example</a>.
+          <a :href="'mailto:' + $store.instance.contactEmail" x-text="$store.instance.contactEmail" class="text-accent hover:underline font-mono text-xs">operator@example.invalid</a>.
         </p>
       </section>
 
@@ -82,8 +82,10 @@ import Footer from '../../../components/Footer.astro';
       <section>
         <h2 class="text-sm font-semibold text-ink mb-3">7. Contact</h2>
         <div class="flex flex-col gap-1 font-mono text-xs">
-          <span>Privacy: <a href="mailto:privacy@websec0.example" class="text-accent hover:underline">privacy@websec0.example</a></span>
-          <span>Abuse: <a href="mailto:abuse@websec0.example" class="text-accent hover:underline">abuse@websec0.example</a></span>
+          <span>
+            Privacy / Abuse:
+            <a :href="'mailto:' + $store.instance.contactEmail" x-text="$store.instance.contactEmail" class="text-accent hover:underline">operator@example.invalid</a>
+          </span>
         </div>
       </section>
 

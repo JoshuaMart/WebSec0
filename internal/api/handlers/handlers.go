@@ -41,6 +41,8 @@ type Handler struct {
 	auditLog       *audit.Logger
 	perScanTimeout time.Duration
 	startedAt      time.Time
+	contactEmail   string
+	userAgent      string
 }
 
 // Options aggregates the dependencies of a Handler.
@@ -53,6 +55,8 @@ type Options struct {
 	IPLimiter      *ratelimit.IPLimiter
 	AuditLog       *audit.Logger
 	PerScanTimeout time.Duration
+	ContactEmail   string
+	UserAgent      string
 }
 
 // New constructs a Handler.
@@ -73,7 +77,17 @@ func New(opts Options) *Handler {
 		auditLog:       opts.AuditLog,
 		perScanTimeout: opts.PerScanTimeout,
 		startedAt:      time.Now(),
+		contactEmail:   opts.ContactEmail,
+		userAgent:      opts.UserAgent,
 	}
+}
+
+// GetInstance implements GET /api/v1/instance.
+func (h *Handler) GetInstance(_ context.Context) (*client.Instance, error) {
+	return &client.Instance{
+		ContactEmail: h.contactEmail,
+		UserAgent:    h.userAgent,
+	}, nil
 }
 
 // audit forwards a scan event to the audit logger if one is configured.

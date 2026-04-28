@@ -37,5 +37,7 @@ func Defaults() map[string]any {
 		"logging.level":       "info",
 		"logging.format":      "json",
 		"logging.log_targets": false,
+
+		"legal.contact_email": "operator@example.invalid",
 	}
 }

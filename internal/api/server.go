@@ -37,6 +37,8 @@ type Options struct {
 	PerScanTimeout time.Duration
 	LogTargets     bool     // honour logging.log_targets
 	CORSOrigin     []string // CORS allowlist; nil → "https://*"
+	ContactEmail   string   // surfaced via GET /api/v1/instance
+	UserAgent      string   // surfaced via GET /api/v1/instance
 }
 
 // NewServer returns the root http.Handler for the WebSec0 API.
@@ -70,6 +72,8 @@ func NewServer(opts Options) (http.Handler, error) {
 		IPLimiter:      opts.IPLimiter,
 		AuditLog:       opts.AuditLog,
 		PerScanTimeout: opts.PerScanTimeout,
+		ContactEmail:   opts.ContactEmail,
+		UserAgent:      opts.UserAgent,
 	})
 
 	ogenServer, err := client.NewServer(h,

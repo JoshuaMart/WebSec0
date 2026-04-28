@@ -457,6 +457,34 @@ func (s *HealthStatus) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/Instance
+type Instance struct {
+	// Operator inbox for privacy / abuse / security correspondence.
+	ContactEmail string `json:"contact_email"`
+	// User-Agent string this instance sends with every outbound request.
+	UserAgent string `json:"user_agent"`
+}
+
+// GetContactEmail returns the value of ContactEmail.
+func (s *Instance) GetContactEmail() string {
+	return s.ContactEmail
+}
+
+// GetUserAgent returns the value of UserAgent.
+func (s *Instance) GetUserAgent() string {
+	return s.UserAgent
+}
+
+// SetContactEmail sets the value of ContactEmail.
+func (s *Instance) SetContactEmail(val string) {
+	s.ContactEmail = val
+}
+
+// SetUserAgent sets the value of UserAgent.
+func (s *Instance) SetUserAgent(val string) {
+	s.UserAgent = val
+}
+
 // NewOptBool returns new OptBool with value set to v.
 func NewOptBool(v bool) OptBool {
 	return OptBool{

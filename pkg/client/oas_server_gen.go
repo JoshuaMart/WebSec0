@@ -33,6 +33,15 @@ type Handler interface {
 	//
 	// GET /api/v1/health
 	GetHealth(ctx context.Context) (*Health, error)
+	// GetInstance implements getInstance operation.
+	//
+	// Returns the contact email and User-Agent string the operator has
+	// configured for this instance. The frontend reads this endpoint to
+	// render legal / about pages without baking deployment-specific
+	// values into the embedded HTML.
+	//
+	// GET /api/v1/instance
+	GetInstance(ctx context.Context) (*Instance, error)
 	// GetOpenAPI implements getOpenAPI operation.
 	//
 	// Embedded OpenAPI 3.0 specification.

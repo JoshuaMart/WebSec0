@@ -64,6 +64,24 @@ paths:
                 type: object
                 additionalProperties: true
 
+  /api/v1/instance:
+    get:
+      tags: [ops]
+      operationId: getInstance
+      summary: Operator-facing instance metadata
+      description: |
+        Returns the contact email and User-Agent string the operator has
+        configured for this instance. The frontend reads this endpoint to
+        render legal / about pages without baking deployment-specific
+        values into the embedded HTML.
+      responses:
+        '200':
+          description: Instance metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Instance'
+
   /api/v1/scans:
     post:
       tags: [scans]
@@ -241,6 +259,18 @@ components:
           type: string
         build_date:
           type: string
+    Instance:
+      type: object
+      required: [contact_email, user_agent]
+      properties:
+        contact_email:
+          type: string
+          description: Operator inbox for privacy / abuse / security correspondence.
+          example: ops@example.org
+        user_agent:
+          type: string
+          description: User-Agent string this instance sends with every outbound request.
+          example: WebSec0/0.1.0 (+https://websec0.example/about; passive-scan)
     Error:
       type: object
       required: [code, message]

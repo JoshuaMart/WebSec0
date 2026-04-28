@@ -141,6 +141,8 @@ func run(args []string, errOut *os.File) error {
 		AuditLog:       auditLog,
 		PerScanTimeout: cfg.Scanner.PerScanTimeout,
 		LogTargets:     cfg.Logging.LogTargets,
+		ContactEmail:   cfg.Legal.ContactEmail,
+		UserAgent:      cfg.Scanner.UserAgent,
 	})
 	if err != nil {
 		return fmt.Errorf("build server: %w", err)

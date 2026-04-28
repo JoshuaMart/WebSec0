@@ -10,6 +10,7 @@ const (
 	DeleteScanOperation      OperationName = "DeleteScan"
 	GetCheckOperation        OperationName = "GetCheck"
 	GetHealthOperation       OperationName = "GetHealth"
+	GetInstanceOperation     OperationName = "GetInstance"
 	GetOpenAPIOperation      OperationName = "GetOpenAPI"
 	GetScanOperation         OperationName = "GetScan"
 	GetScanMarkdownOperation OperationName = "GetScanMarkdown"

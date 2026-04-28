@@ -65,6 +65,23 @@ func TestGetVersion(t *testing.T) {
 	_ = got.Version
 }
 
+func TestGetInstance(t *testing.T) {
+	h := New(Options{
+		ContactEmail: "ops@example.org",
+		UserAgent:    "WebSec0/test (+https://example.org/about; passive-scan)",
+	})
+	got, err := h.GetInstance(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ContactEmail != "ops@example.org" {
+		t.Errorf("ContactEmail = %q", got.ContactEmail)
+	}
+	if got.UserAgent != "WebSec0/test (+https://example.org/about; passive-scan)" {
+		t.Errorf("UserAgent = %q", got.UserAgent)
+	}
+}
+
 func TestGetOpenAPI(t *testing.T) {
 	h := New(Options{})
 	got, err := h.GetOpenAPI(context.Background())

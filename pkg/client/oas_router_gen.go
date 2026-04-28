@@ -154,6 +154,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
+			case 'i': // Prefix: "instance"
+
+				if l := len("instance"); len(elem) >= l && elem[0:l] == "instance" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "GET":
+						s.handleGetInstanceRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, notAllowedParams{
+							allowedMethods: "GET",
+							allowedHeaders: nil,
+							acceptPost:     "",
+							acceptPatch:    "",
+						})
+					}
+
+					return
+				}
+
 			case 'o': // Prefix: "openapi.json"
 
 				if l := len("openapi.json"); len(elem) >= l && elem[0:l] == "openapi.json" {
@@ -516,6 +541,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.operationID = "getHealth"
 						r.operationGroup = ""
 						r.pathPattern = "/api/v1/health"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
+				}
+
+			case 'i': // Prefix: "instance"
+
+				if l := len("instance"); len(elem) >= l && elem[0:l] == "instance" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "GET":
+						r.name = GetInstanceOperation
+						r.summary = "Operator-facing instance metadata"
+						r.operationID = "getInstance"
+						r.operationGroup = ""
+						r.pathPattern = "/api/v1/instance"
 						r.args = args
 						r.count = 0
 						return r, true

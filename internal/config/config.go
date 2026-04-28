@@ -39,6 +39,7 @@ type Config struct {
 	Security  SecurityConfig  `koanf:"security"`
 	Reports   ReportsConfig   `koanf:"reports"`
 	Logging   LoggingConfig   `koanf:"logging"`
+	Legal     LegalConfig     `koanf:"legal"`
 }
 
 type ServerConfig struct {
@@ -103,6 +104,14 @@ type LoggingConfig struct {
 	Level      string `koanf:"level"`  // debug | info | warn | error
 	Format     string `koanf:"format"` // json | text
 	LogTargets bool   `koanf:"log_targets"`
+}
+
+// LegalConfig holds operator-facing contact info surfaced on the
+// /about and /legal/* pages and via GET /api/v1/instance. Self-hosters
+// override ContactEmail to point at their own privacy / abuse / security
+// inbox.
+type LegalConfig struct {
+	ContactEmail string `koanf:"contact_email"`
 }
 
 // LoadOptions controls Load behaviour.

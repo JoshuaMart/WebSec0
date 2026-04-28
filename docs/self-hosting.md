@@ -166,6 +166,12 @@ logging:
   level: info
   format: json
   log_targets: false     # set to true to log scanned domains (off by default)
+
+legal:
+  # Operator inbox surfaced on /about and /legal/* and via
+  # GET /api/v1/instance. Self-hosters should set this to a real address;
+  # the placeholder value will appear verbatim on the legal pages otherwise.
+  contact_email: "operator@example.invalid"
 ```
 
 ### Key environment variables
@@ -178,6 +184,7 @@ logging:
 | `WEBSEC0_SECURITY_REFUSE_PRIVATE_RANGES` | `true` | Block SSRF to private IPs   |
 | `WEBSEC0_LOGGING_LEVEL`            | `info`   | `debug`, `info`, `warn`, `error`  |
 | `WEBSEC0_LOGGING_LOG_TARGETS`      | `false`  | Log scanned domains               |
+| `WEBSEC0_LEGAL__CONTACT_EMAIL`     | `operator@example.invalid` | Inbox shown on /about and /legal/* |
 
 ---
 

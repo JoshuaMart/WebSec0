@@ -25,5 +25,29 @@ const pageTitle = title === 'WebSec0' ? title : `${title} — WebSec0`;
   </head>
   <body class="flex flex-col min-h-full">
     <slot />
+
+    <script>
+      // Operator-facing instance metadata (contact email, User-Agent string).
+      // Populated once at boot from GET /api/v1/instance so self-hosters can
+      // override these values via config.yaml without rebuilding the frontend.
+      // Default placeholder text stays visible if JS is disabled or the
+      // endpoint is unreachable.
+      document.addEventListener('alpine:init', () => {
+        Alpine.store('instance', {
+          contactEmail: 'operator@example.invalid',
+          userAgent: 'WebSec0 (configure scanner.user_agent in config.yaml)',
+          async load() {
+            try {
+              const res = await fetch('/api/v1/instance');
+              if (!res.ok) return;
+              const data = await res.json();
+              if (data.contact_email) this.contactEmail = data.contact_email;
+              if (data.user_agent) this.userAgent = data.user_agent;
+            } catch { /* keep placeholders */ }
+          },
+        });
+        Alpine.store('instance').load();
+      });
+    </script>
   </body>
 </html>

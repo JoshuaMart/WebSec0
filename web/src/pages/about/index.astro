@@ -2,13 +2,11 @@
 import Base from '../../layouts/Base.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
-
-const ua = 'WebSec0/0.1.0 (+https://websec0.example/about; passive-scan)';
 ---
 <Base title="About" description="How WebSec0 works, its User-Agent, and how to opt out of scanning.">
   <Nav current="about" />
 
-  <main class="max-w-6xl mx-auto px-6 py-16">
+  <main class="max-w-6xl mx-auto px-6 py-16" x-data>
 
     <h1 class="text-3xl font-bold text-ink tracking-tight mb-2">About WebSec0</h1>
     <p class="text-ink-muted mb-12 font-mono text-sm">Passive web security scanner · Open-source · MIT</p>
@@ -54,7 +52,7 @@ const ua = 'WebSec0/0.1.0 (+https://websec0.example/about; passive-scan)';
         All requests are sent with an identifiable User-Agent so server operators can
         recognise and block scans if desired.
       </p>
-      <pre class="bg-gray-950 text-green-400 font-mono text-xs rounded-xl px-4 py-3 overflow-x-auto whitespace-pre-wrap break-all">{ua}</pre>
+      <pre x-text="$store.instance.userAgent" class="bg-gray-950 text-green-400 font-mono text-xs rounded-xl px-4 py-3 overflow-x-auto whitespace-pre-wrap break-all">WebSec0/0.1.0 (+https://websec0.example/about; passive-scan)</pre>
     </section>
 
     <!-- Opt-out -->
@@ -76,7 +74,8 @@ const ua = 'WebSec0/0.1.0 (+https://websec0.example/about; passive-scan)';
         <div>
           <p class="text-xs font-semibold font-mono text-ink mb-2">3. Contact us</p>
           <p class="text-xs text-ink-muted">
-            Email <a href="mailto:abuse@websec0.example" class="text-accent hover:underline font-mono">abuse@websec0.example</a>
+            Email
+            <a :href="'mailto:' + $store.instance.contactEmail" x-text="$store.instance.contactEmail" class="text-accent hover:underline font-mono">operator@example.invalid</a>
             to have your domain added to the permanent blocklist.
           </p>
         </div>
