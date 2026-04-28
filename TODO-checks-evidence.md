@@ -27,13 +27,13 @@ hints which path is weak when only one branch is at fault.
 
 ## COOKIE
 
-- [ ] `COOKIE-SECURE-MISSING` — pass path returns only a count, not the list of cookie names that carry `Secure`. Tags: b (cookies/checks.go:135)
-- [ ] `COOKIE-HTTPONLY-MISSING-SESSION` — pass path lists session names but doesn't confirm each carries `HttpOnly`. Tags: d (cookies/checks.go:180)
-- [ ] `COOKIE-SAMESITE-MISSING` — pass path returns nil Evidence; should show observed `SameSite` value per cookie. Tags: a (cookies/checks.go:226)
-- [ ] `COOKIE-SAMESITE-NONE-WITHOUT-SECURE` — pass path returns nil Evidence. Tags: a (cookies/checks.go:269)
-- [ ] `COOKIE-NO-SECURITY-FLAGS` — pass path lists cookie names but not the per-cookie flag breakdown. Tags: d (cookies/checks.go:315)
-- [ ] `COOKIE-PREFIX-SECURE-MISSING` — pass path returns nil Evidence. Tags: a (cookies/checks.go:358)
-- [ ] `COOKIE-PREFIX-HOST-MISSING` — pass path returns nil Evidence. Tags: a (cookies/checks.go:401)
+- [x] `COOKIE-SECURE-MISSING` — pass path returns only a count, not the list of cookie names that carry `Secure`. Tags: b (cookies/checks.go:135)
+- [x] `COOKIE-HTTPONLY-MISSING-SESSION` — pass path lists session names but doesn't confirm each carries `HttpOnly`. Tags: d (cookies/checks.go:180)
+- [x] `COOKIE-SAMESITE-MISSING` — pass path returns nil Evidence; should show observed `SameSite` value per cookie. Tags: a (cookies/checks.go:226)
+- [x] `COOKIE-SAMESITE-NONE-WITHOUT-SECURE` — pass path returns nil Evidence. Tags: a (cookies/checks.go:269)
+- [x] `COOKIE-NO-SECURITY-FLAGS` — pass path lists cookie names but not the per-cookie flag breakdown. Tags: d (cookies/checks.go:315)
+- [x] `COOKIE-PREFIX-SECURE-MISSING` — pass path returns nil Evidence. Tags: a (cookies/checks.go:358)
+- [x] `COOKIE-PREFIX-HOST-MISSING` — pass path returns nil Evidence. Tags: a (cookies/checks.go:401)
 
 ## DNS
 

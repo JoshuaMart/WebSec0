@@ -66,12 +66,39 @@ func scanCookies(ctx context.Context, t *checks.Target, id string, sev checks.Se
 	return fn(cks)
 }
 
-func cookieNames(cks []*http.Cookie) []string {
-	out := make([]string, 0, len(cks))
+// cookieFlags renders one cookie as a structured evidence row. SameSite
+// is the human label (Lax / Strict / None / Default) rather than Go's
+// http.SameSite int, and absent SameSite is the empty string.
+func cookieFlags(c *http.Cookie) map[string]any {
+	return map[string]any{
+		"name":     c.Name,
+		"secure":   c.Secure,
+		"httponly": c.HttpOnly,
+		"samesite": sameSiteLabel(c.SameSite),
+	}
+}
+
+func cookiesFlags(cks []*http.Cookie) []map[string]any {
+	out := make([]map[string]any, 0, len(cks))
 	for _, c := range cks {
-		out = append(out, c.Name)
+		out = append(out, cookieFlags(c))
 	}
 	return out
+}
+
+func sameSiteLabel(s http.SameSite) string {
+	switch s {
+	case http.SameSiteDefaultMode:
+		return "Default"
+	case http.SameSiteLaxMode:
+		return "Lax"
+	case http.SameSiteStrictMode:
+		return "Strict"
+	case http.SameSiteNoneMode:
+		return "None"
+	default:
+		return ""
+	}
 }
 
 func passF(id string, sev checks.Severity, title string, ev map[string]any) *checks.Finding {
@@ -132,7 +159,7 @@ func (secureMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fi
 		}
 		return passF(IDSecureMissing, checks.SeverityMedium,
 			"every cookie has Secure",
-			map[string]any{"count": len(cks)})
+			map[string]any{"cookies": cookiesFlags(cks)})
 	}), nil
 }
 
@@ -175,9 +202,17 @@ func (httpOnlyMissingSessionCheck) Run(ctx context.Context, t *checks.Target) (*
 				"Add `HttpOnly` to every session-class cookie.",
 				map[string]any{"names": bad})
 		}
+		// Surface each session cookie's full flag set so the operator
+		// can confirm HttpOnly is actually present (and see the rest).
+		sessionFlags := make([]map[string]any, 0, len(session))
+		for _, c := range cks {
+			if IsSessionCookie(c.Name) {
+				sessionFlags = append(sessionFlags, cookieFlags(c))
+			}
+		}
 		return passF(IDHTTPOnlyMissingSession, checks.SeverityHigh,
 			"every session cookie has HttpOnly",
-			map[string]any{"sessions": session})
+			map[string]any{"sessions": sessionFlags})
 	}), nil
 }
 
@@ -223,7 +258,8 @@ func (sameSiteMissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 			return f
 		}
 		return passF(IDSameSiteMissing, checks.SeverityMedium,
-			"every cookie carries an explicit SameSite", nil)
+			"every cookie carries an explicit SameSite",
+			map[string]any{"cookies": cookiesFlags(cks)})
 	}), nil
 }
 
@@ -265,8 +301,17 @@ func (sameSiteNoneNotSecureCheck) Run(ctx context.Context, t *checks.Target) (*c
 				"Either drop SameSite=None or add Secure.",
 				map[string]any{"names": bad})
 		}
+		// Surface only the SameSite=None cookies — those are the
+		// subjects of this check.
+		var noneCookies []map[string]any
+		for _, c := range cks {
+			if c.SameSite == http.SameSiteNoneMode {
+				noneCookies = append(noneCookies, cookieFlags(c))
+			}
+		}
 		return passF(IDSameSiteNoneNotSecure, checks.SeverityMedium,
-			"all SameSite=None cookies are Secure", nil)
+			"all SameSite=None cookies are Secure",
+			map[string]any{"cookies": noneCookies})
 	}), nil
 }
 
@@ -312,7 +357,7 @@ func (noSecurityFlagsCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 		}
 		return passF(IDNoSecurityFlags, checks.SeverityMedium,
 			"every cookie has at least one security flag",
-			map[string]any{"all": cookieNames(cks)})
+			map[string]any{"cookies": cookiesFlags(cks)})
 	}), nil
 }
 
@@ -355,7 +400,8 @@ func (prefixSecureMissingCheck) Run(ctx context.Context, t *checks.Target) (*che
 				map[string]any{"names": bad})
 		}
 		return passF(IDPrefixSecureMissing, checks.SeverityLow,
-			"every session cookie uses a secure prefix", nil)
+			"every session cookie uses a secure prefix",
+			map[string]any{"sessions": session})
 	}), nil
 }
 
@@ -398,6 +444,7 @@ func (prefixHostMissingCheck) Run(ctx context.Context, t *checks.Target) (*check
 				map[string]any{"names": bad})
 		}
 		return passF(IDPrefixHostMissing, checks.SeverityLow,
-			"every session cookie uses the __Host- prefix", nil)
+			"every session cookie uses the __Host- prefix",
+			map[string]any{"sessions": session})
 	}), nil
 }

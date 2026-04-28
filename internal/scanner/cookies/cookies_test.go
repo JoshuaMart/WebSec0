@@ -129,8 +129,28 @@ func TestSecureMissingDetected(t *testing.T) {
 func TestSecurePresentPasses(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax")
-	if g := runCheck(t, cookies.IDSecureMissing, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, cookies.IDSecureMissing, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("SECURE-MISSING with Secure = %s, want pass", g.Status)
+	}
+	// Pass evidence must list each cookie's full flag set so the
+	// operator sees Secure / HttpOnly / SameSite verified, not just a
+	// count.
+	rows, _ := g.Evidence["cookies"].([]map[string]any)
+	if len(rows) != 1 {
+		t.Fatalf("evidence[cookies] = %v, want 1 row", rows)
+	}
+	if rows[0]["name"] != "sid" {
+		t.Errorf("name = %v, want sid", rows[0]["name"])
+	}
+	if rows[0]["secure"] != true {
+		t.Errorf("secure = %v, want true", rows[0]["secure"])
+	}
+	if rows[0]["httponly"] != true {
+		t.Errorf("httponly = %v, want true", rows[0]["httponly"])
+	}
+	if rows[0]["samesite"] != "Lax" {
+		t.Errorf("samesite = %v, want Lax", rows[0]["samesite"])
 	}
 }
 
@@ -169,9 +189,21 @@ func TestSameSiteNoneWithoutSecureFails(t *testing.T) {
 
 func TestSameSiteNoneWithSecurePasses(t *testing.T) {
 	t.Parallel()
-	tgt := newServer(t, "tracker=abc; Path=/; Secure; SameSite=None")
-	if g := runCheck(t, cookies.IDSameSiteNoneNotSecure, tgt); g.Status != checks.StatusPass {
+	// Two cookies served, only the SameSite=None one is the subject of
+	// this check — pass evidence must list only that cookie.
+	tgt := newServer(t,
+		"tracker=abc; Path=/; Secure; SameSite=None",
+		"other=xyz; Path=/; Secure; SameSite=Lax")
+	g := runCheck(t, cookies.IDSameSiteNoneNotSecure, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("SAMESITE-NONE+Secure = %s, want pass", g.Status)
+	}
+	rows, _ := g.Evidence["cookies"].([]map[string]any)
+	if len(rows) != 1 {
+		t.Fatalf("evidence[cookies] = %v, want only the SameSite=None cookie", rows)
+	}
+	if rows[0]["name"] != "tracker" || rows[0]["samesite"] != "None" {
+		t.Errorf("row = %v, want tracker / None", rows[0])
 	}
 }
 
@@ -202,8 +234,13 @@ func TestPrefixSecureFailsOnPlainSession(t *testing.T) {
 func TestPrefixSecurePassesOnPrefixedSession(t *testing.T) {
 	t.Parallel()
 	tgt := newServer(t, "__Secure-sessionid=abc; Path=/; Secure; HttpOnly; SameSite=Lax")
-	if g := runCheck(t, cookies.IDPrefixSecureMissing, tgt); g.Status != checks.StatusPass {
+	g := runCheck(t, cookies.IDPrefixSecureMissing, tgt)
+	if g.Status != checks.StatusPass {
 		t.Errorf("PREFIX-SECURE on __Secure- = %s, want pass", g.Status)
+	}
+	sessions, _ := g.Evidence["sessions"].([]string)
+	if len(sessions) != 1 || sessions[0] != "__Secure-sessionid" {
+		t.Errorf("sessions = %v, want [__Secure-sessionid]", sessions)
 	}
 }
 
