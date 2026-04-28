@@ -382,9 +382,9 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 
 ## Phase 21 — Tests d'intégration et qualité
 
-- [ ] Test suite end-to-end contre badssl.com (toutes les variantes)
-- [ ] Tests E2E contre cibles de référence (mozilla.org, github.com, cloudflare.com → A+)
-- [ ] Tests E2E contre cibles « legacy » connues (à identifier sans nuire, ou container fixture local)
+- [x] Test suite end-to-end contre badssl.com (toutes les variantes) — `tests/e2e/badssl_e2e_test.go`, full-orchestrator (126 checks) sur 8 variantes badssl + hsts/redirect, validé manuellement (15 s par scan)
+- [x] Tests E2E contre cibles de référence (mozilla.org, github.com, cloudflare.com → A+) — `tests/e2e/reference_e2e_test.go`, hard-gate sur critical, soft-gate sur high, score ≥ 70
+- [x] Tests E2E contre cibles « legacy » connues (à identifier sans nuire, ou container fixture local) — fixture Docker local sous `tests/e2e/legacy-fixture/` (nginx 1.18, TLS 1.0/1.1, ciphers faibles, headers absents, .git/config exposé), test gated par `WEBSEC0_LEGACY_FIXTURE_HOST`, intégré dans `make test-e2e-fixture`
 - [ ] Test fixtures dockerisées : nginx 1.18 mal configuré, Apache vulnérable, etc.
 - [ ] Couverture de tests Go ≥ 70 % sur `internal/`
 - [ ] Tests `go test -race` propres

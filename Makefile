@@ -1,4 +1,4 @@
-.PHONY: build build-all web test test-race lint clean run gen docs help
+.PHONY: build build-all web test test-race test-e2e test-e2e-fixture lint clean run gen docs help
 .DEFAULT_GOAL := help
 
 BIN_DIR    := bin
@@ -23,6 +23,8 @@ help:
 	@echo "  run        Run the server (go run ./cmd/websec0)"
 	@echo "  test       Run unit tests"
 	@echo "  test-race  Run tests with the race detector"
+	@echo "  test-e2e   Run full-orchestrator E2E suites (badssl + reference, needs internet)"
+	@echo "  test-e2e-fixture  Bring up the legacy fixture, run the gated E2E test, tear down"
 	@echo "  lint       Run golangci-lint"
 	@echo "  gen        Run all go:generate directives"
 	@echo "  docs       Regenerate per-check docs under docs/checks/"
@@ -49,6 +51,17 @@ test:
 
 test-race:
 	go test -race -count=1 ./...
+
+test-e2e:
+	go test -tags e2e -count=1 -timeout 10m -v ./tests/e2e/...
+
+test-e2e-fixture:
+	$(MAKE) -C tests/e2e/legacy-fixture up
+	WEBSEC0_LEGACY_FIXTURE_HOST=localhost:18443 \
+	  go test -tags e2e -count=1 -v -run TestE2E_LegacyFixture ./tests/e2e/...; \
+	  status=$$?; \
+	  $(MAKE) -C tests/e2e/legacy-fixture down; \
+	  exit $$status
 
 lint:
 	golangci-lint run ./...
