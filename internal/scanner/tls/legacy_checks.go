@@ -32,12 +32,13 @@ func (ssl2Check) Run(ctx context.Context, t *checks.Target) (*checks.Finding, er
 	}
 	if !res.SSL2Supported {
 		return passFinding(IDProtocolLegacySSL2, checks.SeverityCritical,
-			"SSLv2 not accepted", nil), nil
+			"SSLv2 not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	return failFinding(IDProtocolLegacySSL2, checks.SeverityCritical,
 		"SSLv2 accepted",
 		"The server accepted an SSLv2 ClientHello. SSLv2 is cryptographically broken and was deprecated by RFC 6176. Any modern server must reject SSLv2 entirely.",
-		nil), nil
+		map[string]any{"accepted": true}), nil
 }
 
 // --- TLS-PROTOCOL-LEGACY-SSL3 ------------------------------------------------
@@ -60,12 +61,13 @@ func (ssl3Check) Run(ctx context.Context, t *checks.Target) (*checks.Finding, er
 	}
 	if !res.SSL3Supported {
 		return passFinding(IDProtocolLegacySSL3, checks.SeverityCritical,
-			"SSLv3 not accepted", nil), nil
+			"SSLv3 not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	return failFinding(IDProtocolLegacySSL3, checks.SeverityCritical,
 		"SSLv3 accepted",
 		"The server accepted an SSLv3 ClientHello. SSLv3 is vulnerable to POODLE (CVE-2014-3566) and must be disabled. RFC 7568 deprecated it in June 2015.",
-		nil), nil
+		map[string]any{"accepted": true}), nil
 }
 
 // --- TLS-PROTOCOL-LEGACY-TLS10 -----------------------------------------------
@@ -146,7 +148,8 @@ func (cipherNullCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	}
 	if !res.NullAccepted {
 		return passFinding(IDCipherNull, checks.SeverityCritical,
-			"NULL cipher suites not accepted", nil), nil
+			"NULL cipher suites not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	return failFinding(IDCipherNull, checks.SeverityCritical,
 		"NULL cipher suite accepted",
@@ -174,7 +177,8 @@ func (cipherExportCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	}
 	if !res.ExportAccepted {
 		return passFinding(IDCipherExport, checks.SeverityCritical,
-			"EXPORT cipher suites not accepted", nil), nil
+			"EXPORT cipher suites not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	return failFinding(IDCipherExport, checks.SeverityCritical,
 		"EXPORT cipher suite accepted",
@@ -202,7 +206,8 @@ func (cipherRC4Check) Run(ctx context.Context, t *checks.Target) (*checks.Findin
 	}
 	if !res.RC4Accepted {
 		return passFinding(IDCipherRC4, checks.SeverityHigh,
-			"RC4 cipher suites not accepted", nil), nil
+			"RC4 cipher suites not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	return failFinding(IDCipherRC4, checks.SeverityHigh,
 		"RC4 cipher suite accepted",
@@ -230,7 +235,8 @@ func (cipherDESCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findin
 	}
 	if !res.DESAccepted {
 		return passFinding(IDCipherDES, checks.SeverityHigh,
-			"DES cipher suites not accepted", nil), nil
+			"DES cipher suites not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	return failFinding(IDCipherDES, checks.SeverityHigh,
 		"DES cipher suite accepted",
@@ -258,7 +264,8 @@ func (cipher3DESCheck) Run(ctx context.Context, t *checks.Target) (*checks.Findi
 	}
 	if !res.TripleDESAccepted {
 		return passFinding(IDCipherTripleDES, checks.SeverityMedium,
-			"3DES cipher suites not accepted", nil), nil
+			"3DES cipher suites not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	return failFinding(IDCipherTripleDES, checks.SeverityMedium,
 		"3DES cipher suite accepted",
@@ -286,7 +293,8 @@ func (cipherCBCTLS10Check) Run(ctx context.Context, t *checks.Target) (*checks.F
 	}
 	if !res.CBCInTLS10Accepted {
 		return passFinding(IDCipherCBCTLS10, checks.SeverityMedium,
-			"CBC ciphers with TLS 1.0 not accepted", nil), nil
+			"CBC ciphers with TLS 1.0 not accepted",
+			map[string]any{"accepted": false}), nil
 	}
 	ev := map[string]any{"negotiated_cipher": cipherHex(res.CBCTLS10Cipher)}
 	return failFinding(IDCipherCBCTLS10, checks.SeverityMedium,

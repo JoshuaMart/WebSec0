@@ -166,13 +166,19 @@ func (hstsNoIncludeSubCheck) Run(ctx context.Context, t *checks.Target) (*checks
 	if !ok {
 		return skippedFinding(IDHSTSNoIncludeSubDomains, checks.SeverityLow, "HSTS header missing"), nil
 	}
+	ev := map[string]any{
+		"raw_header":        res.HSTSHeader,
+		"includesubdomains": p.IncludeSubDomains,
+		"max_age_seconds":   int(p.MaxAge.Seconds()),
+		"preload":           p.Preload,
+	}
 	if !p.IncludeSubDomains {
 		return failFinding(IDHSTSNoIncludeSubDomains, checks.SeverityLow,
 			"HSTS without includeSubDomains",
-			"Subdomains are not protected by this policy.", nil), nil
+			"Subdomains are not protected by this policy.", ev), nil
 	}
 	return passFinding(IDHSTSNoIncludeSubDomains, checks.SeverityLow,
-		"HSTS covers subdomains", nil), nil
+		"HSTS covers subdomains", ev), nil
 }
 
 // --- TLS-HSTS-NO-PRELOAD -----------------------------------------------------

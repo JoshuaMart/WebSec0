@@ -45,14 +45,17 @@ func (tls12MissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	p := res.Probes[stdtls.VersionTLS12]
 	if p != nil && p.Supported {
 		return passFinding(IDProtocolTLS12Missing, checks.SeverityHigh,
-			"TLS 1.2 supported", nil), nil
+			"TLS 1.2 supported",
+			map[string]any{"negotiated_cipher": cipherName(p.NegotiatedCS)}), nil
 	}
 	desc := "Server refused a TLS 1.2 ClientHello."
+	ev := map[string]any{"version": "TLS 1.2"}
 	if p != nil && p.HandshakeErr != nil {
 		desc = p.HandshakeErr.Error()
+		ev["handshake_err"] = desc
 	}
 	return failFinding(IDProtocolTLS12Missing, checks.SeverityHigh,
-		"TLS 1.2 not supported", desc, nil), nil
+		"TLS 1.2 not supported", desc, ev), nil
 }
 
 // --- TLS-PROTOCOL-TLS13-MISSING ---------------------------------------
@@ -76,14 +79,17 @@ func (tls13MissingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	p := res.Probes[stdtls.VersionTLS13]
 	if p != nil && p.Supported {
 		return passFinding(IDProtocolTLS13Missing, checks.SeverityMedium,
-			"TLS 1.3 supported", nil), nil
+			"TLS 1.3 supported",
+			map[string]any{"negotiated_cipher": cipherName(p.NegotiatedCS)}), nil
 	}
 	desc := "Server refused a TLS 1.3 ClientHello."
+	ev := map[string]any{"version": "TLS 1.3"}
 	if p != nil && p.HandshakeErr != nil {
 		desc = p.HandshakeErr.Error()
+		ev["handshake_err"] = desc
 	}
 	return failFinding(IDProtocolTLS13Missing, checks.SeverityMedium,
-		"TLS 1.3 not supported", desc, nil), nil
+		"TLS 1.3 not supported", desc, ev), nil
 }
 
 // --- TLS-CIPHER-NO-FORWARD-SECRECY ------------------------------------
@@ -129,7 +135,23 @@ func (noFSCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, er
 		}
 	}
 
-	ev := map[string]any{}
+	probed := []map[string]any{}
+	for _, v := range []uint16{stdtls.VersionTLS13, stdtls.VersionTLS12} {
+		p := res.Probes[v]
+		if p == nil {
+			continue
+		}
+		row := map[string]any{
+			"version":   versionString(v),
+			"supported": p.Supported,
+		}
+		if p.Supported {
+			row["cipher"] = cipherName(p.NegotiatedCS)
+			row["forward_secret"] = hasForwardSecrecy(v, p.NegotiatedCS)
+		}
+		probed = append(probed, row)
+	}
+	ev := map[string]any{"probed_versions": probed}
 	if cenum != nil && len(cenum.TLS12Accepted) > 0 {
 		ev["tls12_ciphers_accepted"] = cenum.CipherNames()
 	}
@@ -159,20 +181,26 @@ func (noH2Check) Run(ctx context.Context, t *checks.Target) (*checks.Finding, er
 	if !res.AnySucceeded {
 		return skippedFinding(IDALPNNoHTTP2, checks.SeverityLow, "no successful TLS handshake"), nil
 	}
+	alpnPerVersion := []map[string]any{}
 	for _, v := range []uint16{stdtls.VersionTLS13, stdtls.VersionTLS12} {
 		p := res.Probes[v]
 		if p == nil || !p.Supported {
 			continue
 		}
+		alpnPerVersion = append(alpnPerVersion, map[string]any{
+			"version": versionString(v),
+			"alpn":    p.ALPN,
+		})
 		if p.ALPN == "h2" {
 			return passFinding(IDALPNNoHTTP2, checks.SeverityLow,
 				"HTTP/2 negotiated via ALPN",
-				map[string]any{"version": versionString(v)}), nil
+				map[string]any{"version": versionString(v), "alpn": p.ALPN}), nil
 		}
 	}
 	return failFinding(IDALPNNoHTTP2, checks.SeverityLow,
 		"HTTP/2 not advertised",
-		"No probed handshake negotiated `h2` via ALPN.", nil), nil
+		"No probed handshake negotiated `h2` via ALPN.",
+		map[string]any{"alpn_per_version": alpnPerVersion}), nil
 }
 
 // --- TLS-OCSP-STAPLING-MISSING ----------------------------------------
@@ -196,19 +224,26 @@ func (ocspStaplingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Fin
 	if !res.AnySucceeded {
 		return skippedFinding(IDOCSPStaplingMissing, checks.SeverityLow, "no successful TLS handshake"), nil
 	}
+	probed := []map[string]any{}
 	for _, v := range []uint16{stdtls.VersionTLS13, stdtls.VersionTLS12} {
 		p := res.Probes[v]
 		if p == nil || !p.Supported {
 			continue
 		}
+		probed = append(probed, map[string]any{
+			"version":      versionString(v),
+			"ocsp_stapled": p.OCSPStapled,
+		})
 		if p.OCSPStapled {
 			return passFinding(IDOCSPStaplingMissing, checks.SeverityLow,
-				"OCSP response stapled", nil), nil
+				"OCSP response stapled",
+				map[string]any{"version": versionString(v)}), nil
 		}
 	}
 	return failFinding(IDOCSPStaplingMissing, checks.SeverityLow,
 		"OCSP stapling not enabled",
-		"No probed handshake stapled an OCSP response.", nil), nil
+		"No probed handshake stapled an OCSP response.",
+		map[string]any{"probed_versions": probed}), nil
 }
 
 // --- helpers ----------------------------------------------------------

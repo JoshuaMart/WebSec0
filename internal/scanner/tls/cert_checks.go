@@ -128,7 +128,13 @@ func (chainIncompleteCheck) Run(ctx context.Context, t *checks.Target) (*checks.
 	}
 	return failFinding(IDCertChainIncomplete, checks.SeverityHigh,
 		"certificate chain does not validate",
-		res.SystemVerifyErr.Error(), nil), nil
+		res.SystemVerifyErr.Error(),
+		map[string]any{
+			"verify_error": res.SystemVerifyErr.Error(),
+			"chain_length": len(res.Chain),
+			"leaf_subject": res.Leaf.Subject.String(),
+			"leaf_issuer":  res.Leaf.Issuer.String(),
+		}), nil
 }
 
 // --- TLS-CERT-NAME-MISMATCH -------------------------------------------
@@ -397,8 +403,10 @@ func (ctCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding, erro
 	}
 
 	ev := map[string]any{
+		"methods_checked":    []string{"tls_extension", "x509_extension", "ocsp_stapling"},
 		"tls_extension_scts": 0,
 		"x509_embedded_scts": false,
+		"ocsp_stapling":      ocspNote != "",
 	}
 	if ocspNote != "" {
 		ev["ocsp_note"] = ocspNote
