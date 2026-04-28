@@ -54,9 +54,10 @@ type FetchResult struct {
 
 // Attempt is one row of the fetch trail.
 type Attempt struct {
-	URL    string `json:"url"`
-	Status int    `json:"status,omitempty"`
-	Error  string `json:"error,omitempty"`
+	URL      string `json:"url"`
+	Status   int    `json:"status,omitempty"`
+	FinalURL string `json:"final_url,omitempty"` // set only when redirects landed elsewhere
+	Error    string `json:"error,omitempty"`
 }
 
 // FetchSecurityTxt is shared by every securitytxt check via target.CacheValue.
@@ -95,13 +96,16 @@ func doFetch(ctx context.Context, t *checks.Target) *FetchResult {
 		if a.scheme == "https" {
 			httpsAttempted = true
 		}
-		body, status, finalURL, err := tryFetch(ctx, t, a.scheme, a.path)
+		body, status, requestedURL, finalURL, err := tryFetch(ctx, t, a.scheme, a.path)
 
-		rec := Attempt{URL: finalURL}
+		rec := Attempt{URL: requestedURL}
 		if err != nil {
 			rec.Error = err.Error()
 		} else {
 			rec.Status = status
+			if finalURL != requestedURL {
+				rec.FinalURL = finalURL
+			}
 		}
 		res.Attempts = append(res.Attempts, rec)
 
@@ -140,24 +144,31 @@ func doFetch(ctx context.Context, t *checks.Target) *FetchResult {
 
 // tryFetch performs one HTTP GET. It bounds the response body to
 // maxBodyBytes to defend against malicious or pathological hosts.
-func tryFetch(ctx context.Context, t *checks.Target, scheme, path string) (body []byte, status int, finalURL string, err error) {
+//
+// requestedURL is the URL we sent the request to (scheme + host + path).
+// finalURL is where we actually landed after any redirects; it equals
+// requestedURL when no redirect happened. Keeping the two separate lets
+// the Attempt trail surface "tried http://… → 301 → https://…" without
+// pretending the http attempt was an https one.
+func tryFetch(ctx context.Context, t *checks.Target, scheme, path string) (body []byte, status int, requestedURL, finalURL string, err error) {
 	host := t.Host
 	if host == "" {
 		host = t.Hostname
 	}
 	u := url.URL{Scheme: scheme, Host: host, Path: path}
-	finalURL = u.String()
+	requestedURL = u.String()
+	finalURL = requestedURL
 
-	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, finalURL, nil)
+	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, requestedURL, nil)
 	if rerr != nil {
-		return nil, 0, finalURL, rerr
+		return nil, 0, requestedURL, finalURL, rerr
 	}
 	req.Header.Set("User-Agent", t.UA())
 	req.Header.Set("Accept", "text/plain, */*;q=0.5")
 
 	resp, derr := t.Client().Do(req)
 	if derr != nil {
-		return nil, 0, finalURL, derr
+		return nil, 0, requestedURL, finalURL, derr
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -166,5 +177,5 @@ func tryFetch(ctx context.Context, t *checks.Target, scheme, path string) (body 
 	if resp.Request != nil && resp.Request.URL != nil {
 		finalURL = resp.Request.URL.String()
 	}
-	return b, resp.StatusCode, finalURL, nil
+	return b, resp.StatusCode, requestedURL, finalURL, nil
 }
