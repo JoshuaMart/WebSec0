@@ -3,7 +3,6 @@ package wellknown
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -44,8 +43,20 @@ type FetchResult struct {
 	Body []byte
 	// Parsed is non-nil when Body parsed cleanly.
 	Parsed *SecurityTxt
-	// FetchErrs collects per-attempt errors for diagnostics.
-	FetchErrs []string
+	// Attempts records the URL + outcome of every fetch we tried, in
+	// order. The MISSING check surfaces this as evidence so the operator
+	// can see exactly what was probed and what status came back.
+	Attempts []Attempt
+	// ParseError, when non-empty, is the parse failure observed on the
+	// successful 2xx body — separate from network attempts.
+	ParseError string
+}
+
+// Attempt is one row of the fetch trail.
+type Attempt struct {
+	URL    string `json:"url"`
+	Status int    `json:"status,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 // FetchSecurityTxt is shared by every securitytxt check via target.CacheValue.
@@ -85,6 +96,15 @@ func doFetch(ctx context.Context, t *checks.Target) *FetchResult {
 			httpsAttempted = true
 		}
 		body, status, finalURL, err := tryFetch(ctx, t, a.scheme, a.path)
+
+		rec := Attempt{URL: finalURL}
+		if err != nil {
+			rec.Error = err.Error()
+		} else {
+			rec.Status = status
+		}
+		res.Attempts = append(res.Attempts, rec)
+
 		if err == nil && status >= 200 && status < 300 {
 			res.Found = true
 			res.FinalURL = finalURL
@@ -100,17 +120,11 @@ func doFetch(ctx context.Context, t *checks.Target) *FetchResult {
 			if parsed, perr := ParseSecurityTxt(body); perr == nil {
 				res.Parsed = parsed
 			} else {
-				res.FetchErrs = append(res.FetchErrs, "parse: "+perr.Error())
+				res.ParseError = perr.Error()
 			}
 			break
 		}
 		if err != nil {
-			host := t.Host
-			if host == "" {
-				host = t.Hostname
-			}
-			res.FetchErrs = append(res.FetchErrs,
-				fmt.Sprintf("%s://%s%s: %s", a.scheme, host, a.path, err.Error()))
 			continue
 		}
 		// Record the last non-2xx status we saw.

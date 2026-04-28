@@ -55,7 +55,7 @@ func (missingCheck) Run(ctx context.Context, t *checks.Target) (*checks.Finding,
 			Status:      checks.StatusFail,
 			Title:       "No security.txt published",
 			Description: "Neither /.well-known/security.txt nor /security.txt could be retrieved.",
-			Evidence:    map[string]any{"attempts": res.FetchErrs},
+			Evidence:    map[string]any{"attempts": res.Attempts},
 			Remediation: map[string]any{
 				"why_it_matters": "security.txt gives security researchers a standardized, discoverable channel to report vulnerabilities responsibly. Without it, researchers may resort to public disclosure or struggle to reach the right contact — widening your exposure window.",
 				"impact":         "Shortens time-to-response for vulnerability reports and signals security maturity to auditors, bug hunters, and enterprise customers.",

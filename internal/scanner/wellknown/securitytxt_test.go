@@ -115,6 +115,27 @@ func TestMissingWhenNoFile(t *testing.T) {
 	if f.Status != checks.StatusFail {
 		t.Errorf("Status = %s, want fail", f.Status)
 	}
+
+	// Evidence should expose the structured attempt trail (URL + status
+	// per probe), not a nil/null slice — that's what the operator sees on
+	// the report page. We don't assert the exact length because HTTPS
+	// attempts against the plain-HTTP test server fail fast and may
+	// short-circuit, but at least one attempt must be recorded with a URL.
+	attempts, ok := f.Evidence["attempts"].([]wellknown.Attempt)
+	if !ok {
+		t.Fatalf("evidence[attempts] type = %T, want []wellknown.Attempt", f.Evidence["attempts"])
+	}
+	if len(attempts) == 0 {
+		t.Fatal("evidence[attempts] is empty; expected at least one fetch trail entry")
+	}
+	for i, a := range attempts {
+		if a.URL == "" {
+			t.Errorf("attempts[%d].URL is empty", i)
+		}
+		if a.Status == 0 && a.Error == "" {
+			t.Errorf("attempts[%d] has neither status nor error: %+v", i, a)
+		}
+	}
 }
 
 func TestPresentWhenWellKnownServed(t *testing.T) {
