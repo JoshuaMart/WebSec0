@@ -1,4 +1,4 @@
-.PHONY: build build-all web test test-race test-e2e test-e2e-fixture lint clean run gen docs help
+.PHONY: build build-all web test test-race test-e2e test-e2e-fixture bench cover lint clean run gen docs help
 .DEFAULT_GOAL := help
 
 BIN_DIR    := bin
@@ -25,6 +25,8 @@ help:
 	@echo "  test-race  Run tests with the race detector"
 	@echo "  test-e2e   Run full-orchestrator E2E suites (badssl + reference, needs internet)"
 	@echo "  test-e2e-fixture  Bring up the legacy fixture, run the gated E2E test, tear down"
+	@echo "  bench      Run benchmarks (TLS probes, CSP parser, SPF parser)"
+	@echo "  cover      Print per-package coverage on internal/"
 	@echo "  lint       Run golangci-lint"
 	@echo "  gen        Run all go:generate directives"
 	@echo "  docs       Regenerate per-check docs under docs/checks/"
@@ -54,6 +56,18 @@ test-race:
 
 test-e2e:
 	go test -tags e2e -count=1 -timeout 10m -v ./tests/e2e/...
+
+bench:
+	go test -run NONE -bench . -benchmem -benchtime 1s \
+	  ./internal/scanner/tls/probes/ \
+	  ./internal/scanner/headers/ \
+	  ./internal/scanner/email/
+
+cover:
+	go test -coverprofile=coverage.out -covermode=atomic ./internal/...
+	@go tool cover -func=coverage.out | tail -1
+	@echo "(open coverage.html for the line-by-line report)"
+	@go tool cover -html=coverage.out -o coverage.html
 
 test-e2e-fixture:
 	$(MAKE) -C tests/e2e/legacy-fixture up
