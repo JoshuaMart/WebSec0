@@ -1,417 +1,56 @@
 # WebSec0 — TODO
 
-Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonnées : chaque phase suppose que les précédentes sont closes (ou suffisamment avancées pour ne pas bloquer). Les **milestones** marquent les états testables en bout de chaîne.
+What's left on the road to **0.1.0**. Phases 0 – 21 are largely closed
+and live in `git log`; this file tracks only the remaining work.
 
-## Phase 0 — Bootstrap et licence
+## Phase 12 — Report engine (last item)
 
-- [x] Créer le repo GitHub `JoshuaMart-org/websec0` (public, MIT)
-- [x] Ajouter `LICENSE` (MIT, 2026 + nom du copyright holder)
-- [x] Ajouter `.gitignore` (Go + Node + IDE + binaries + dist)
-- [x] Ajouter `.gitattributes` (line-endings, linguist hints)
-- [x] Créer `README.md` minimal (titre, badge "WIP", lien vers `SPECIFICATIONS.md`)
-- [x] Copier `SPECIFICATIONS.md` à la racine
-- [x] Initialiser `go.mod` (`go mod init github.com/your-org/websec0`, Go 1.23)
-- [x] Créer la structure de dossiers vide conforme au layout §2.2
-- [x] Premier commit `chore: bootstrap repository`
-- [x] Ajouter `CHANGELOG.md` (format Keep a Changelog, vide initialement)
-- [x] Ajouter `.editorconfig`
-- [x] Configurer branch protection sur `main` (require PR review, require status checks, signed commits)
-- [x] Activer Dependabot security updates dans Settings GitHub
+- [ ] Validate the SARIF export against the official OASIS schema in CI
+      (deferred — needs a JSON-Schema validator wired into the workflow)
 
-## Phase 1 — CI minimale et outillage du repo
+## Phase 14 — Frontend (deferred items)
 
-- [x] Créer `.github/workflows/ci.yml` minimal (lint Go + test Go)
-- [x] Configurer `golangci-lint` via `.golangci.yml` (preset opinionated)
-- [x] Ajouter `gosec` au pipeline lint
-- [x] Ajouter `commitlint` config (`commitlint.config.js`) + workflow PR title check
-- [x] Créer `Makefile` racine (`build`, `test`, `lint`, `clean`, `run`, `gen`, `test-race`)
-- [x] Configurer `dependabot.yml` (gomod weekly + github-actions weekly + npm weekly)
-- [x] Ajouter le workflow `codeql.yml` (Go + JavaScript, hebdo + PR sensibles)
-- [x] Activer OSSF Scorecard workflow
+- [ ] Per-check deep-link page `/checks/{id}` (MVP uses inline expand)
+- [ ] Accessibility audit (WCAG 2.1 AA: contrast, keyboard nav)
 
-## Phase 2 — Foundation backend
+## Phase 15 — CLI (deferred item)
 
-- [x] `internal/version/version.go` : variables `Version`, `Commit`, `BuildDate` injectables via ldflags
-- [x] `internal/config/config.go` : structure typée + chargement koanf (YAML + env + flags)
-- [x] `internal/config/defaults.go` : valeurs par défaut conformes §4.6
-- [x] Test unitaire chargement config + override env + override flag
-- [x] Configuration logging via `log/slog` (JSON, niveau, format)
-- [x] `internal/storage/store.go` : interface `ScanStore` conforme §9.1
-- [x] `internal/storage/memory/store.go` : implémentation `patrickmn/go-cache`
-- [x] Tests storage memory (Put/Get/Delete/UpdateStatus, TTL, expiration, concurrence)
-- [x] `cmd/websec0/main.go` : skeleton qui charge config, init logger, ne fait rien d'autre
-- [x] Vérifier `go run ./cmd/websec0 --help` fonctionne
+- [ ] Progress bar (deferred — synchronous mode via `wait_seconds` is
+      enough for CI use)
 
-## Phase 3 — API skeleton (spec-first via ogen)
+## Phase 18 — Documentation (last item)
 
-- [x] `api/openapi.yaml` : spec OpenAPI 3.0 initiale avec endpoints §5.3
-  - [x] Schémas `Scan`, `ScanRequest`, `Finding`, `Report`, `Check`, `Error`
-  - [x] `POST /api/v1/scans` (202 Accepted)
-  - [x] `GET /api/v1/scans/{guid}` (200)
-  - [x] `GET /api/v1/scans/{guid}/markdown` (text/markdown)
-  - [x] `GET /api/v1/scans/{guid}/sarif` (application/sarif+json)
-  - [x] `DELETE /api/v1/scans/{guid}` (204)
-  - [x] `GET /api/v1/checks` (200)
-  - [x] `GET /api/v1/checks/{check_id}` (200)
-  - [x] `GET /api/v1/health`
-  - [x] `GET /api/v1/version`
-  - [x] `GET /api/v1/openapi.json`
-- [x] Configurer `ogen` avec `go generate` + `tools.go` pinning de version
-- [x] Générer `internal/api/oas/` (serveur Go) et `pkg/client/` (client Go) — ogen v1.20 ne sépare plus serveur/client en CLI ; tout est généré dans `pkg/client/` et réutilisé côté serveur
-- [x] Configurer Spectral lint dans `ci.yml` (style guide opinionated)
-- [x] Workflow `verify-codegen.yml` : check anti-dérive ogen ↔ openapi.yaml
-- [x] Implémenter le routeur HTTP (`net/http` + `chi/v5`) qui monte les handlers ogen
-- [x] Middlewares : `request-id`, `recover`, `slog-access-log`, `cors` (allowlist)
-- [x] Embed de `api/openapi.yaml` via `go:embed` et serve sur `/api/v1/openapi.json`
-- [x] Implémenter `GET /api/v1/health` et `/api/v1/version` (real)
-- [x] Stub des autres handlers (501 Not Implemented avec message clair)
-- [x] Test d'intégration httptest sur health/version
+- [ ] Screenshots / GIFs in the README
 
-## Phase 4 — Scanner orchestrator
+## Phase 19 — Agent skill (deferred items)
 
-- [x] `internal/checks/registry.go` : interface `Check` + registre central
-  ```go
-  type Check interface {
-    ID() string
-    Family() Family
-    DefaultSeverity() Severity
-    Run(ctx context.Context, target *Target) (*Finding, error)
-  }
-  ```
-- [x] `internal/checks/catalog.go` : alimente `GET /api/v1/checks`
-- [x] `internal/scanner/runner.go` : orchestrateur avec semaphore global + errgroup intra-scan + per-check timeout (cf. §4.5)
-- [x] ~~`internal/scanner/target.go`~~ → `internal/checks/target.go` : type `Target` + cache DNS partagé (déplacé dans `checks/` pour éviter le cycle d'import scanner ↔ checks)
-- [x] `internal/scanner/progress.go` : émetteur de progression typé pour SSE
-- [x] `internal/api/handlers/scans.go` : implémenter `POST /scans` (génération GUIDv4, lancement async, retour 202)
-- [x] Implémenter `GET /scans/{guid}` (toujours 200, status running/completed/failed)
-- [x] `internal/api/sse/sse.go` : helper SSE avec `Last-Event-ID`, retry, heartbeat keepalive
-- [x] Implémenter `GET /scans/{guid}/events` (SSE)
-- [x] Mode `?wait=30s` synchrone bloquant (via `options.wait_seconds` sur POST, plus simple que query GET)
-- [x] Test d'intégration : POST scan → GET → SSE → status completed
+- [ ] Test the skill with Claude Code and Cursor (real session)
 
-## Phase 5 — Premier check end-to-end (proof of orchestrator)
+## Phase 21 — Quality (last item)
 
-- [x] `internal/scanner/wellknown/securitytxt.go` : check `WELLKNOWN-SECURITY-TXT-MISSING`
-- [x] Parser security.txt RFC 9116 (champs Contact, Expires, Signature, Encryption, etc.)
-- [x] Checks dérivés : `WELLKNOWN-SECURITY-TXT-EXPIRED`, `*-NO-CONTACT`, `*-NO-EXPIRES`, `*-NOT-HTTPS`, `*-NO-SIGNATURE`
-- [x] Enregistrer dans le registry
-- [x] Tests unitaires (fichiers fixtures valides/invalides/expirés)
-- [x] Test E2E via API : `POST /scans` sur exemple connu → finding remonte
-- [x] **🎯 Milestone 1 : un scan via l'API retourne un findings sur security.txt**
+- [ ] License audit: `go-licenses` — refuse GPL/AGPL in deps
 
-## Phase 6 — Famille TLS
+## Phase 22 — 0.1.0 pre-release
 
-### 6.1 Modern TLS (stdlib)
-
-- [x] `internal/scanner/tls/handshake.go` : handshake `crypto/tls` configurable par version (cf. spec §2.2 ; renommé de `modern.go`)
-- [x] Énumération des versions supportées (TLS 1.2, TLS 1.3) → checks `TLS-PROTOCOL-TLS12-MISSING`, `*-TLS13-MISSING`
-- [x] Énumération exhaustive des cipher suites par version (raw socket probes — `probes.EnumerateCipherSuites`, `CipherEnumFetch`, 35 candidats TLS 1.2)
-- [x] Détection Forward Secrecy (ECDHE/DHE) → `TLS-CIPHER-NO-FORWARD-SECRECY`
-- [x] Détection ALPN (h2) → `TLS-ALPN-NO-HTTP2` (`h3` reporté avec QUIC)
-- [x] Détection OCSP stapling → `TLS-OCSP-STAPLING-MISSING`
-
-### 6.2 Validation certificat
-
-- [x] Parsing de la chaîne complète, validation contre roots système
-- [x] `TLS-CERT-EXPIRED`, `*-EXPIRES-SOON-14D`, `*-EXPIRES-SOON-30D`
-- [x] `TLS-CERT-CHAIN-INCOMPLETE`
-- [x] `TLS-CERT-NAME-MISMATCH` (SAN matching)
-- [x] `TLS-CERT-SELF-SIGNED`
-- [x] `TLS-CERT-WEAK-RSA` (< 2048), `TLS-CERT-WEAK-ECC` (< 256)
-- [x] `TLS-CERT-WEAK-SIGNATURE` (MD5/SHA1)
-- [x] `TLS-CERT-NO-CT` (sans dépendance externe — SCTs via `ConnectionState().SignedCertificateTimestamps` + OID X.509 `1.3.6.1.4.1.11129.2.4.2`)
-
-### 6.3 Legacy TLS (raw socket probes — pas besoin de zcrypto)
-
-- [x] `internal/scanner/tls/legacy.go` : orchestrateur memoïsé, probes raw socket
-- [x] `TLS-PROTOCOL-LEGACY-TLS10`, `*-LEGACY-TLS11`
-- [x] Énumération ciphers anciens : NULL, EXPORT, RC4, DES, 3DES, CBC en TLS 1.0
-- [x] `TLS-CIPHER-NULL`, `*-EXPORT`, `*-RC4`, `*-DES`, `*-3DES`, `*-CBC-TLS10`
-- [x] `TLS-CIPHER-DH-WEAK` (DH params < 2048 via ServerKeyExchange parsing)
-
-### 6.4 Probes raw SSLv2 / SSLv3
-
-- [x] `internal/scanner/tls/probes/sslv3.go` : ClientHello SSLv3 craft + analyse réponse (cf. §4.3)
-- [x] `internal/scanner/tls/probes/sslv2.go` : ClientHello SSLv2 (record format Netscape)
-- [x] Tests unitaires probes (mock TCP server répondant ServerHello/Alert/RST)
-- [x] Tests d'intégration contre badssl.com (`integration` build tag) : SSLv2/SSLv3, TLS 1.0/1.1, RC4, RC4-MD5, 3DES, NULL, DH 480/1024-bit, Heartbleed safe, cipher enum — `go test -tags integration ./internal/scanner/tls/probes/`
-- [x] `TLS-PROTOCOL-LEGACY-SSL2`, `*-LEGACY-SSL3`
-
-### 6.5 Heartbleed actif
-
-- [x] `internal/scanner/tls/heartbleed.go` : check enregistré, retourne `skipped` (stub)
-- [x] `TLS-VULN-HEARTBLEED` (stub — sonde active nécessite zcrypto, backlog)
-- [x] Sonde active implémentée en raw socket sans zcrypto (`probes.ProbeHeartbleed`) — ClientHello + Heartbeat extension + HeartbeatRequest `payload_length=0xFFFF` → détecte réponse oversized
-
-### 6.6 HSTS et redirect HTTP→HTTPS
-
-- [x] Parsing `Strict-Transport-Security` (max-age, includeSubDomains, preload)
-- [x] `TLS-HSTS-MISSING`, `*-MAX-AGE-LOW`, `*-NO-INCLUDESUBDOMAINS`
-- [x] `TLS-HSTS-NO-PRELOAD` : vérifie éligibilité preload (max-age ≥ 18 sem, includeSubDomains, flag preload) — appel API hstspreload.org différé
-- [x] `TLS-REDIRECT-HTTP-TO-HTTPS` : test HTTP → 301 → HTTPS
-
-### 6.7 Validation famille
-
-- [x] Tests d'intégration contre badssl.com (suite complète) — `integration_family_test.go` (`//go:build integration`)
-  - Certs : `expired`, `self-signed`, `wrong.host`, `incomplete-chain`, `sha1-intermediate`
-  - Protocoles : `tls-v1-0`, `tls-v1-1`, `tls-v1-2` (rejet TLS 1.0)
-  - Ciphers : `rc4.badssl.com`, `dh1024.badssl.com`
-  - HSTS + redirect : `hsts.badssl.com`, `badssl.com`
-- [x] Tests d'intégration contre `cloudflare.com`, `github.com`, `mozilla.org` (références A+)
-- [x] **🎯 Milestone 2 : famille TLS complète passe sur badssl.com** — `TestMilestone2_TLSFamilyComplete`
-
-## Phase 7 — Famille Headers HTTP
-
-- [x] `internal/scanner/headers/fetcher.go` : GET homepage avec User-Agent identifiable
-- [x] `internal/scanner/headers/csp.go` : parser CSP + checks
-  - [x] `HEADER-CSP-MISSING`, `*-UNSAFE-INLINE`, `*-UNSAFE-EVAL`
-  - [x] `HEADER-CSP-WILDCARD-SRC`, `*-NO-OBJECT-SRC`, `*-NO-BASE-URI`, `*-NO-FRAME-ANCESTORS`
-  - [x] Logique inspirée de `google/csp-evaluator` (réimplémentation pragmatique : effective() avec fallback default-src)
-- [x] X-Content-Type-Options (`HEADER-XCTO-MISSING`)
-- [x] X-Frame-Options (`HEADER-XFO-MISSING`) — passe automatiquement si CSP `frame-ancestors` est posé
-- [x] Referrer-Policy (`HEADER-REFERRER-POLICY-MISSING`, `*-UNSAFE`)
-- [x] Permissions-Policy (`HEADER-PERMISSIONS-POLICY-MISSING`)
-- [x] Feature-Policy déprécié (`HEADER-FEATURE-POLICY-DEPRECATED`)
-- [x] COOP/COEP/CORP (`HEADER-COOP-MISSING`, `*-COEP-MISSING`, `*-CORP-MISSING`)
-- [x] Reporting-Endpoints / Report-To (`HEADER-REPORTING-ENDPOINTS-NONE`)
-- [x] NEL (`HEADER-NEL-NONE`)
-- [x] Headers obsolètes : X-XSS-Protection, HPKP, Expect-CT
-- [x] Info disclosure : Server, X-Powered-By, X-AspNet-Version, X-Generator, Server-Timing
-- [x] Tests unitaires sur fixtures HTTP
-- [x] Tests d'intégration sur securityheaders.com test sites — fait via fixtures httptest + smoke test contre github.com / cloudflare.com / mozilla.org
-
-## Phase 8 — Famille Cookies
-
-- [x] `internal/scanner/cookies/analyzer.go` : parsing `Set-Cookie` (multi-headers) — réutilise le fetch homepage de la famille headers
-- [x] Détection heuristique cookie de session (substring + liste de noms connus)
-- [x] `COOKIE-SECURE-MISSING`, `*-HTTPONLY-MISSING-SESSION`
-- [x] `COOKIE-SAMESITE-MISSING`, `*-SAMESITE-NONE-WITHOUT-SECURE`
-- [x] `COOKIE-NO-SECURITY-FLAGS`
-- [x] `COOKIE-PREFIX-SECURE-MISSING`, `*-PREFIX-HOST-MISSING`
-- [x] Tests unitaires sur fixtures de Set-Cookie
-
-## Phase 9 — Famille DNS
-
-- [x] `internal/scanner/dns/resolver.go` : helper `miekg/dns` avec retry léger + upgrade UDP→TCP sur troncature
-- [x] DNSSEC chain validation (`DNS-DNSSEC-MISSING`, `*-WEAK-ALGO`, `*-BROKEN` via AD bit du resolver validating)
-- [x] CAA records (`DNS-CAA-MISSING`, `*-NO-IODEF`)
-- [x] AAAA / IPv6 (`DNS-AAAA-MISSING`)
-- [x] Wildcard detection (`DNS-WILDCARD-DETECTED`)
-- [x] Dangling CNAME / takeover (`DNS-DANGLING-CNAME`)
-  - [x] Liste de signatures hardcodée (S3, Heroku, GitHub Pages, Vercel, Netlify, Azure, Fastly, Shopify, Tumblr, Zendesk)
-  - [x] Source d'inspiration : `EdOverflow/can-i-take-over-xyz`
-- [x] Nameserver diversity (`DNS-NS-DIVERSITY-LOW`)
-- [x] TTL aberrants (`DNS-TTL-ABERRANT`)
-- [x] Tests unitaires (mock DNS server in-process via miekg/dns)
-- [x] Tests d'intégration contre `dnssec-failed.org`, `internetsociety.org` — fait via fixtures mock + smoke contre cloudflare.com (signé) / github.com (non signé)
-
-## Phase 10 — Famille Email (gated MX)
-
-- [x] ~~`internal/scanner/email/mx.go`~~ → fold into `fetcher.go` : récupération MX, gating de toute la famille via `gateOnMX()`
-- [x] **SPF** (`internal/scanner/email/spf.go`)
-  - [x] Parsing RFC 7208
-  - [x] `EMAIL-SPF-MISSING`, `*-MULTIPLE-RECORDS`, `*-INVALID-SYNTAX`
-  - [x] `EMAIL-SPF-TOO-MANY-LOOKUPS` (compteur récursif DNS include/redirect/a/mx, limite RFC 7208 §4.6.4)
-  - [x] `EMAIL-SPF-NO-ALL-MECHANISM`, `*-PASS-ALL`, `*-SOFTFAIL-ALL`, `*-PTR-MECHANISM`
-- [x] **DKIM** (`internal/scanner/email/dkim.go`)
-  - [x] Liste de ~25 sélecteurs courants en parallèle
-  - [x] `EMAIL-DKIM-NONE-FOUND`, `*-WEAK-KEY`, `*-SHA1`, `*-TEST-MODE`
-- [x] **DMARC** (`internal/scanner/email/dmarc.go`)
-  - [x] `EMAIL-DMARC-MISSING`, `*-INVALID-SYNTAX`, `*-POLICY-NONE`, `*-POLICY-WEAK`
-  - [x] `EMAIL-DMARC-NO-RUA`, `*-MISALIGNED-SPF`, `*-MISALIGNED-DKIM` (parsing `aspf=`/`adkim=`, défaut=`r`)
-- [x] **MTA-STS** (`internal/scanner/email/mtasts.go`)
-  - [x] Record TXT `_mta-sts.X` + fetch HTTPS `/.well-known/mta-sts.txt`
-  - [x] `EMAIL-MTASTS-MISSING`, `*-MODE-TESTING`, `*-MAX-AGE-LOW`, `*-MX-MISMATCH` (comparaison MX DNS vs policy, wildcard RFC 8461)
-- [x] **TLS-RPT** (`EMAIL-TLSRPT-MISSING`)
-- [x] **STARTTLS** sur port 25 (`EMAIL-STARTTLS-FAIL`, `*-WEAK-TLS`) — sonde raw SMTP, skip si port 25 bloqué
-- [x] **DANE/TLSA** (`EMAIL-DANE-MISSING`, `*-INVALID-PARAMS`, `*-MISMATCH`) — lookup `_25._tcp.mx`, match SHA-256/512/exact vs cert STARTTLS
-- [x] **BIMI** (`EMAIL-BIMI-MISSING`, `*-INVALID-SVG`) — fetch URL `l=`, XML decoder, vérifie namespace SVG + `baseProfile=tiny-ps` + absence de `<script>`
-- [x] Tests d'intégration sur domaines de référence (mock fixtures + smoke contre google.com, protonmail.com, microsoft.com)
-
-## Phase 11 — Famille Web / Custom
-
-- [x] HTTP→HTTPS redirect (déjà couvert par `TLS-REDIRECT-HTTP-TO-HTTPS` en Phase 6)
-- [x] HTTP/2 / HTTP/3 detection (`HTTP-HTTP2-MISSING` via `resp.ProtoMajor`, `*-HTTP3-MISSING` via `Alt-Svc`)
-- [x] Mixed content (parsing HTML homepage avec `golang.org/x/net/html`) → `HTTP-MIXED-CONTENT`
-- [x] OPTIONS / TRACE
-  - [x] `HTTP-OPTIONS-DANGEROUS-METHODS`
-  - [x] `HTTP-TRACE-ENABLED`
-- [x] CORS misconfiguration (request avec `Origin: https://websec0-test.invalid`)
-  - [x] `HTTP-CORS-WILDCARD-CREDENTIALS`
-  - [x] `HTTP-CORS-ORIGIN-REFLECTED`
-  - [x] `HTTP-CORS-NULL-ORIGIN`
-- [x] 404 probe (single GET vers path random)
-  - [x] `HTTP-404-STACK-TRACE`
-  - [x] `HTTP-404-DEFAULT-ERROR-PAGE`
-- [x] Compression (`HTTP-COMPRESSION-NONE`)
-- [x] robots.txt validity (`ROBOTS-TXT-INVALID`)
-- [x] /.well-known/change-password RFC 8615 (`WELLKNOWN-CHANGE-PASSWORD-MISSING`)
-- [x] SRI sur ressources externes (`SRI-EXTERNAL-RESOURCE-NO-INTEGRITY`)
-- [ ] **Fichiers sensibles exposés** (`internal/scanner/exposures/`)
-  - [ ] Liste des ~40 paths du §3.7
-  - [ ] Probe HEAD puis GET partiel sur confirmation
-  - [ ] Heuristique upgrade `high` → `critical` sur détection de pattern de secret (AWS keys, JWT, etc.)
-  - [ ] `EXPOSURE-DOTGIT-CONFIG`, `EXPOSURE-DOTENV`, etc.
-
-## Phase 12 — Engine de rapport
-
-- [x] `internal/report/grade.go` : algorithme de scoring §6.3 (penalties — bonuses différés)
-- [x] ~~`internal/report/score_per_family.go`~~ → fold into `grade.go` : scores par famille pondérés
-- [x] Quick wins detector (`severity ≥ medium && status == fail|warn` — `effort` non encore présent dans `Finding`)
-- [x] `internal/report/markdown.go` : export Markdown conforme §6.5
-- [x] `internal/report/sarif.go` : export SARIF 2.1.0 conforme §6.6
-- [x] Tests unitaires sur fixtures de rapports (7 cas)
-- [ ] Test SARIF : valider contre schema OASIS officiel — différé (besoin d'un validator JSON Schema en CI)
-- [x] Implémenter `GET /scans/{guid}/markdown` et `*/sarif`
-- [x] **🎯 Milestone 3 : un scan complet produit JSON + Markdown + SARIF cohérents**
-
-## Phase 13 — Sécurité opérationnelle
-
-- [x] `internal/scanner/safety/{policy,resolver,dialer,blocklist}.go` : pin+recheck contre SSRF + DNS rebinding (allowed_cidrs/hosts override, metadata always blocked)
-- [x] `internal/scanner/safety/blocklist.go` : domain blocklist + IP CIDRs hard-coded
-- [x] Réponses 422 (target_blocked) / 451 (domain_blocklist) / 429 (cooldown / rate_limited / abuse_flagged) typées
-- [x] `internal/ratelimit/ip.go` : rate limit par IP via `golang.org/x/time/rate` (tollbooth jugé overkill — token bucket suffit)
-- [x] `internal/ratelimit/target.go` : cooldown 5 min par hostname (toutes IPs)
-- [x] Cache 24 h des rapports précédents avec param `refresh=true`
-- [x] Détection pattern d'abus (>5 cibles distinctes / <5 min → 429 abuse_flagged) ; captcha déféré, on retourne directement 429
-- [x] Audit log JSON-line append-only avec IPs masquées (/24 v4 ou /64 v6) et hostname hashé (SHA-256 16 hex). Rotation 7j déférée à logrotate / journald
-- [x] Configuration `security:` dans config.yaml (refuse_metadata + allowed_cidrs + allowed_hosts ajoutés)
-- [x] Tests unitaires SSRF + blocklist (12 cas safety + 5 cas ratelimit + 5 cas audit)
-
-## Phase 14 — Frontend Astro
-
-- [x] `web/` init Astro 5 + Tailwind + Alpine
-- [x] `web/astro.config.mjs` : output static, outDir → `internal/webfs/dist/`
-- [x] Layout principal + theme (Inter Variable, vert #4e9a52, fond #fdfcf9)
-- [x] Page d'accueil `/` avec formulaire de scan (Turnstile différé — retourne directement 429 sur abus)
-  - [x] Hero split 2 colonnes : form gauche + mock report droite
-  - [x] Stats row (70+ checks, 9 stacks, <8s, 0kB)
-  - [x] Section features + CTA finale dark
-- [x] Page `/scan/{guid}` lecture seule
-  - [x] Mode SSE pendant le scan (Alpine island) : barre de progression + live findings feed
-  - [x] Vue statique du rapport quand completed : grade card, quick wins, findings expandables, snippets par stack + copy
-- [x] Page `/about` (description scanner, User-Agent, opt-out)
-- [x] Page `/checks` (catalogue interactif, filtrage par famille/sévérité + inline expand)
-- [ ] Page `/checks/{id}` (deep-link par check — différé, inline expand pour MVP)
-- [x] Page `/docs/api` (Scalar UI via CDN sur `/api/v1/openapi.json`)
-- [x] Pages `/legal/{tos,privacy}`
-- [x] Build → `internal/webfs/dist/` (via `make web` / `pnpm build`)
-- [x] `internal/webfs/embed.go` : `//go:embed all:dist` + handler statique
-- [x] ~~Mode dégradé~~ → déféré : agents IA utilisent `/api/v1/scans/{guid}/markdown`, `<noscript>` renvoie vers l'API
-- [ ] Audit accessibilité (WCAG 2.1 AA, contraste, navigation clavier)
-
-## Phase 15 — CLI
-
-- [x] `cmd/websec0-cli/main.go` : entry point cobra
-- [x] Commande `scan [target]`
-  - [x] Mode online (appel API distante)
-  - [x] Mode `--standalone` (scan in-process sans serveur)
-  - [x] Output formats : `--json`, `--markdown`, `--sarif`
-  - [x] `--fail-on critical,high` (codes de sortie pour CI/CD)
-  - [ ] Barre de progression (différé — mode synchrone via `wait_seconds` suffit pour CI)
-- [x] Commande `report [guid]` (re-rendu d'un scan stocké)
-- [x] Commande `catalog` (dump des checks supportés)
-- [x] Commande `version`
-- [x] `--server`, `--api-key` (env `WEBSEC0_API_KEY`)
-- [x] Tests E2E CLI sur cible badssl.com (smoke `expired.badssl.com --fail-on critical` → exit 2)
-
-## Phase 16 — Distribution
-
-- [x] `deploy/docker/Dockerfile` : multi-stage avec `gcr.io/distroless/static-debian13:nonroot` (3 stages : frontend Node 22, builder Go 1.26, runtime distroless)
-- [x] `deploy/docker/Dockerfile.goreleaser` : Dockerfile mince pour goreleaser (copie le binaire pré-compilé)
-- [x] `deploy/docker/docker-compose.yml` : template auto-hébergement (avec section Redis optionnelle commentée)
-- [x] `.goreleaser.yaml`
-  - [x] Cross-compilation Linux/macOS/Windows × amd64/arm64 (windows/arm64 ignoré)
-  - [x] Strip symboles `-s -w` + `-trimpath`
-  - [x] Archives tar.gz / zip
-  - [x] **Cosign v3 keyless OIDC** — utilise `--bundle` (breaking change cosign v3 pris en compte)
-  - [x] **Syft SBOM SPDX** (via section `sboms:`)
-  - [x] **SLSA Level 3 provenance** — goreleaser.yaml prêt ; la génération effective Level 3 requiert `slsa-framework/slsa-github-generator` dans `release.yml` (Phase 17)
-  - [x] Push image GHCR multi-arch (docker_manifests : tag, v{major}.{minor}, latest)
-  - [ ] ~~Mise à jour Homebrew tap~~ — hors scope (exclu délibérément)
-  - [x] CHANGELOG auto depuis Conventional Commits (groupes feat/fix/sec/perf/breaking)
-- [ ] ~~Repo séparé `your-org/homebrew-tap`~~ — hors scope (exclu délibérément)
-- [x] `scripts/install.sh` (one-liner avec vérification SHA256 + cosign bundle optionnel via `VERIFY_COSIGN=1`)
-- [x] `docs/self-hosting.md` (Docker, docker compose, binaire manuel, build source, config, reverse proxy Nginx/Caddy, opt-out, mise à jour)
-- [x] `CHANGELOG.md` placeholder (format Keep a Changelog, goreleaser y prépend les releases)
-
-## Phase 17 — CI/CD complet
-
-- [x] `.github/workflows/release.yml` (déclenchée sur tag `v*`)
-  - [x] Lance goreleaser-action v7 (`~> v2` goreleaser binary) via `goreleaser/goreleaser-action`
-  - [x] Permissions OIDC (`id-token: write`) pour cosign keyless + SLSA provenance
-  - [x] SLSA Level 3 via `slsa-framework/slsa-github-generator` (reusable workflow, SHA-pinned)
-  - [x] Job `verify-docker` : pull image, smoke test health endpoint, verify cosign signature
-- [x] Branch protection sur `main` configurée via API GitHub :
-  - checks requis : `test`, `lint (golangci-lint + gosec)`, `openapi (spectral)`, `regenerate and diff`
-  - 1 PR review requise, signed commits activés
-- [ ] Test du release flow sur tag pré-release `v0.0.1-rc1` (à faire manuellement : `git tag v0.0.1-rc1 && git push origin v0.0.1-rc1`)
-
-## Phase 18 — Documentation
-
-- [x] `README.md` complet (intro, install, quickstart, démo, badges, lien specs)
-- [x] `docs/architecture.md` (synthèse §2)
-- [x] `docs/api/` (générée depuis OpenAPI ou liens Scalar/Redoc) — `docs/api/README.md` (endpoints, async pattern, SDK Go, codegen autres langages)
-- [x] `docs/self-hosting.md` (Docker, docker-compose, binaire, env vars, reverse proxy)
-- [x] `docs/checks/` (un fichier .md par check, généré depuis le catalog) — 126 fichiers + index par famille
-- [x] Script de génération `scripts/gen-checks-docs.sh` (idempotent, mode `--server URL` ou standalone via CLI)
-- [x] `docs/ai-agents.md` (guide d'intégration agent IA, exemples Claude/Codex/Cursor)
-- [x] `docs/contributing/checks.md` (comment ajouter un nouveau check)
-- [ ] Captures d'écran / GIFs dans le README
-
-## Phase 19 — SKILL.md pour agents IA
-
-- [x] `skills/websec0/SKILL.md` (frontmatter + workflow + exemples §10.2) — third-person description, 199 lignes (sous le plafond 500)
-- [x] `skills/websec0/scripts/scan.sh` (wrapper curl ou CLI) — gère 422 / 451 / 429 (cooldown / rate_limited / abuse_flagged) / 401 explicitement, polling avec deadline
-- [x] `skills/websec0/scripts/apply_remediation.sh` (snippet picker pour stack donné) — `--file PATH` ou `--scan GUID`, liste les stacks dispo si la clé est absente
-- [x] `skills/websec0/references/api.md` (référence API complète) — TOC, schéma Finding complet, error envelope
-- [x] `skills/websec0/references/checks.md` (généré depuis `GET /api/v1/checks`) — fichier condensé unique (217 lignes), regen via `scripts/gen-checks-docs.sh`
-- [x] `skills/websec0/references/stacks.md` (mapping stack → conventions snippet) — nginx, apache, caddy, haproxy, cloudflare, express_helmet, fastify, spring_boot, iis_web_config + détection stack + fallback
-- [x] `skills/websec0/references/safety.md` (règles éthiques étendues) — auth gate, blocklist élargie, secret handling, rate-limit, self-hosted vs public
-- [ ] Test du skill avec Claude Code et avec Cursor
-- [ ] PR vers `anthropics/skills` pour visibilité (optionnel)
-
-## Phase 20 — Légal
-
-- [x] `docs/legal/tos.md` (conforme §14.3, 10 sections)
-- [x] `docs/legal/privacy.md` (conforme §14.4, RGPD-compatible)
-- [x] `docs/legal/abuse-policy.md` (conforme §14.5)
-- [x] Disclaimer §14.6 dans le footer du frontend et de tous les rapports Markdown/HTML
-- [x] Définir adresses `abuse@`, `security@`, `privacy@` (à instancier au déploiement) — placeholders `*@websec0.example` dans tous les docs
-- [x] Page `/legal/tos` et `/legal/privacy` linkées depuis le footer
-
-## Phase 21 — Tests d'intégration et qualité
-
-- [x] Test suite end-to-end contre badssl.com (toutes les variantes) — `tests/e2e/badssl_e2e_test.go`, full-orchestrator (126 checks) sur 8 variantes badssl + hsts/redirect, validé manuellement (15 s par scan)
-- [x] Tests E2E contre cibles de référence (mozilla.org, github.com, cloudflare.com → A+) — `tests/e2e/reference_e2e_test.go`, hard-gate sur critical, soft-gate sur high, score ≥ 70
-- [x] Tests E2E contre cibles « legacy » connues (à identifier sans nuire, ou container fixture local) — fixture Docker local sous `tests/e2e/legacy-fixture/` (nginx 1.18, TLS 1.0/1.1, ciphers faibles, headers absents, .git/config exposé), test gated par `WEBSEC0_LEGACY_FIXTURE_HOST`, intégré dans `make test-e2e-fixture`
-- [x] Test fixtures dockerisées : nginx 1.18 mal configuré, Apache vulnérable, etc. — `tests/e2e/legacy-fixture/{nginx,apache}/`, docker-compose multi-services, sub-test gated par env var (`WEBSEC0_LEGACY_FIXTURE_HOST`, `WEBSEC0_APACHE_FIXTURE_HOST`), Apache cible TraceEnable On + CORS reflection + ServerTokens Full, intégré dans `make test-e2e-fixture`. Helper `runFullScan` corrigé pour respecter les ports custom (skip safety pinning car DialAddress jette le port quand PinnedIPs est set).
-- [x] Couverture de tests Go ≥ 70 % sur `internal/` — **70.1 %** (baseline 48.3 %), `make cover`. Wins majeurs : `api/sse` 0→92, `api/middleware` 0→97, `scanner` 0→87, `api/spec` 0→71, `webfs` 0→100, `api/handlers` 0→60. Pattern « metadata test » (Register + Catalog round-trip) cloné sur les 7 familles → +14 à +26 pp par famille. Email reste à 47 % (Run methods réseau-bound).
-- [x] Tests `go test -race` propres — `make test-race` passe sur tout `./internal/...` (validé avec et sans les nouveaux tests).
-- [x] Bench critiques (`internal/scanner/tls/probes`, parsing CSP, parsing SPF) — `internal/scanner/{tls/probes,headers,email}/bench_test.go`, `make bench`. Numbers : ClientHello craft ~230 ns/op (2-6 allocs), parseServerHelloHandshake 1.5 ns/op (0 allocs), ParseCSP typical 1 µs / heavy 4 µs, ParseSPF typical 530 ns / heavy 2.1 µs.
-- [x] Audit `gosec` : zéro `HIGH` — 0 issues à toutes les sévérités (HIGH/MEDIUM/LOW). 3 G101 false positives sur les check IDs (`HTTP-CORS-WILDCARD-CREDENTIALS`, `HEADER-CSP-WILDCARD-SRC`, `EMAIL-SPF-PASS-ALL`) annotés `#nosec G101 -- public check identifier`.
-- [x] Audit dépendances : `govulncheck`, `osv-scanner` — `No vulnerabilities found`. Bumped toolchain à Go 1.26.2 dans `go.mod` (toolchain directive) pour fixer 7 vulns stdlib (`GO-2026-{4864,4865,4866,4869,4870,4946,4947}`). 51 packages Go + 405 packages frontend (`web/pnpm-lock.yaml`) scannés. `make audit` orchestre gosec + govulncheck + osv-scanner.
-- [ ] Audit licences (`go-licenses` : pas de GPL/AGPL en deps)
-
-## Phase 22 — Pré-release 0.1.0
-
-- [ ] Walkthrough manuel du SPECIFICATIONS.md : tout ce qui est marqué MVP est implémenté ou explicitement reporté
-- [ ] Walkthrough sécurité (anti-SSRF, blocklist, rate-limit, anonymisation IPs)
-- [ ] Walkthrough légal (ToS / Privacy / Abuse en place)
+- [ ] Manual walkthrough of every check vs. its check ID — every
+      `passed` finding should be intentionally so
+- [ ] Security walkthrough (anti-SSRF, blocklist, rate-limit, IP
+      anonymisation)
+- [ ] Legal walkthrough (ToS / Privacy / Abuse policy in place)
 - [ ] OSSF Scorecard score ≥ 7
-- [ ] CHANGELOG.md à jour avec la section 0.1.0
-- [ ] Annonce préparée (HN / lobste.rs / r/netsec / Mastodon / Twitter)
-- [ ] Démo en ligne sur `websec0.example` (instance publique)
-- [ ] Tag `v0.1.0` poussé → release goreleaser
-- [ ] Vérification post-release : binaires téléchargeables, image Docker pull, Homebrew formula, install.sh fonctionne
-- [ ] **🎯 Milestone final : release 0.1.0 publique**
+- [ ] CHANGELOG.md updated with a `0.1.0` section
+- [ ] Public demo instance live on `websec0.example`
+- [ ] Tag `v0.1.0`, push → goreleaser produces the release
+- [ ] Post-release verification: binaries downloadable, Docker image
+      pulls, install.sh works, cosign verifies
+- [ ] **🎯 Final milestone: 0.1.0 public release**
 
-## Backlog (post-0.1.0, hors scope MVP)
+## Backlog (post-0.1.0, out of MVP scope)
 
-- [ ] HTTP/3 handshake complet via `quic-go`
-- [ ] DROWN, ROBOT, Ticketbleed, Lucky13, RACCOON actifs
-- [ ] Readiness post-quantique (X25519MLKEM768)
+- [ ] HTTP/3 full handshake via `quic-go`
+- [ ] Active probes for DROWN / ROBOT / Ticketbleed / Lucky13 / RACCOON
+- [ ] Post-quantum readiness (X25519MLKEM768 detection)
 - [ ] MCP server `websec0-mcp`
-- [ ] GitHub Action officielle, GitLab CI template, Jenkins plugin
-- [ ] Helm chart Kubernetes
-- [ ] Plugins WebSec0 (framework de checks tiers)
+- [ ] Official GitHub Action, GitLab CI template, Jenkins plugin
+- [ ] Helm chart for Kubernetes
+- [ ] Third-party plugin framework (custom checks contributed by users)
