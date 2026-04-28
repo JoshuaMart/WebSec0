@@ -15,6 +15,7 @@ import (
 	ogenerrors "github.com/ogen-go/ogen/ogenerrors"
 
 	"github.com/JoshuaMart/websec0/internal/checks"
+	"github.com/JoshuaMart/websec0/internal/ratelimit"
 	"github.com/JoshuaMart/websec0/internal/report"
 	"github.com/JoshuaMart/websec0/internal/scanner"
 	"github.com/JoshuaMart/websec0/internal/scanner/safety"
@@ -211,6 +212,50 @@ func TestCreateScan_SuccessReturnsCreated(t *testing.T) {
 	}
 	if r, ok := created.RetryAfter.Get(); !ok || r <= 0 {
 		t.Errorf("Retry-After = %d, want > 0", r)
+	}
+}
+
+// TestCreateScan_RateLimited verifies the per-IP scan-creation cap fires
+// from inside the handler. With a budget of 2, the third POST from the
+// same source IP must get a 429 rate_limited envelope. This used to be
+// a global router middleware (which also throttled static assets and
+// SSE — see commit history).
+func TestCreateScan_RateLimited(t *testing.T) {
+	policy := safety.Permissive()
+	if !policy.AddAllowedCIDR("127.0.0.0/8") {
+		t.Fatal("AddAllowedCIDR returned false")
+	}
+
+	h := New(Options{
+		Store:     memory.New(time.Hour),
+		Scans:     noopScanService{},
+		Policy:    policy,
+		IPLimiter: ratelimit.NewIPLimiter(2, time.Hour),
+	})
+
+	for i := 1; i <= 2; i++ {
+		res, err := h.CreateScan(context.Background(), &client.ScanRequest{Target: "127.0.0.1"})
+		if err != nil {
+			t.Fatalf("call %d: unexpected error: %v", i, err)
+		}
+		if _, ok := res.(*client.ScanCreatedHeaders); !ok {
+			t.Fatalf("call %d: type = %T (status=%d), want *ScanCreatedHeaders", i, res, statusOf(res))
+		}
+	}
+
+	res, err := h.CreateScan(context.Background(), &client.ScanRequest{Target: "127.0.0.1"})
+	if err != nil {
+		t.Fatalf("third call: unexpected error: %v", err)
+	}
+	envelope, ok := res.(*client.ErrorStatusCode)
+	if !ok {
+		t.Fatalf("third call: type = %T, want *ErrorStatusCode", res)
+	}
+	if envelope.StatusCode != 429 {
+		t.Errorf("third call status = %d, want 429", envelope.StatusCode)
+	}
+	if envelope.Response.Code != "rate_limited" {
+		t.Errorf("third call code = %q, want rate_limited", envelope.Response.Code)
 	}
 }
 

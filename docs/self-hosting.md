@@ -138,9 +138,14 @@ storage:
     url: ""              # e.g. redis://localhost:6379/0
 
 ratelimit:
+  # Per-source-IP cap on scan creation (POST /api/v1/scans).
+  # Static assets, the SSE event stream, and result polling are NOT
+  # counted — opening the web UI never burns this budget.
   per_ip:
     rate: 10
     period: 1h
+  # Per-target cooldown: a hostname scanned within `cooldown` returns
+  # the cached scan instead of launching a new one.
   per_target:
     cooldown: 5m
 

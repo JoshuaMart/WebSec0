@@ -31,7 +31,7 @@ type Options struct {
 	Registry       *checks.Registry
 	Scans          *scanner.Manager
 	Policy         *safety.Policy
-	IPLimiter      *ratelimit.IPLimiter     // optional; nil disables per-IP rate limiting
+	IPLimiter      *ratelimit.IPLimiter     // optional; nil disables per-IP scan-creation cap
 	Tracker        *ratelimit.TargetTracker // optional; nil disables cooldown/cache/abuse
 	AuditLog       *audit.Logger            // optional; nil disables audit
 	PerScanTimeout time.Duration
@@ -67,6 +67,7 @@ func NewServer(opts Options) (http.Handler, error) {
 		Scans:          opts.Scans,
 		Policy:         opts.Policy,
 		Tracker:        opts.Tracker,
+		IPLimiter:      opts.IPLimiter,
 		AuditLog:       opts.AuditLog,
 		PerScanTimeout: opts.PerScanTimeout,
 	})
@@ -84,9 +85,10 @@ func NewServer(opts Options) (http.Handler, error) {
 	r.Use(mw.Recover(opts.Logger))
 	r.Use(mw.AccessLog(opts.Logger, opts.LogTargets))
 	r.Use(mw.CORS(mw.CORSOptions{AllowedOrigins: opts.CORSOrigin}))
-	if opts.IPLimiter != nil {
-		r.Use(opts.IPLimiter.Middleware())
-	}
+
+	// The per-IP scan-creation cap (opts.IPLimiter) is enforced inside the
+	// CreateScan handler, not here, so static assets, the SSE stream, and
+	// result polling are not throttled.
 
 	if _, err := spec.JSON(); err != nil {
 		return nil, fmt.Errorf("api: load embedded openapi: %w", err)

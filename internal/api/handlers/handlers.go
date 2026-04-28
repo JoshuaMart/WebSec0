@@ -37,6 +37,7 @@ type Handler struct {
 	scans          ScanService
 	policy         *safety.Policy
 	tracker        *ratelimit.TargetTracker
+	ipLimiter      *ratelimit.IPLimiter
 	auditLog       *audit.Logger
 	perScanTimeout time.Duration
 	startedAt      time.Time
@@ -49,6 +50,7 @@ type Options struct {
 	Scans          ScanService
 	Policy         *safety.Policy
 	Tracker        *ratelimit.TargetTracker
+	IPLimiter      *ratelimit.IPLimiter
 	AuditLog       *audit.Logger
 	PerScanTimeout time.Duration
 }
@@ -67,6 +69,7 @@ func New(opts Options) *Handler {
 		scans:          opts.Scans,
 		policy:         opts.Policy,
 		tracker:        opts.Tracker,
+		ipLimiter:      opts.IPLimiter,
 		auditLog:       opts.AuditLog,
 		perScanTimeout: opts.PerScanTimeout,
 		startedAt:      time.Now(),

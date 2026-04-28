@@ -41,6 +41,14 @@ func (h *Handler) CreateScan(ctx context.Context, req *client.ScanRequest) (clie
 
 	srcIP := middleware.SourceIPFromContext(ctx)
 
+	// Per-IP scan-creation budget. Counts only here so that the UI's
+	// static assets, SSE stream, and result polling are not throttled.
+	if h.ipLimiter != nil && !h.ipLimiter.Allow(srcIP) {
+		h.audit("rate_limited", srcIP, target.Hostname, "", "ip_quota")
+		return errEnvelope(429, "rate_limited",
+			"too many scans from this IP — slow down"), nil
+	}
+
 	// Anti-SSRF + DNS-rebinding gate: resolve once, pin the IP set.
 	pinned, decision := safety.ResolveAndValidate(ctx, target.Hostname, h.policy, nil)
 	if decision != nil {
