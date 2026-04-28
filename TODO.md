@@ -349,14 +349,14 @@ Plan d'exécution séquentiel vers la release **0.1.0**. Les phases sont ordonn�
 
 ## Phase 18 — Documentation
 
-- [ ] `README.md` complet (intro, install, quickstart, démo, badges, lien specs)
-- [ ] `docs/architecture.md` (synthèse §2)
-- [ ] `docs/api/` (générée depuis OpenAPI ou liens Scalar/Redoc)
-- [ ] `docs/self-hosting.md` (Docker, docker-compose, binaire, env vars, reverse proxy)
-- [ ] `docs/checks/` (un fichier .md par check, généré depuis le catalog)
-- [ ] Script de génération `scripts/gen-checks-docs.sh`
-- [ ] `docs/ai-agents.md` (guide d'intégration agent IA, exemples Claude/Codex/Cursor)
-- [ ] `docs/contributing/checks.md` (comment ajouter un nouveau check)
+- [x] `README.md` complet (intro, install, quickstart, démo, badges, lien specs)
+- [x] `docs/architecture.md` (synthèse §2)
+- [x] `docs/api/` (générée depuis OpenAPI ou liens Scalar/Redoc) — `docs/api/README.md` (endpoints, async pattern, SDK Go, codegen autres langages)
+- [x] `docs/self-hosting.md` (Docker, docker-compose, binaire, env vars, reverse proxy)
+- [x] `docs/checks/` (un fichier .md par check, généré depuis le catalog) — 126 fichiers + index par famille
+- [x] Script de génération `scripts/gen-checks-docs.sh` (idempotent, mode `--server URL` ou standalone via CLI)
+- [x] `docs/ai-agents.md` (guide d'intégration agent IA, exemples Claude/Codex/Cursor)
+- [x] `docs/contributing/checks.md` (comment ajouter un nouveau check)
 - [ ] Captures d'écran / GIFs dans le README
 
 ## Phase 19 — SKILL.md pour agents IA

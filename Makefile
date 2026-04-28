@@ -1,4 +1,4 @@
-.PHONY: build build-all web test test-race lint clean run gen help
+.PHONY: build build-all web test test-race lint clean run gen docs help
 .DEFAULT_GOAL := help
 
 BIN_DIR    := bin
@@ -25,6 +25,7 @@ help:
 	@echo "  test-race  Run tests with the race detector"
 	@echo "  lint       Run golangci-lint"
 	@echo "  gen        Run all go:generate directives"
+	@echo "  docs       Regenerate per-check docs under docs/checks/"
 	@echo "  clean      Remove build artefacts"
 
 build:
@@ -55,6 +56,9 @@ lint:
 gen:
 	cp -f api/openapi.yaml internal/api/spec/openapi.yaml
 	go generate ./...
+
+docs:
+	./scripts/gen-checks-docs.sh
 
 clean:
 	rm -rf $(BIN_DIR) internal/webfs/dist coverage.txt coverage.html
