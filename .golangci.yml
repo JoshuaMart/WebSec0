@@ -18,7 +18,8 @@ linters:
   settings:
     gosec:
       excludes:
-        - G304            # file inclusion via variable — we read configured paths
+        - G304            # file inclusion via variable — we read configured paths (legacy id)
+        - G703            # path traversal via taint analysis — same intent as G304 in gosec v2
     revive:
       rules:
         - name: blank-imports

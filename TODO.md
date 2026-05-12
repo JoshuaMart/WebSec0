@@ -20,12 +20,12 @@
 
 ## Phase 1 — Configuration & shared types
 
-- [ ] `internal/config`: YAML loader with the resolution order from SPEC §7
-- [ ] `internal/config`: defaults table + validation (port ranges, duration parsing, CIDR parsing for `extra_blocked_cidrs`)
-- [ ] `internal/config`: env-var override (`WEBSEC0_CONFIG`)
-- [ ] `internal/config`: unit tests covering invalid YAML, missing required fields, malformed CIDRs
-- [ ] `internal/scan/types.go`: shared payload types (`ScanResult`, `TLSReport`, `HeadersReport`, `CustomFinding`) matching SPEC §6.4–6.6
-- [ ] `internal/scoring/grade.go`: `Grade` enum (A+ → F, T) with stable string representation
+- [x] `internal/config`: YAML loader with the resolution order from SPEC §7
+- [x] `internal/config`: defaults table + validation (port ranges, duration parsing, CIDR parsing for `extra_blocked_cidrs`)
+- [x] `internal/config`: env-var override (`WEBSEC0_CONFIG`)
+- [x] `internal/config`: unit tests covering invalid YAML, missing required fields, malformed CIDRs
+- [x] `internal/scan/types.go`: shared payload types (`ScanResult`, `TLSReport`, `HeadersReport`, `CustomFinding`) matching SPEC §6.4–6.6
+- [x] `internal/scoring/grade.go`: `Grade` enum (A+ → F, T) with stable string representation
 
 ## Phase 2 — `safehttp` (the security-critical core)
 

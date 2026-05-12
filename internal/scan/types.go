@@ -1,0 +1,163 @@
+// Package scan defines the public payload shapes returned by the scanner
+// API. These types mirror SPEC §6.1, §6.4–6.6 and are intended for JSON
+// marshalling — the field names are normative.
+package scan
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/JoshuaMart/websec0/internal/scoring"
+)
+
+// Status is a per-finding outcome label used in header and custom checks.
+type Status string
+
+// Status values.
+const (
+	StatusPass Status = "pass"
+	StatusFail Status = "fail"
+	StatusWarn Status = "warn"
+	StatusInfo Status = "info"
+)
+
+// Severity is the colour-band attached to TLS cipher rows and vulnerability
+// findings.
+type Severity string
+
+// Severity values.
+const (
+	SeverityGood Severity = "good"
+	SeverityWarn Severity = "warn"
+	SeverityBad  Severity = "bad"
+	SeverityInfo Severity = "info"
+)
+
+// Probe identifies how a TLS protocol's "offered" flag was measured.
+type Probe string
+
+// Probe values.
+const (
+	ProbeStdlib         Probe = "stdlib"
+	ProbeRawClientHello Probe = "raw_clienthello"
+)
+
+// Result is the top-level scan response (SPEC §6.1).
+type Result struct {
+	ID         string          `json:"id"`
+	Host       string          `json:"host"`
+	Port       int             `json:"port"`
+	ResolvedIP string          `json:"resolved_ip"`
+	ScannedAt  time.Time       `json:"scanned_at"`
+	DurationMs int64           `json:"duration_ms"`
+	TLS        *TLSReport      `json:"tls,omitempty"`
+	Headers    *HeadersReport  `json:"headers,omitempty"`
+	Custom     []CustomFinding `json:"custom,omitempty"`
+}
+
+// TLSReport mirrors SPEC §6.4.
+type TLSReport struct {
+	Grade            scoring.Grade          `json:"grade"`
+	Scores           TLSScores              `json:"scores"`
+	Protocols        []ProtocolSupport      `json:"protocols"`
+	Ciphers          []Cipher               `json:"ciphers"`
+	CertificateChain []Certificate          `json:"certificate_chain"`
+	Vulnerabilities  []VulnerabilityFinding `json:"vulnerabilities"`
+}
+
+// TLSScores is the four-sub-score + final breakdown.
+type TLSScores struct {
+	Certificate     int `json:"certificate"`
+	ProtocolSupport int `json:"protocol_support"`
+	KeyExchange     int `json:"key_exchange"`
+	CipherStrength  int `json:"cipher_strength"`
+	Final           int `json:"final"`
+}
+
+// ProtocolSupport describes whether a single TLS/SSL version is offered.
+type ProtocolSupport struct {
+	Name    string `json:"name"`
+	Offered bool   `json:"offered"`
+	Probe   Probe  `json:"probe"`
+}
+
+// Cipher describes one negotiated or offered cipher suite.
+type Cipher struct {
+	Protocol string   `json:"protocol"`
+	Name     string   `json:"name"`
+	Code     string   `json:"code"`
+	Strength int      `json:"strength"`
+	AEAD     bool     `json:"aead"`
+	PFS      bool     `json:"pfs"`
+	Level    Severity `json:"level"`
+}
+
+// Certificate is one entry in the certification path (leaf → root).
+type Certificate struct {
+	Step       int       `json:"step"`
+	Kind       string    `json:"kind"`
+	CommonName string    `json:"cn"`
+	Issuer     string    `json:"issuer"`
+	NotBefore  time.Time `json:"not_before"`
+	NotAfter   time.Time `json:"not_after"`
+	DaysLeft   int       `json:"days_left"`
+	KeyAlg     string    `json:"key_alg"`
+	SigAlg     string    `json:"sig_alg"`
+	Serial     string    `json:"serial"`
+	SHA256     string    `json:"sha256"`
+	SAN        []string  `json:"san"`
+	Revocation string    `json:"revocation"`
+}
+
+// VulnerabilityFinding records a presence-based check for a named TLS weakness.
+type VulnerabilityFinding struct {
+	ID    string   `json:"id"`
+	CVE   string   `json:"cve,omitempty"`
+	State string   `json:"state"`
+	Level Severity `json:"level"`
+	Body  string   `json:"body"`
+}
+
+// HeadersReport mirrors SPEC §6.5.
+type HeadersReport struct {
+	Grade      scoring.Grade           `json:"grade"`
+	Score      int                     `json:"score"`
+	Core       map[string]HeaderResult `json:"core"`
+	Additional AdditionalHeaders       `json:"additional"`
+}
+
+// HeaderResult is the evaluation of a single response header.
+type HeaderResult struct {
+	Present bool   `json:"present"`
+	Value   string `json:"value,omitempty"`
+	Status  Status `json:"status"`
+}
+
+// AdditionalHeaders aggregates the headers that contribute to bonus/malus
+// scoring but are not part of the core six.
+type AdditionalHeaders struct {
+	Server                    *HeaderResult  `json:"server,omitempty"`
+	SetCookie                 []CookieResult `json:"set-cookie,omitempty"`
+	AccessControlAllowOrigin  *HeaderResult  `json:"access-control-allow-origin,omitempty"`
+	CrossOriginOpenerPolicy   *HeaderResult  `json:"cross-origin-opener-policy,omitempty"`
+	CrossOriginEmbedderPolicy *HeaderResult  `json:"cross-origin-embedder-policy,omitempty"`
+	CrossOriginResourcePolicy *HeaderResult  `json:"cross-origin-resource-policy,omitempty"`
+}
+
+// CookieResult describes the flags found on a single Set-Cookie response.
+type CookieResult struct {
+	Name     string  `json:"name"`
+	Secure   bool    `json:"secure"`
+	HTTPOnly bool    `json:"httponly"`
+	SameSite *string `json:"samesite"`
+	Status   Status  `json:"status"`
+}
+
+// CustomFinding mirrors SPEC §6.6. The Details payload is finding-specific
+// and is left opaque at this layer.
+type CustomFinding struct {
+	ID      string          `json:"id"`
+	Title   string          `json:"title"`
+	Status  Status          `json:"status"`
+	Details json.RawMessage `json:"details,omitempty"`
+}
