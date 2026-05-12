@@ -101,10 +101,10 @@
 
 ## Phase 7 — Custom checks
 
-- [ ] `internal/custom/securitytxt.go`: fetch `/.well-known/security.txt`, parse RFC 9116 fields, check expiry, detect PGP signature
-- [ ] `internal/custom/robotstxt.go`: fetch `/robots.txt`, parse, flag suspicious `Disallow:` paths (`/admin`, `/internal`, `/private`, `/api`, etc.)
-- [ ] `internal/custom/registry.go`: pluggable interface so future checks slot in without touching the orchestrator
-- [ ] Unit tests for both checks (golden files for parsing, table tests for status mapping)
+- [x] `internal/custom/securitytxt.go`: fetch `/.well-known/security.txt`, parse RFC 9116 fields, check expiry, detect PGP signature
+- [x] `internal/custom/robotstxt.go`: fetch `/robots.txt`, parse, flag suspicious `Disallow:` paths (`/admin`, `/internal`, `/private`, `/api`, etc.)
+- [x] `internal/custom/registry.go`: pluggable interface so future checks slot in without touching the orchestrator
+- [x] Unit tests for both checks (golden files for parsing, table tests for status mapping)
 
 ## Phase 8 — Scan orchestrator
 
