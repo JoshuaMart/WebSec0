@@ -57,15 +57,33 @@
 
 - [x] Enumerate offered protocols (TLS 1.0, 1.1, 1.2, 1.3) via successive handshakes with `MinVersion = MaxVersion = X`
 - [x] Enumerate cipher suites per protocol (loop through stdlib suite IDs, observe what the server picks)
-- [ ] Detect server preference vs client preference (compare server pick when client order is reversed) — *deferred to v1.1*
+- [ ] Detect server preference vs client preference (compare server pick when client order is reversed) — **easy / passive** (2 handshakes, compare picked cipher)
 - [x] Extract full certificate chain, parse leaf + intermediates (subject, SAN, issuer, validity, key alg, sig alg, serial, SHA-256)
-- [x] Verify chain against Mozilla root store (`crypto/x509` `SystemCertPool` + bundled CCADB fallback) — *system roots only in v1; CCADB fallback deferred*
-- [x] OCSP stapling presence detection
-- [ ] OCSP response parsing if stapled — *deferred to v1.1*
-- [ ] SCT extraction from certificate extensions (TLS extension `signed_certificate_timestamp`) — *deferred to v1.1*
-- [ ] Session ticket / session ID / 0-RTT detection — *deferred to v1.1*
-- [x] Known weakness heuristics (presence-based, no exploitation): Heartbleed, ROBOT, POODLE, BEAST, CRIME, Logjam, FREAK, DROWN, Sweet32, Lucky13, Raccoon, Ticketbleed
+- [x] Verify chain against Mozilla root store — *system roots via `crypto/x509.SystemCertPool` only; CCADB fallback bundle not shipped*
+- [ ] Bundle a CCADB Mozilla root fallback so the binary validates chains identically across host OSes — **moderate / passive** (embed a curated PEM, fall back when system pool is empty)
+- [x] OCSP stapling presence detection (bool)
+- [ ] OCSP response parsing if stapled — **easy / passive** (`x/crypto/ocsp.ParseResponse` on `state.OCSPResponse`)
+- [ ] SCT extraction from `state.SignedCertificateTimestamps` (count + log IDs) — **moderate / passive**
+- [ ] SCT extraction from the leaf cert's X.509 extension (OID 1.3.6.1.4.1.11129.2.4.2) — **complex / passive** (ASN.1 OctetString of SignedCertificateTimestampList)
+- [ ] Session ticket / session ID detection — **easy / passive** (second handshake → `state.DidResume`)
+- [ ] 0-RTT (early data) detection on TLS 1.3 — **complex / passive** (requires real early-data send, not directly exposed)
 - [x] Unit tests against `crypto/tls` test servers (`httptest.NewTLSServer` with crafted configs)
+
+#### TLS weakness heuristics
+
+- [x] **POODLE** (CVE-2014-3566) — detected via SSLv3 offered — passive
+- [x] **DROWN** (CVE-2016-0800) — detected via SSLv2 offered — passive
+- [x] **BEAST** (CVE-2011-3389) — detected via TLS 1.0 offered — passive
+- [x] **Sweet32** (CVE-2016-2183) — detected via 3DES cipher offered — passive
+- [x] **RC4 weakness** (CVE-2015-2808) — detected via RC4 cipher offered — passive
+- [ ] **Heartbleed** (CVE-2014-0160) — placeholder *Not assessed* — **easy / passive** via `Server:` header OpenSSL version range, with false-positive risk
+- [ ] **Lucky13** (CVE-2013-0169) — placeholder *Not assessed* — **easy / passive** (TLS 1.0/1.1 + CBC ciphers offered; overlaps BEAST)
+- [ ] **Ticketbleed** (CVE-2016-9244) — placeholder *Not assessed* — **easy / passive** (`Server:` header contains "BIG-IP")
+- [ ] **FREAK** (CVE-2015-0204) — placeholder *Not assessed* — **moderate / passive** (export cipher enumeration; not in stdlib, needs raw ClientHello)
+- [ ] **Logjam** (CVE-2015-4000) — placeholder *Not assessed* — **complex / passive** (parse ServerKeyExchange DH group, reject < 1024 bits)
+- [ ] **CRIME** (CVE-2012-4929) — placeholder *Not assessed* — **complex / passive** (TLS compression detection; stdlib disables it client-side, so requires raw probing)
+- [ ] **Raccoon Attack** (CVE-2020-1968) — placeholder *Not assessed* — **complex / passive** (multi-handshake DH-share comparison)
+- [ ] **ROBOT** (CVE-2017-13099) — placeholder *Not assessed* — **complex / active** (requires sending malformed RSA padding; out of scope of a passive scanner)
 
 ### SSLv2 (`internal/sslv2`)
 
