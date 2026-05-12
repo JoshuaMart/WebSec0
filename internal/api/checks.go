@@ -1,27 +1,17 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"github.com/JoshuaMart/websec0/catalog"
 )
 
-// checksPayload is the v1 placeholder catalog. Phase 10 will replace this
-// with an //go:embed-loaded JSON file containing every check the scanner
-// performs (TLS, headers, custom) along with its remediation snippet.
-type checksPayload struct {
-	Version string `json:"version"`
-	Checks  []any  `json:"checks"`
-}
-
-// checksHandler serves a stable JSON catalog of checks. The current payload
-// is a placeholder; the real catalog lands in Phase 10.
+// checksHandler serves the embedded checks catalog (SPEC §6.3). The bytes
+// are loaded once at handler construction; the JSON is byte-for-byte
+// identical to catalog/checks.json. Cache-Control allows downstream
+// caching since the catalog is immutable per build.
 func checksHandler() http.HandlerFunc {
-	payload := checksPayload{
-		Version: "1.0.0-draft",
-		Checks:  []any{},
-	}
-	body, _ := json.Marshal(payload)
-
+	body := catalog.Raw()
 	return func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=3600")

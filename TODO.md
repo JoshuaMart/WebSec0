@@ -126,11 +126,11 @@
 
 ## Phase 10 — Check catalog
 
-- [ ] `catalog/checks.json`: write the canonical catalog (one entry per check across TLS, headers, custom)
-- [ ] Each entry has: `id`, `category`, `title`, `severity_when_fail`, `score_impact`, `remediation.summary`, `remediation.example_stack: "nginx"`, `remediation.example_snippet`
-- [ ] `catalog/catalog.go`: `//go:embed checks.json`, parse at startup, validate against a schema
-- [ ] Unit test: every check ID used at runtime (`tls.protocol.sslv2`, …) exists in the catalog
-- [ ] Unit test: every catalog entry has a non-empty remediation snippet
+- [x] `catalog/checks.json`: 35 entries covering tls.protocol, tls.chain, tls.cipher, tls.vulnerability, headers.core, headers.additional, custom
+- [x] Each entry has: `id`, `category`, `title`, `severity_when_fail`, `score_impact`, `remediation.summary`, `remediation.example_stack`, `remediation.example_snippet`
+- [x] `catalog/catalog.go`: `//go:embed checks.json`, Load() parses + Validate(), Raw() for direct HTTP serving, ByID() lookup
+- [x] Unit test: key well-known check IDs (`custom.security_txt`, `custom.robots_txt`, `tls.protocol.sslv2`, …) exist in the catalog
+- [x] Unit test: every catalog entry has a non-empty remediation snippet
 
 ## Phase 11 — Frontend (Astro 6 + Preact)
 

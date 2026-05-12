@@ -1,0 +1,425 @@
+{
+  "version": "1.0.0",
+  "checks": [
+    {
+      "id": "tls.protocol.sslv2",
+      "category": "tls.protocol",
+      "title": "SSLv2 enabled",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at F",
+      "remediation": {
+        "summary": "Disable SSLv2. The protocol has been broken since 1995 and exposes DROWN.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "tls.protocol.sslv3",
+      "category": "tls.protocol",
+      "title": "SSLv3 enabled",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at F",
+      "remediation": {
+        "summary": "Disable SSLv3. The protocol is vulnerable to POODLE and has no remaining safe use case.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "tls.protocol.tls10",
+      "category": "tls.protocol",
+      "title": "TLS 1.0 enabled",
+      "severity_when_fail": "warn",
+      "score_impact": "Caps TLS grade at C",
+      "remediation": {
+        "summary": "Disable TLS 1.0. The protocol is deprecated (RFC 8996) and its CBC paths are exploitable via BEAST.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "tls.protocol.tls11",
+      "category": "tls.protocol",
+      "title": "TLS 1.1 enabled",
+      "severity_when_fail": "warn",
+      "score_impact": "Caps TLS grade at C",
+      "remediation": {
+        "summary": "Disable TLS 1.1. The protocol is deprecated (RFC 8996) and offers no security benefit over TLS 1.2.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "tls.protocol.tls12",
+      "category": "tls.protocol",
+      "title": "TLS 1.2 enabled",
+      "severity_when_fail": "info",
+      "score_impact": "Recommended for client compatibility",
+      "remediation": {
+        "summary": "Enable TLS 1.2 alongside TLS 1.3 so legacy clients can still connect.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "tls.protocol.tls13",
+      "category": "tls.protocol",
+      "title": "TLS 1.3 enabled",
+      "severity_when_fail": "info",
+      "score_impact": "Recommended; required for top grades",
+      "remediation": {
+        "summary": "Enable TLS 1.3 — modern client support is universal and the protocol is faster and safer.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "tls.chain.untrusted",
+      "category": "tls.chain",
+      "title": "Certificate chain does not validate",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at T (no trust)",
+      "remediation": {
+        "summary": "Use a certificate signed by a publicly-trusted CA. Free options: Let's Encrypt, ZeroSSL.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;\nssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;"
+      }
+    },
+    {
+      "id": "tls.chain.expired",
+      "category": "tls.chain",
+      "title": "Certificate expired",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at T (no trust)",
+      "remediation": {
+        "summary": "Renew the certificate. Configure automated renewal (certbot, acme.sh) so this never happens again.",
+        "example_stack": "shell",
+        "example_snippet": "certbot renew --quiet"
+      }
+    },
+    {
+      "id": "tls.chain.self_signed",
+      "category": "tls.chain",
+      "title": "Self-signed certificate",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at T (no trust)",
+      "remediation": {
+        "summary": "Replace the self-signed certificate with one issued by a publicly-trusted CA.",
+        "example_stack": "shell",
+        "example_snippet": "certbot certonly --webroot -w /var/www/html -d example.com"
+      }
+    },
+    {
+      "id": "tls.chain.hostname_mismatch",
+      "category": "tls.chain",
+      "title": "Certificate hostname mismatch",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at T (no trust)",
+      "remediation": {
+        "summary": "Issue a certificate whose SAN list includes every hostname this server answers under.",
+        "example_stack": "shell",
+        "example_snippet": "certbot certonly -d example.com -d www.example.com -d api.example.com"
+      }
+    },
+    {
+      "id": "tls.cipher.no_pfs",
+      "category": "tls.cipher",
+      "title": "No forward-secrecy cipher offered",
+      "severity_when_fail": "warn",
+      "score_impact": "Caps TLS grade at C",
+      "remediation": {
+        "summary": "Restrict the cipher list to ECDHE/DHE suites so every session uses an ephemeral key exchange.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;\nssl_prefer_server_ciphers off;"
+      }
+    },
+    {
+      "id": "tls.cipher.cbc",
+      "category": "tls.cipher",
+      "title": "Non-AEAD (CBC) cipher offered",
+      "severity_when_fail": "warn",
+      "score_impact": "Reduces cipher-strength sub-score",
+      "remediation": {
+        "summary": "Restrict to AEAD suites (GCM, ChaCha20-Poly1305). CBC modes are exposed to padding oracles and timing attacks.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;"
+      }
+    },
+    {
+      "id": "tls.cipher.3des",
+      "category": "tls.cipher",
+      "title": "3DES cipher offered",
+      "severity_when_fail": "warn",
+      "score_impact": "Caps TLS grade at C (Sweet32)",
+      "remediation": {
+        "summary": "Remove 3DES. Its 64-bit block size is exploitable via Sweet32 over long-lived connections.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!3DES:!DES;"
+      }
+    },
+    {
+      "id": "tls.cipher.rc4",
+      "category": "tls.cipher",
+      "title": "RC4 cipher offered",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at F",
+      "remediation": {
+        "summary": "Remove RC4. The cipher has a known biases-in-keystream attack and is deprecated (RFC 7465).",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!RC4;"
+      }
+    },
+    {
+      "id": "tls.cipher.anonymous",
+      "category": "tls.cipher",
+      "title": "Anonymous cipher offered",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at F",
+      "remediation": {
+        "summary": "Remove anonymous suites (DH_anon, ECDH_anon). They provide no authentication.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!aNULL:!eNULL;"
+      }
+    },
+    {
+      "id": "vuln.poodle",
+      "category": "tls.vulnerability",
+      "title": "POODLE (CVE-2014-3566)",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at F (via SSLv3 floor)",
+      "remediation": {
+        "summary": "Disable SSLv3 — POODLE exploits its CBC padding handling. There is no safe SSLv3 configuration.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "vuln.drown",
+      "category": "tls.vulnerability",
+      "title": "DROWN (CVE-2016-0800)",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at F (via SSLv2 floor)",
+      "remediation": {
+        "summary": "Disable SSLv2 on every service sharing this key, not only HTTPS. DROWN exploits SSLv2 to decrypt TLS sessions that reuse the certificate.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "vuln.beast",
+      "category": "tls.vulnerability",
+      "title": "BEAST (CVE-2011-3389)",
+      "severity_when_fail": "warn",
+      "score_impact": "Mitigated client-side in modern browsers; server-side fix is to disable TLS 1.0",
+      "remediation": {
+        "summary": "Disable TLS 1.0. BEAST targets its CBC IV reuse — TLS 1.1+ uses per-record IVs.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "vuln.sweet32",
+      "category": "tls.vulnerability",
+      "title": "Sweet32 (CVE-2016-2183)",
+      "severity_when_fail": "warn",
+      "score_impact": "Caps TLS grade at C (via 3DES floor)",
+      "remediation": {
+        "summary": "Remove 3DES — 64-bit block ciphers are vulnerable to birthday-bound attacks over long sessions.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!3DES;"
+      }
+    },
+    {
+      "id": "vuln.rc4",
+      "category": "tls.vulnerability",
+      "title": "RC4 weakness (CVE-2015-2808)",
+      "severity_when_fail": "critical",
+      "score_impact": "Caps TLS grade at F (via RC4 floor)",
+      "remediation": {
+        "summary": "Remove RC4 from the cipher list. The keystream biases let an attacker recover plaintext over many sessions.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!RC4;"
+      }
+    },
+    {
+      "id": "headers.strict_transport_security",
+      "category": "headers.core",
+      "title": "Strict-Transport-Security",
+      "severity_when_fail": "warn",
+      "score_impact": "20/100 of the Headers score; required for A+",
+      "remediation": {
+        "summary": "Emit HSTS with at least one year of max-age, includeSubDomains, and preload to be eligible for the HSTS preload list.",
+        "example_stack": "nginx",
+        "example_snippet": "add_header Strict-Transport-Security \"max-age=63072000; includeSubDomains; preload\" always;"
+      }
+    },
+    {
+      "id": "headers.content_security_policy",
+      "category": "headers.core",
+      "title": "Content-Security-Policy",
+      "severity_when_fail": "warn",
+      "score_impact": "25/100 of the Headers score (the largest single weight)",
+      "remediation": {
+        "summary": "Ship a strict CSP without unsafe-inline in script-src. Use nonces or hashes for inline scripts.",
+        "example_stack": "nginx",
+        "example_snippet": "add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';\" always;"
+      }
+    },
+    {
+      "id": "headers.x_frame_options",
+      "category": "headers.core",
+      "title": "X-Frame-Options",
+      "severity_when_fail": "warn",
+      "score_impact": "15/100 of the Headers score",
+      "remediation": {
+        "summary": "Send X-Frame-Options: DENY or rely on CSP's frame-ancestors directive (modern equivalent).",
+        "example_stack": "nginx",
+        "example_snippet": "add_header X-Frame-Options \"DENY\" always;"
+      }
+    },
+    {
+      "id": "headers.x_content_type_options",
+      "category": "headers.core",
+      "title": "X-Content-Type-Options",
+      "severity_when_fail": "warn",
+      "score_impact": "10/100 of the Headers score",
+      "remediation": {
+        "summary": "Send X-Content-Type-Options: nosniff to disable MIME-sniffing on browsers that still perform it.",
+        "example_stack": "nginx",
+        "example_snippet": "add_header X-Content-Type-Options \"nosniff\" always;"
+      }
+    },
+    {
+      "id": "headers.referrer_policy",
+      "category": "headers.core",
+      "title": "Referrer-Policy",
+      "severity_when_fail": "warn",
+      "score_impact": "15/100 of the Headers score",
+      "remediation": {
+        "summary": "Send a restrictive Referrer-Policy. \"strict-origin-when-cross-origin\" is a good default.",
+        "example_stack": "nginx",
+        "example_snippet": "add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;"
+      }
+    },
+    {
+      "id": "headers.permissions_policy",
+      "category": "headers.core",
+      "title": "Permissions-Policy",
+      "severity_when_fail": "warn",
+      "score_impact": "15/100 of the Headers score",
+      "remediation": {
+        "summary": "Send a Permissions-Policy that explicitly denies powerful APIs you do not use (geolocation, camera, microphone, payment).",
+        "example_stack": "nginx",
+        "example_snippet": "add_header Permissions-Policy \"geolocation=(), camera=(), microphone=(), payment=()\" always;"
+      }
+    },
+    {
+      "id": "headers.coop_same_origin",
+      "category": "headers.additional",
+      "title": "Cross-Origin-Opener-Policy",
+      "severity_when_fail": "info",
+      "score_impact": "+5 bonus when present with same-origin",
+      "remediation": {
+        "summary": "Send COOP: same-origin to isolate top-level browsing contexts and enable cross-origin-isolated features.",
+        "example_stack": "nginx",
+        "example_snippet": "add_header Cross-Origin-Opener-Policy \"same-origin\" always;"
+      }
+    },
+    {
+      "id": "headers.coep",
+      "category": "headers.additional",
+      "title": "Cross-Origin-Embedder-Policy",
+      "severity_when_fail": "info",
+      "score_impact": "+3 bonus when present",
+      "remediation": {
+        "summary": "Send COEP: require-corp to require explicit opt-in from cross-origin resources.",
+        "example_stack": "nginx",
+        "example_snippet": "add_header Cross-Origin-Embedder-Policy \"require-corp\" always;"
+      }
+    },
+    {
+      "id": "headers.corp",
+      "category": "headers.additional",
+      "title": "Cross-Origin-Resource-Policy",
+      "severity_when_fail": "info",
+      "score_impact": "+2 bonus when present",
+      "remediation": {
+        "summary": "Send CORP: same-origin (or same-site) so cross-origin contexts cannot read your resources.",
+        "example_stack": "nginx",
+        "example_snippet": "add_header Cross-Origin-Resource-Policy \"same-origin\" always;"
+      }
+    },
+    {
+      "id": "headers.server_version_leak",
+      "category": "headers.additional",
+      "title": "Server header leaks version",
+      "severity_when_fail": "warn",
+      "score_impact": "-5 malus",
+      "remediation": {
+        "summary": "Suppress the Server header (or replace its value) so attackers cannot fingerprint the running software.",
+        "example_stack": "nginx",
+        "example_snippet": "server_tokens off;\n# requires the headers-more module for full removal:\n# more_clear_headers Server;"
+      }
+    },
+    {
+      "id": "headers.cookie_no_secure",
+      "category": "headers.additional",
+      "title": "Set-Cookie without Secure",
+      "severity_when_fail": "critical",
+      "score_impact": "-5 per cookie (cap -10)",
+      "remediation": {
+        "summary": "Set the Secure attribute on every cookie served from HTTPS. Without it the cookie can be sent over plaintext HTTP.",
+        "example_stack": "nginx",
+        "example_snippet": "# Application-level fix — set Secure when building the cookie.\n# Express example:\n# res.cookie('session', token, { secure: true, httpOnly: true, sameSite: 'strict' });"
+      }
+    },
+    {
+      "id": "headers.cookie_no_samesite",
+      "category": "headers.additional",
+      "title": "Set-Cookie without SameSite",
+      "severity_when_fail": "warn",
+      "score_impact": "-3 per cookie",
+      "remediation": {
+        "summary": "Set SameSite=Lax or SameSite=Strict on every cookie to mitigate CSRF.",
+        "example_stack": "express",
+        "example_snippet": "res.cookie('session', token, { secure: true, httpOnly: true, sameSite: 'strict' });"
+      }
+    },
+    {
+      "id": "headers.acao_wildcard",
+      "category": "headers.additional",
+      "title": "Access-Control-Allow-Origin: *",
+      "severity_when_fail": "warn",
+      "score_impact": "-10 malus",
+      "remediation": {
+        "summary": "Replace the wildcard with an explicit allow-list, or remove the header on endpoints that do not need CORS.",
+        "example_stack": "nginx",
+        "example_snippet": "# Restrict CORS to a known origin:\nadd_header Access-Control-Allow-Origin \"https://app.example.com\" always;\nadd_header Vary \"Origin\" always;"
+      }
+    },
+    {
+      "id": "custom.security_txt",
+      "category": "custom",
+      "title": "security.txt",
+      "severity_when_fail": "info",
+      "score_impact": "Informational; does not affect any grade",
+      "remediation": {
+        "summary": "Publish a RFC 9116 security.txt at /.well-known/security.txt. Include Contact, Expires and, ideally, a PGP signature.",
+        "example_stack": "static-file",
+        "example_snippet": "Contact: mailto:security@example.com\nExpires: 2026-12-31T00:00:00Z\nPreferred-Languages: en, fr\nCanonical: https://example.com/.well-known/security.txt"
+      }
+    },
+    {
+      "id": "custom.robots_txt",
+      "category": "custom",
+      "title": "robots.txt",
+      "severity_when_fail": "info",
+      "score_impact": "Informational; suspicious disallows do not affect any grade but leak internal paths",
+      "remediation": {
+        "summary": "Avoid listing sensitive paths in Disallow — robots.txt is publicly readable and effectively advertises which paths to probe.",
+        "example_stack": "static-file",
+        "example_snippet": "User-agent: *\nDisallow: /search\nDisallow: /private/  # avoid; protect via auth instead\nSitemap: https://example.com/sitemap.xml"
+      }
+    }
+  ]
+}

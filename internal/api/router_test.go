@@ -177,16 +177,24 @@ func TestScanGet_HitReturnsCachedResult(t *testing.T) {
 	}
 }
 
-func TestChecks_ReturnsStubCatalog(t *testing.T) {
+func TestChecks_ServesEmbeddedCatalog(t *testing.T) {
 	srv := newTestServer(t, &fakeScanner{})
 	resp, _ := http.Get(srv.URL + "/api/v1/checks")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status: got %d, want 200", resp.StatusCode)
 	}
-	var p checksPayload
-	_ = json.NewDecoder(resp.Body).Decode(&p)
-	if p.Version == "" {
+	var payload struct {
+		Version string `json:"version"`
+		Checks  []struct {
+			ID string `json:"id"`
+		} `json:"checks"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&payload)
+	if payload.Version == "" {
 		t.Error("version should be set")
+	}
+	if len(payload.Checks) == 0 {
+		t.Error("checks list should be populated")
 	}
 }
 
