@@ -17,6 +17,11 @@ import (
 // partially-populated TLSReport. The Grade and Scores fields are left
 // zero — they are filled in by the scoring engine in Phase 6.
 func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
+	// Extract the chain first — the certificate is single-handshake and
+	// always informative, so we want it even when a downstream cipher
+	// enumeration runs into the scan timeout.
+	chain, trust, ocsp := extractChain(ctx, target)
+
 	protocols := enumerateProtocols(ctx, target)
 
 	var ciphers []scan.Cipher
@@ -35,7 +40,6 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 		}
 	}
 
-	chain, trust, ocsp := extractChain(ctx, target)
 	vulns := deriveWeaknesses(protocols, ciphers)
 
 	return &scan.TLSReport{

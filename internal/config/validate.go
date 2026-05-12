@@ -13,7 +13,8 @@ import (
 var validSchemes = []string{"https"}
 
 // maxScanTimeout caps the per-scan budget so operators cannot accidentally
-// (or maliciously) configure a multi-hour scan.
+// (or maliciously) configure a multi-hour scan. 5 min is well above the
+// 30 s default and accommodates manual-pace debugging.
 const maxScanTimeout = 5 * time.Minute
 
 // Validate returns the joined set of configuration errors, or nil if the

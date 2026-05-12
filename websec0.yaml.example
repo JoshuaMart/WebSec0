@@ -7,7 +7,7 @@ server:
   trusted_proxies: []           # CIDRs allowed to set X-Forwarded-For
 
 scan:
-  timeout: 15s                  # global per-scan budget
+  timeout: 30s                  # global per-scan budget
   parallel_probes: true
   follow_redirects: true        # for header probing
   max_redirects: 3

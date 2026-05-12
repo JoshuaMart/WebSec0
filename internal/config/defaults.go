@@ -12,7 +12,7 @@ func Defaults() *Config {
 			TrustedProxies: []string{},
 		},
 		Scan: Scan{
-			Timeout:         Duration(15 * time.Second),
+			Timeout:         Duration(30 * time.Second),
 			ParallelProbes:  true,
 			FollowRedirects: true,
 			MaxRedirects:    3,
