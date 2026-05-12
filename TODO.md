@@ -108,10 +108,10 @@
 
 ## Phase 8 — Scan orchestrator
 
-- [ ] `internal/scan/orchestrator.go`: parallel fan-out (TLS modern, SSLv2, SSLv3, headers, custom) under one budget (`scan.timeout`)
-- [ ] `internal/scan/orchestrator.go`: graceful per-probe timeout + partial-result reporting (one slow probe doesn't kill the scan)
-- [ ] `internal/scan/orchestrator.go`: assemble `ScanResult`, push to cache, return ID
-- [ ] Integration test: full scan against `httptest` server with crafted bad config (SSLv3 enabled, missing HSTS) → expected grades
+- [x] `internal/scanner/scanner.go`: parallel fan-out (TLS modern, SSLv2, SSLv3, headers, custom) under one budget (`scan.timeout`) — *moved out of `internal/scan/` to avoid import cycle with probes*
+- [x] `internal/scanner/scanner.go`: graceful per-probe timeout + partial-result reporting (one slow probe doesn't kill the scan)
+- [x] `internal/scanner/scanner.go`: assemble `ScanResult`, push to cache, return ID
+- [x] Integration test: full scan against `httptest` server with crafted bad config — expected grades
 
 ## Phase 9 — API layer
 
