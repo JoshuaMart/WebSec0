@@ -122,6 +122,22 @@ function statusSev(status: Status): Severity {
   return 'info';
 }
 
+function sevLabel(level: Severity): string {
+  if (level === 'good') return 'Pass';
+  if (level === 'warn') return 'Warn';
+  if (level === 'bad') return 'Fail';
+  return 'Info';
+}
+
+function SevPill({ level }: { level: Severity }) {
+  return (
+    <span class={`pill ${level}`}>
+      <span class="dot" />
+      {sevLabel(level)}
+    </span>
+  );
+}
+
 function fmtDate(iso: string): string {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -880,7 +896,7 @@ function CiphersTab({
                         </span>
                       )}
                     </td>
-                    <td style={{ width: 90 }}>
+                    <td style={{ width: 96 }}>
                       {c.pfs ? (
                         <span class="pill good">
                           <span class="dot" />
@@ -989,14 +1005,17 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
             <tbody>
               {Object.entries(headers.core).map(([name, r]) => (
                 <tr key={name}>
+                  <td style={{ width: 24, paddingRight: 0 }}>
+                    <span class={`sev ${statusSev(r.status)}`} />
+                  </td>
                   <td class="mono" style={{ whiteSpace: 'nowrap' }}>
                     {prettyHeader(name)}
                   </td>
                   <td class="mono muted" style={{ wordBreak: 'break-all' }}>
                     {r.present ? r.value || '(present)' : <em>missing</em>}
                   </td>
-                  <td style={{ textAlign: 'right', width: 72 }}>
-                    <span class={`sev ${statusSev(r.status)}`} />
+                  <td style={{ textAlign: 'right', width: 80 }}>
+                    <SevPill level={statusSev(r.status)} />
                   </td>
                 </tr>
               ))}
@@ -1076,14 +1095,17 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
 function AdditionalRow({ name, hr }: { name: string; hr?: HeaderResult }) {
   return (
     <tr>
+      <td style={{ width: 24, paddingRight: 0 }}>
+        {hr ? <span class={`sev ${statusSev(hr.status)}`} /> : <span class="muted">—</span>}
+      </td>
       <td class="mono" style={{ whiteSpace: 'nowrap' }}>
         {name}
       </td>
       <td class="mono muted" style={{ wordBreak: 'break-all' }}>
         {hr ? hr.value || '(present)' : <em>absent</em>}
       </td>
-      <td style={{ textAlign: 'right', width: 72 }}>
-        {hr ? <span class={`sev ${statusSev(hr.status)}`} /> : <span class="muted">—</span>}
+      <td style={{ textAlign: 'right', width: 80 }}>
+        {hr ? <SevPill level={statusSev(hr.status)} /> : <span class="muted">—</span>}
       </td>
     </tr>
   );
@@ -1125,12 +1147,7 @@ function VulnsTab({ vulns }: { vulns: Vuln[] }) {
         {visible.map((v) => (
           <div class="vuln-row" key={v.id}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span class={`sev ${v.level}`} />
-                <span class="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  {v.state}
-                </span>
-              </div>
+              <span class={`sev ${v.level}`} />
             </div>
             <div>
               <h4>{v.id}</h4>
@@ -1138,27 +1155,7 @@ function VulnsTab({ vulns }: { vulns: Vuln[] }) {
               {v.cve && <div class="cve">{v.cve}</div>}
             </div>
             <div>
-              {v.level === 'good' ? (
-                <span class="pill good">
-                  <span class="dot" />
-                  Pass
-                </span>
-              ) : v.level === 'bad' ? (
-                <span class="pill bad">
-                  <span class="dot" />
-                  Fail
-                </span>
-              ) : v.level === 'warn' ? (
-                <span class="pill warn">
-                  <span class="dot" />
-                  Warn
-                </span>
-              ) : (
-                <span class="pill info">
-                  <span class="dot" />
-                  Info
-                </span>
-              )}
+              <SevPill level={v.level} />
             </div>
           </div>
         ))}
@@ -1184,22 +1181,14 @@ function CustomTab({ findings }: { findings: CustomFinding[] }) {
         {findings.map((f) => (
           <div class="vuln-row" key={f.id}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span class={`sev ${statusSev(f.status)}`} />
-                <span class="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  {f.status}
-                </span>
-              </div>
+              <span class={`sev ${statusSev(f.status)}`} />
             </div>
             <div>
               <h4>{f.title}</h4>
               <DetailsBlock details={f.details} />
             </div>
             <div>
-              <span class={`pill ${statusSev(f.status)}`}>
-                <span class="dot" />
-                {f.status}
-              </span>
+              <SevPill level={statusSev(f.status)} />
             </div>
           </div>
         ))}
