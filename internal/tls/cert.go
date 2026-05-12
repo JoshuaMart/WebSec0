@@ -16,22 +16,22 @@ import (
 )
 
 // extractChain runs one permissive handshake to capture the peer
-// certificates, then validates the chain against the system root store.
-// Returns the mapped scan-shape chain, the trust outcome, and whether an
-// OCSP response was stapled. Failure to handshake yields an empty chain
-// and ChainTrustUnknown.
-func extractChain(ctx context.Context, target *safehttp.Target) ([]scan.Certificate, scan.ChainTrust, bool) {
+// certificates, validates the chain against the system root store and
+// parses the stapled OCSP response (if any). Failure to handshake yields
+// an empty chain and ChainTrustUnknown.
+func extractChain(ctx context.Context, target *safehttp.Target) ([]scan.Certificate, scan.ChainTrust, bool, scan.OCSPStatus) {
 	state, err := attemptHandshake(ctx, target, handshakeOpts{
 		MinVersion: stdtls.VersionTLS10,
 		MaxVersion: stdtls.VersionTLS13,
 	})
 	if err != nil {
-		return nil, scan.ChainTrustUnknown, false
+		return nil, scan.ChainTrustUnknown, false, scan.OCSPStatusUnknown
 	}
 	chain := mapChain(state.PeerCertificates)
 	trust := validateChain(state.PeerCertificates, target.Host)
 	stapled := len(state.OCSPResponse) > 0
-	return chain, trust, stapled
+	ocspStatus := parseOCSPStatus(state.OCSPResponse, state.PeerCertificates)
+	return chain, trust, stapled, ocspStatus
 }
 
 func mapChain(certs []*x509.Certificate) []scan.Certificate {

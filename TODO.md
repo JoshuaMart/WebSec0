@@ -57,15 +57,15 @@
 
 - [x] Enumerate offered protocols (TLS 1.0, 1.1, 1.2, 1.3) via successive handshakes with `MinVersion = MaxVersion = X`
 - [x] Enumerate cipher suites per protocol (loop through stdlib suite IDs, observe what the server picks)
-- [ ] Detect server preference vs client preference (compare server pick when client order is reversed) — **easy / passive** (2 handshakes, compare picked cipher)
+- [x] Detect server preference vs client preference — exposed as `tls.cipher_preference` (`server` / `client` / unknown), 2 TLS 1.2 handshakes with reversed orders
 - [x] Extract full certificate chain, parse leaf + intermediates (subject, SAN, issuer, validity, key alg, sig alg, serial, SHA-256)
 - [x] Verify chain against Mozilla root store — *system roots via `crypto/x509.SystemCertPool` only; CCADB fallback bundle not shipped*
 - [ ] Bundle a CCADB Mozilla root fallback so the binary validates chains identically across host OSes — **moderate / passive** (embed a curated PEM, fall back when system pool is empty)
 - [x] OCSP stapling presence detection (bool)
-- [ ] OCSP response parsing if stapled — **easy / passive** (`x/crypto/ocsp.ParseResponse` on `state.OCSPResponse`)
+- [x] OCSP response parsing if stapled — exposed as `tls.ocsp_status` (`good` / `revoked` / `unknown_to_responder` / `parse_error`), via `x/crypto/ocsp.ParseResponse`
 - [ ] SCT extraction from `state.SignedCertificateTimestamps` (count + log IDs) — **moderate / passive**
 - [ ] SCT extraction from the leaf cert's X.509 extension (OID 1.3.6.1.4.1.11129.2.4.2) — **complex / passive** (ASN.1 OctetString of SignedCertificateTimestampList)
-- [ ] Session ticket / session ID detection — **easy / passive** (second handshake → `state.DidResume`)
+- [x] Session ticket / session ID detection — exposed as `tls.session_resumption` (`supported` / `not_supported`), via two GETs sharing a ClientSessionCache
 - [ ] 0-RTT (early data) detection on TLS 1.3 — **complex / passive** (requires real early-data send, not directly exposed)
 - [x] Unit tests against `crypto/tls` test servers (`httptest.NewTLSServer` with crafted configs)
 

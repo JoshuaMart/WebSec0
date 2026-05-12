@@ -20,9 +20,11 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 	// Extract the chain first — the certificate is single-handshake and
 	// always informative, so we want it even when a downstream cipher
 	// enumeration runs into the scan timeout.
-	chain, trust, ocsp := extractChain(ctx, target)
+	chain, trust, stapled, ocspStatus := extractChain(ctx, target)
 
 	protocols := enumerateProtocols(ctx, target)
+	cipherPref := detectCipherPreference(ctx, target)
+	resumption := detectSessionResumption(ctx, target)
 
 	var ciphers []scan.Cipher
 	for _, p := range protocols {
@@ -44,10 +46,13 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 	// and headers probes complete — Heartbleed and Ticketbleed depend on
 	// the HTTP Server header that this package does not observe.
 	return &scan.TLSReport{
-		Protocols:        protocols,
-		Ciphers:          ciphers,
-		CertificateChain: chain,
-		ChainTrust:       trust,
-		OCSPStapling:     ocsp,
+		Protocols:         protocols,
+		Ciphers:           ciphers,
+		CipherPreference:  cipherPref,
+		CertificateChain:  chain,
+		ChainTrust:        trust,
+		OCSPStapling:      stapled,
+		OCSPStatus:        ocspStatus,
+		SessionResumption: resumption,
 	}
 }

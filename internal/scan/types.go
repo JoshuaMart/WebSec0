@@ -53,18 +53,55 @@ type Result struct {
 	Custom     []CustomFinding `json:"custom,omitempty"`
 }
 
-// TLSReport mirrors SPEC §6.4, with two extensions added during Phase 4:
-// ChainTrust (overall trust outcome) and OCSPStapling (presence only).
+// TLSReport mirrors SPEC §6.4, extended with: ChainTrust (overall trust
+// outcome), OCSPStapling + OCSPStatus (stapling presence and the parsed
+// status), CipherPreference (server vs client) and SessionResumption.
 type TLSReport struct {
-	Grade            Grade                  `json:"grade"`
-	Scores           TLSScores              `json:"scores"`
-	Protocols        []ProtocolSupport      `json:"protocols"`
-	Ciphers          []Cipher               `json:"ciphers"`
-	CertificateChain []Certificate          `json:"certificate_chain"`
-	ChainTrust       ChainTrust             `json:"chain_trust"`
-	OCSPStapling     bool                   `json:"ocsp_stapling"`
-	Vulnerabilities  []VulnerabilityFinding `json:"vulnerabilities"`
+	Grade             Grade                  `json:"grade"`
+	Scores            TLSScores              `json:"scores"`
+	Protocols         []ProtocolSupport      `json:"protocols"`
+	Ciphers           []Cipher               `json:"ciphers"`
+	CipherPreference  CipherPreference       `json:"cipher_preference,omitempty"`
+	CertificateChain  []Certificate          `json:"certificate_chain"`
+	ChainTrust        ChainTrust             `json:"chain_trust"`
+	OCSPStapling      bool                   `json:"ocsp_stapling"`
+	OCSPStatus        OCSPStatus             `json:"ocsp_status,omitempty"`
+	SessionResumption SessionResumption      `json:"session_resumption,omitempty"`
+	Vulnerabilities   []VulnerabilityFinding `json:"vulnerabilities"`
 }
+
+// CipherPreference reports whose preference drives the negotiated cipher.
+type CipherPreference string
+
+// CipherPreference values.
+const (
+	CipherPreferenceUnknown CipherPreference = ""
+	CipherPreferenceServer  CipherPreference = "server"
+	CipherPreferenceClient  CipherPreference = "client"
+)
+
+// OCSPStatus is the parsed status of an OCSP-stapled response.
+type OCSPStatus string
+
+// OCSPStatus values.
+const (
+	OCSPStatusUnknown    OCSPStatus = ""
+	OCSPStatusGood       OCSPStatus = "good"
+	OCSPStatusRevoked    OCSPStatus = "revoked"
+	OCSPStatusUnknownRev OCSPStatus = "unknown_to_responder"
+	OCSPStatusParseError OCSPStatus = "parse_error"
+)
+
+// SessionResumption reports whether a second TLS handshake resumes the
+// session ticket / session ID issued by the first.
+type SessionResumption string
+
+// SessionResumption values.
+const (
+	SessionResumptionUnknown      SessionResumption = ""
+	SessionResumptionSupported    SessionResumption = "supported"
+	SessionResumptionNotSupported SessionResumption = "not_supported"
+)
 
 // ChainTrust enumerates the outcome of certificate-chain validation.
 type ChainTrust string
