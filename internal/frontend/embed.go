@@ -19,8 +19,13 @@ import (
 //go:embed all:dist
 var rawFS embed.FS
 
-// indexPath is the SPA entry point; every unknown URL falls back to it.
-const indexPath = "index.html"
+// indexPath is the SPA entry point; every unknown URL not under /r/ falls
+// back to it. reportIndexPath is the dedicated shell for the report
+// pages so /r/<scan-id> mounts the Report island rather than the landing.
+const (
+	indexPath       = "index.html"
+	reportIndexPath = "r/index.html"
+)
 
 // FS returns the embedded filesystem rooted at the build output.
 func FS() (fs.FS, error) {
@@ -53,6 +58,9 @@ func Handler() (http.Handler, error) {
 	if err != nil {
 		return nil, ErrIndexMissing
 	}
+	// The report shell is optional — if it has not been built yet, /r/* paths
+	// fall back to the landing.
+	reportBytes, _ := fs.ReadFile(sub, reportIndexPath)
 	server := http.FileServer(http.FS(sub))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +71,11 @@ func Handler() (http.Handler, error) {
 		}
 		if info, err := fs.Stat(sub, rel); err == nil && !info.IsDir() {
 			server.ServeHTTP(w, r)
+			return
+		}
+		// SPA fallback — pick the right shell based on path prefix.
+		if reportBytes != nil && strings.HasPrefix(rel, "r/") {
+			writeIndex(w, reportBytes)
 			return
 		}
 		writeIndex(w, indexBytes)

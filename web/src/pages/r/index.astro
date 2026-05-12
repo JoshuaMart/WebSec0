@@ -1,0 +1,37 @@
+---
+import '../../styles/global.css';
+import Report from '../../islands/Report.tsx';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebSec0 — scan report</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <a href="/" class="brand" style="text-decoration:none;color:inherit"
+          ><span class="brand-dot">w</span>websec0</a
+        >
+        <div style="flex:1"></div>
+        <div class="nav-links">
+          <a href="/">New scan</a>
+          <a href="/api/v1/checks">Catalog</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="page">
+      <Report client:only="preact" />
+    </main>
+  </body>
+</html>
