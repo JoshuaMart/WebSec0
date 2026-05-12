@@ -115,14 +115,14 @@
 
 ## Phase 9 — API layer
 
-- [ ] `internal/api/router.go`: `chi` router, request ID middleware, structured logging (`slog`), panic recovery
-- [ ] `internal/api/scan.go`: `POST /api/v1/scan` handler — validate input via `safehttp`, run orchestrator, return scan
-- [ ] `internal/api/scan.go`: `GET /api/v1/scan/:id` handler — cache lookup, 404 on miss
-- [ ] `internal/api/checks.go`: `GET /api/v1/checks` handler — serves the embedded catalog JSON
-- [ ] `internal/api/errors.go`: typed error responses per SPEC §6.1 (`invalid_scheme`, `private_target_blocked`, `scan_timeout`, …)
-- [ ] `internal/api/ratelimit.go`: wire the `safehttp` rate limiter as middleware
-- [ ] `internal/api/cors.go`: CORS for the frontend (same-origin in production, configurable)
-- [ ] Integration tests: each error code is reachable, payload shape matches SPEC §6
+- [x] `internal/api/router.go`: `chi` router, request ID middleware, structured logging (`slog`), panic recovery
+- [x] `internal/api/scan.go`: `POST /api/v1/scan` handler — validate input via `safehttp`, run orchestrator, return scan
+- [x] `internal/api/scan.go`: `GET /api/v1/scan/:id` handler — cache lookup, 404 on miss
+- [x] `internal/api/checks.go`: `GET /api/v1/checks` handler — *stub catalog; real content lands in Phase 10*
+- [x] `internal/api/errors.go`: typed error responses per SPEC §6.1 (`invalid_scheme`, `private_target_blocked`, `scan_timeout`, …)
+- [x] Rate limiter wired as middleware (`internal/api/middleware.go`)
+- [ ] `internal/api/cors.go`: CORS for the frontend — *deferred; same-origin works out of the box with the embedded frontend*
+- [x] Integration tests: each error code is reachable, payload shape matches SPEC §6
 
 ## Phase 10 — Check catalog
 

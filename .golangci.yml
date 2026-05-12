@@ -52,6 +52,7 @@ linters:
           - errcheck
           - gosec
           - unparam
+          - bodyclose
 
 formatters:
   enable:
