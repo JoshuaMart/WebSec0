@@ -10,7 +10,7 @@ LDFLAGS     := -s -w \
 
 GO          ?= go
 GOLANGCI    ?= golangci-lint
-NPM         ?= npm
+PNPM        ?= pnpm
 
 .PHONY: help build test lint frontend frontend-install docker clean tidy
 
@@ -30,11 +30,11 @@ lint: ## Run golangci-lint
 tidy: ## go mod tidy
 	$(GO) mod tidy
 
-frontend-install: ## Install frontend dependencies
-	cd web && $(NPM) install
+frontend-install: ## Install frontend dependencies (pnpm)
+	cd web && $(PNPM) install
 
 frontend: ## Build the Astro frontend into web/dist
-	cd web && $(NPM) run build
+	cd web && $(PNPM) build
 
 docker: ## Build the distroless Docker image
 	docker build -t $(BINARY):$(VERSION) .

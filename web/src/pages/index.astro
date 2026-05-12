@@ -1,0 +1,52 @@
+---
+// Phase 11A placeholder. The real landing (form + recent scans strip)
+// lands in Phase 11B.
+const apiBase = '/api/v1';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebSec0</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body {
+        margin: 0;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        color: #0f141e;
+        background: #fafbfc;
+      }
+      main {
+        max-width: 640px;
+        margin: 80px auto;
+        padding: 0 24px;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-weight: 600;
+        font-size: 28px;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #eef1f4;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      ul { padding-left: 18px; }
+      li { margin: 4px 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WebSec0</h1>
+      <p>Frontend scaffold live. The full landing page lands in Phase 11B.</p>
+      <p>API base: <code>{apiBase}</code></p>
+      <ul>
+        <li><a href={`${apiBase}/checks`}><code>GET /api/v1/checks</code></a></li>
+        <li><a href={`${apiBase}/history`}><code>GET /api/v1/history</code></a></li>
+      </ul>
+    </main>
+  </body>
+</html>
