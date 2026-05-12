@@ -46,10 +46,10 @@
 
 ## Phase 3 — Cache & history
 
-- [ ] `internal/cache/lru.go`: TTL + max-entries LRU (consider `hashicorp/golang-lru/v2` or roll a thin one)
-- [ ] `internal/cache/id.go`: scan ID generation (content-addressable, e.g. truncated BLAKE3 of host+timestamp+nonce)
-- [ ] `internal/history`: opt-in public list, retention purge, in-memory only
-- [ ] Unit tests: TTL expiry, LRU eviction order, `list_in_history` toggle
+- [x] `internal/cache/lru.go`: TTL + max-entries LRU (consider `hashicorp/golang-lru/v2` or roll a thin one)
+- [x] `internal/cache/id.go`: scan ID generation (content-addressable, e.g. truncated BLAKE3 of host+timestamp+nonce)
+- [x] `internal/history`: opt-in public list, retention purge, in-memory only
+- [x] Unit tests: TTL expiry, LRU eviction order, `list_in_history` toggle
 
 ## Phase 4 — TLS probes
 
