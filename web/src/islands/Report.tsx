@@ -600,69 +600,378 @@ function Overview({ data }: { data: ScanResult }) {
   );
 }
 
-function deriveHighlights(data: ScanResult): { title: string; body: string; level: Severity }[] {
-  const out: { title: string; body: string; level: Severity }[] = [];
-  const tls = data.tls;
-  const protocols = new Set(tls?.protocols.filter((p) => p.offered).map((p) => p.name));
+type Highlight = { title: string; body: string; level: Severity };
 
-  if (protocols.has('TLS 1.3') && !protocols.has('TLS 1.0') && !protocols.has('TLS 1.1')) {
+function parseMaxAge(value: string): number | null {
+  const m = value.match(/max-age\s*=\s*"?(\d+)"?/i);
+  return m ? Number(m[1]) : null;
+}
+
+function protocolHighlights(tls?: TLSReport): Highlight[] {
+  if (!tls) return [];
+  const offered = new Set(tls.protocols.filter((p) => p.offered).map((p) => p.name));
+  const out: Highlight[] = [];
+  if (offered.has('TLS 1.3') && !offered.has('TLS 1.0') && !offered.has('TLS 1.1')) {
     out.push({
       title: 'TLS 1.3 with no legacy fallback',
       body: 'Only TLS 1.2 and 1.3 are offered. Legacy protocols (1.0/1.1) are disabled.',
       level: 'good',
     });
   }
-  if (protocols.has('SSL 2.0') || protocols.has('SSL 3.0')) {
+  if (offered.has('SSL 2.0') || offered.has('SSL 3.0')) {
     out.push({
       title: 'Obsolete SSL versions enabled',
       body: 'SSLv2 or SSLv3 is enabled — POODLE/DROWN are exploitable.',
       level: 'bad',
     });
   }
-  if (protocols.has('TLS 1.0') || protocols.has('TLS 1.1')) {
+  if (offered.has('TLS 1.0') || offered.has('TLS 1.1')) {
     out.push({
       title: 'Deprecated TLS versions enabled',
       body: 'TLS 1.0 or 1.1 is offered. Disable them to remove the C cap.',
       level: 'warn',
     });
   }
-  if (tls && tls.ciphers.length && tls.ciphers.every((c) => c.pfs)) {
+  return out;
+}
+
+function cipherHighlights(tls?: TLSReport): Highlight[] {
+  if (!tls || !tls.ciphers.length) return [];
+  const out: Highlight[] = [];
+  const ciphers = tls.ciphers;
+
+  if (ciphers.every((c) => c.pfs)) {
     out.push({
       title: 'All offered ciphers provide forward secrecy',
       body: 'Every cipher uses ECDHE/DHE — past sessions stay safe even if the private key is compromised.',
       level: 'good',
     });
-  }
-  if (tls?.ocsp_stapling && tls.ocsp_status === 'good') {
+  } else if (ciphers.some((c) => c.name.includes('_RSA_WITH_'))) {
     out.push({
-      title: 'OCSP stapling enabled with good status',
-      body: 'The server staples a fresh OCSP response — clients do not need to query the CA.',
+      title: 'Caveat: RSA key-exchange ciphers offered',
+      body: 'Some TLS 1.2 suites use static RSA — no forward secrecy. Drop the TLS_RSA_WITH_* suites.',
+      level: 'warn',
+    });
+  }
+
+  const cbc12 = ciphers.filter((c) => c.protocol === 'TLS 1.2' && !c.aead);
+  if (cbc12.length) {
+    out.push({
+      title: 'Caveat: legacy CBC modes on TLS 1.2',
+      body: `${cbc12.length} CBC-mode cipher${cbc12.length > 1 ? 's are' : ' is'} offered. Prefer AEAD (GCM/ChaCha20-Poly1305) and drop the rest.`,
+      level: 'warn',
+    });
+  }
+
+  const weak = ciphers.filter((c) => c.level === 'bad');
+  if (weak.length) {
+    const sample = weak.slice(0, 3).map((c) => c.name).join(', ');
+    const suffix = weak.length > 3 ? ` (+${weak.length - 3} more)` : '';
+    out.push({
+      title: `${weak.length} weak cipher${weak.length > 1 ? 's' : ''} offered`,
+      body: `${sample}${suffix} — RC4/3DES/anon/export-grade suites should be disabled.`,
+      level: 'bad',
+    });
+  }
+
+  if (tls.cipher_preference === 'server') {
+    out.push({
+      title: 'Server enforces cipher preference',
+      body: 'The server picks the cipher instead of trusting the client list — prevents downgrade games.',
       level: 'good',
     });
   }
-  if (tls?.chain_trust && tls.chain_trust !== 'trusted') {
+  return out;
+}
+
+function certificateHighlights(tls?: TLSReport): Highlight[] {
+  if (!tls) return [];
+  const leaf = tls.certificate_chain.find((c) => c.step === 0) ?? tls.certificate_chain[0];
+  if (!leaf) return [];
+  const out: Highlight[] = [];
+
+  if (leaf.days_left < 7) {
+    out.push({
+      title: 'Leaf certificate expires within a week',
+      body: `Renew immediately — only ${leaf.days_left} day${leaf.days_left === 1 ? '' : 's'} left.`,
+      level: 'bad',
+    });
+  } else if (leaf.days_left < 30) {
+    out.push({
+      title: 'Leaf certificate expires within 30 days',
+      body: `${leaf.days_left} days left — schedule renewal.`,
+      level: 'warn',
+    });
+  }
+
+  if (/ECDSA|Ed25519/i.test(leaf.key_alg)) {
+    out.push({
+      title: 'Modern key algorithm',
+      body: `Leaf certificate uses ${leaf.key_alg} — smaller, faster handshakes than RSA.`,
+      level: 'good',
+    });
+  }
+  return out;
+}
+
+function trustAndOcspHighlights(tls?: TLSReport): Highlight[] {
+  if (!tls) return [];
+  const out: Highlight[] = [];
+
+  if (tls.chain_trust && tls.chain_trust !== 'trusted') {
     out.push({
       title: 'Certificate chain does not validate',
       body: `Chain trust: ${tls.chain_trust.replace(/_/g, ' ')}. The grade is capped at T.`,
       level: 'bad',
     });
   }
-  const vulnsBad = (tls?.vulnerabilities ?? []).filter((v) => v.level === 'bad');
-  if (vulnsBad.length) {
+
+  if (tls.ocsp_stapling && tls.ocsp_status === 'good') {
     out.push({
-      title: `${vulnsBad.length} active vulnerability ${vulnsBad.length > 1 ? 'findings' : 'finding'}`,
-      body: vulnsBad.map((v) => v.id).join(', '),
+      title: 'OCSP stapling enabled with good status',
+      body: 'The server staples a fresh OCSP response — clients do not need to query the CA.',
+      level: 'good',
+    });
+  } else if (tls.ocsp_stapling && tls.ocsp_status === 'revoked') {
+    out.push({
+      title: 'Stapled OCSP reports the certificate as revoked',
+      body: 'Browsers will reject this certificate. Reissue and redeploy immediately.',
+      level: 'bad',
+    });
+  } else if (tls.ocsp_stapling === false) {
+    out.push({
+      title: 'OCSP stapling not enabled',
+      body: 'Clients fall back to querying the CA themselves — adds a privacy and latency cost.',
+      level: 'info',
+    });
+  }
+
+  if (tls.session_resumption === 'supported') {
+    out.push({
+      title: 'Session resumption supported',
+      body: 'Repeat clients skip a full handshake — fewer round-trips and CPU.',
+      level: 'good',
+    });
+  }
+  return out;
+}
+
+function vulnHighlights(tls?: TLSReport): Highlight[] {
+  if (!tls) return [];
+  const out: Highlight[] = [];
+  const bad = tls.vulnerabilities.filter((v) => v.level === 'bad');
+  const warn = tls.vulnerabilities.filter((v) => v.level === 'warn');
+  if (bad.length) {
+    out.push({
+      title: `${bad.length} active vulnerability ${bad.length > 1 ? 'findings' : 'finding'}`,
+      body: bad.map((v) => v.id).join(', '),
       level: 'bad',
     });
   }
-  if (out.length === 0) {
+  if (warn.length) {
     out.push({
+      title: `${warn.length} vulnerability caveat${warn.length > 1 ? 's' : ''}`,
+      body: warn.map((v) => v.id).join(', '),
+      level: 'warn',
+    });
+  }
+  return out;
+}
+
+function headerHighlights(headers?: HeadersReport): Highlight[] {
+  if (!headers) return [];
+  const core = headers.core;
+  const out: Highlight[] = [];
+
+  const hsts = core['strict-transport-security'];
+  if (!hsts?.present) {
+    out.push({
+      title: 'HSTS not set',
+      body: 'No Strict-Transport-Security header — first visit can still be downgraded to HTTP.',
+      level: 'bad',
+    });
+  } else {
+    const value = hsts.value ?? '';
+    const age = parseMaxAge(value);
+    const subs = /includeSubDomains/i.test(value);
+    const preload = /preload/i.test(value);
+    const sixMonths = 60 * 60 * 24 * 180;
+    const oneYear = 60 * 60 * 24 * 365;
+    if (age === null || age < sixMonths) {
+      out.push({
+        title: 'HSTS max-age too short',
+        body: `max-age=${age ?? '0'} — set at least 6 months (15768000) for any real protection.`,
+        level: 'warn',
+      });
+    } else if (age >= oneYear && subs && preload) {
+      const years = Math.round((age / (60 * 60 * 24 * 365)) * 10) / 10;
+      out.push({
+        title: `HSTS preloaded with ${years}-year max-age`,
+        body: 'Strict-Transport-Security includes includeSubDomains and preload; eligible for the HSTS Preload List.',
+        level: 'good',
+      });
+    } else if (!subs) {
+      out.push({
+        title: 'HSTS missing includeSubDomains',
+        body: 'Subdomains can still negotiate plain HTTP. Add includeSubDomains, then preload.',
+        level: 'info',
+      });
+    }
+  }
+
+  const csp = core['content-security-policy'];
+  if (!csp?.present) {
+    out.push({
+      title: 'No Content-Security-Policy',
+      body: 'CSP is missing — clients have no inline-script or origin restrictions.',
+      level: 'warn',
+    });
+  } else {
+    const v = csp.value ?? '';
+    if (/'unsafe-inline'|'unsafe-eval'/i.test(v) || /(script-src|default-src)[^;]*\*\b/i.test(v)) {
+      out.push({
+        title: "CSP allows 'unsafe-inline' or wildcard sources",
+        body: 'A permissive CSP barely raises the bar against XSS. Tighten script-src to nonces or hashes.',
+        level: 'warn',
+      });
+    } else {
+      out.push({
+        title: 'Content-Security-Policy in place',
+        body: 'CSP is set without unsafe-inline or wildcard script sources.',
+        level: 'good',
+      });
+    }
+  }
+
+  const xfo = core['x-frame-options'];
+  const cspV = csp?.value ?? '';
+  if (!xfo?.present && !/frame-ancestors/i.test(cspV)) {
+    out.push({
+      title: 'Clickjacking defence missing',
+      body: 'No X-Frame-Options and no CSP frame-ancestors — the page can be framed.',
+      level: 'warn',
+    });
+  }
+
+  const xcto = core['x-content-type-options'];
+  if (!xcto?.present || !/nosniff/i.test(xcto.value ?? '')) {
+    out.push({
+      title: 'X-Content-Type-Options missing nosniff',
+      body: 'Browsers may MIME-sniff responses, enabling some XSS vectors.',
+      level: 'warn',
+    });
+  }
+
+  if (!core['referrer-policy']?.present) {
+    out.push({
+      title: 'No Referrer-Policy',
+      body: 'Referrer leakage falls back to the browser default — set no-referrer or strict-origin.',
+      level: 'info',
+    });
+  }
+
+  if (!core['permissions-policy']?.present) {
+    out.push({
+      title: 'No Permissions-Policy',
+      body: 'Powerful APIs (camera, geolocation, etc.) are not scoped — at least opt out of what you do not use.',
+      level: 'info',
+    });
+  }
+
+  if (headers.additional['cross-origin-opener-policy']?.present) {
+    out.push({
+      title: 'Cross-Origin-Opener-Policy set',
+      body: 'COOP isolates browsing contexts — blocks Spectre-style cross-origin leaks.',
+      level: 'good',
+    });
+  }
+
+  const server = headers.additional.server;
+  if (server?.present && /\d/.test(server.value ?? '')) {
+    out.push({
+      title: 'Server header discloses version',
+      body: `Server: ${server.value}. Strip the version to avoid handing attackers a fingerprint.`,
+      level: 'warn',
+    });
+  }
+
+  return out;
+}
+
+function cookieHighlights(headers?: HeadersReport): Highlight[] {
+  if (!headers) return [];
+  const cookies = headers.additional['set-cookie'] ?? [];
+  const weak = cookies.filter((c) => !c.secure || !c.httponly);
+  if (!weak.length) return [];
+  const names = weak.slice(0, 2).map((c) => c.name).join(', ');
+  const suffix = weak.length > 2 ? ` (+${weak.length - 2} more)` : '';
+  return [
+    {
+      title: `${weak.length} cookie${weak.length > 1 ? 's' : ''} missing Secure/HttpOnly`,
+      body: `${names}${suffix} — add the Secure and HttpOnly flags on every session cookie.`,
+      level: 'warn',
+    },
+  ];
+}
+
+function customHighlights(custom?: CustomFinding[]): Highlight[] {
+  if (!custom?.length) return [];
+  const out: Highlight[] = [];
+  for (const f of custom) {
+    if (f.id === 'custom.security_txt') {
+      if (f.status === 'fail') {
+        out.push({
+          title: 'security.txt missing or unreachable',
+          body: 'No usable /.well-known/security.txt — publish one per RFC 9116 so researchers can reach you.',
+          level: 'warn',
+        });
+      } else if (f.status === 'warn') {
+        out.push({
+          title: 'security.txt is not fully RFC 9116-compliant',
+          body: 'The file is reachable but missing required fields (Expires, Contact) or has expired.',
+          level: 'info',
+        });
+      }
+    } else if (f.id === 'custom.robots_txt') {
+      const susp = Array.isArray(f.details?.suspicious_disallow)
+        ? (f.details!.suspicious_disallow as string[])
+        : [];
+      if (susp.length) {
+        const sample = susp.slice(0, 2).join(', ');
+        const suffix = susp.length > 2 ? ` (+${susp.length - 2} more)` : '';
+        out.push({
+          title: `robots.txt discloses ${susp.length} suspicious path${susp.length > 1 ? 's' : ''}`,
+          body: `${sample}${suffix} — Disallow entries reveal admin/internal paths to anyone reading robots.txt.`,
+          level: 'warn',
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function deriveHighlights(data: ScanResult): Highlight[] {
+  const all = [
+    ...protocolHighlights(data.tls),
+    ...cipherHighlights(data.tls),
+    ...certificateHighlights(data.tls),
+    ...trustAndOcspHighlights(data.tls),
+    ...vulnHighlights(data.tls),
+    ...headerHighlights(data.headers),
+    ...cookieHighlights(data.headers),
+    ...customHighlights(data.custom),
+  ];
+  const order: Record<Severity, number> = { bad: 0, warn: 1, info: 2, good: 3 };
+  all.sort((a, b) => order[a.level] - order[b.level]);
+  const top = all.slice(0, 6);
+  if (top.length === 0) {
+    top.push({
       title: 'No notable findings yet',
       body: 'The scan completed without highlights to surface.',
       level: 'info',
     });
   }
-  return out;
+  return top;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
