@@ -109,7 +109,13 @@ func parseSecurityTxt(body string) securityTxtParsed {
 				out.Contacts = append(out.Contacts, val)
 			}
 		case "expires":
-			if t, err := time.Parse(time.RFC3339, val); err == nil {
+			// RFC 3339 §5.6 explicitly allows lowercase 't' and 'z' (and
+			// fractional seconds), but time.RFC3339 is case-sensitive and
+			// rejects them. Normalize case and fall back to RFC3339Nano.
+			norm := strings.ToUpper(val)
+			if t, err := time.Parse(time.RFC3339, norm); err == nil {
+				out.Expires = t
+			} else if t, err := time.Parse(time.RFC3339Nano, norm); err == nil {
 				out.Expires = t
 			}
 		}

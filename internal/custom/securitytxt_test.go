@@ -63,6 +63,27 @@ Expires: 2030-01-01T00:00:00Z
 	}
 }
 
+func TestParseSecurityTxt_ExpiresLowercaseZ(t *testing.T) {
+	// RFC 3339 §5.6 allows lowercase 't' and 'z'; github.com's file
+	// uses `Expires: 2026-06-11T19:09:02z`.
+	body := "Contact: mailto:x@example.com\nExpires: 2026-06-11T19:09:02z\n"
+	got := parseSecurityTxt(body)
+	if got.Expires.IsZero() {
+		t.Fatal("Expires with lowercase z should parse, got zero")
+	}
+	if got.Expires.Year() != 2026 || got.Expires.Month() != 6 || got.Expires.Day() != 11 {
+		t.Errorf("expires: got %s, want 2026-06-11", got.Expires)
+	}
+}
+
+func TestParseSecurityTxt_ExpiresFractional(t *testing.T) {
+	body := "Contact: mailto:x@example.com\nExpires: 2030-01-01T00:00:00.500Z\n"
+	got := parseSecurityTxt(body)
+	if got.Expires.Year() != 2030 {
+		t.Errorf("fractional Expires should parse, got %s", got.Expires)
+	}
+}
+
 func TestParseSecurityTxt_MalformedExpires(t *testing.T) {
 	body := `Contact: mailto:x@example.com
 Expires: not-a-date
