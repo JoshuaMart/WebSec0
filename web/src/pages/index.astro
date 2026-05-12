@@ -8,6 +8,8 @@ import '../styles/global.css';
     <meta charset="utf-8" />
     <title>WebSec0 — security configuration scanner</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -18,7 +20,13 @@ import '../styles/global.css';
   <body>
     <nav class="nav">
       <div class="nav-inner">
-        <div class="brand"><span class="brand-dot">w</span>websec0</div>
+        <div class="brand">
+          <svg class="brand-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--good)" stroke-width="1.5" />
+            <circle cx="8" cy="8" r="3.5" fill="var(--ink)" />
+          </svg>
+          websec0
+        </div>
         <div style="flex:1"></div>
         <div class="nav-links">
           <a href="/api/v1/checks">Checks</a>
@@ -188,7 +196,10 @@ import '../styles/global.css';
 
     <footer class="landing-footer">
       <div class="left">
-        <span class="brand-dot">w</span>
+        <svg class="brand-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--good)" stroke-width="1.5" />
+          <circle cx="8" cy="8" r="3.5" fill="var(--ink)" />
+        </svg>
         websec0 · MIT
       </div>
       <nav>

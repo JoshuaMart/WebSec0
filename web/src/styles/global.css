@@ -81,18 +81,7 @@ button { font-family: inherit; cursor: pointer; }
   letter-spacing: -0.01em; font-size: 15px;
   display: flex; align-items: center; gap: 8px;
 }
-.brand-dot {
-  width: 16px; height: 16px; border-radius: 4px;
-  background: var(--ink);
-  display: inline-grid; place-items: center;
-  color: white; font-size: 9px; font-weight: 700;
-  position: relative;
-}
-.brand-dot::after {
-  content: ""; position: absolute; inset: 3px;
-  border: 1.5px solid white; border-radius: 1px;
-  border-top: 0; border-left: 0;
-}
+.brand-mark { flex-shrink: 0; display: block; }
 .nav-search {
   flex: 1; max-width: 460px;
   display: flex; align-items: center; gap: 8px;

@@ -9,6 +9,8 @@ import Report from '../../islands/Report.tsx';
     <meta charset="utf-8" />
     <title>WebSec0 — scan report</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,9 +21,13 @@ import Report from '../../islands/Report.tsx';
   <body>
     <nav class="nav">
       <div class="nav-inner">
-        <a href="/" class="brand" style="text-decoration:none;color:inherit"
-          ><span class="brand-dot">w</span>websec0</a
-        >
+        <a href="/" class="brand" style="text-decoration:none;color:inherit">
+          <svg class="brand-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--good)" stroke-width="1.5" />
+            <circle cx="8" cy="8" r="3.5" fill="var(--ink)" />
+          </svg>
+          websec0
+        </a>
         <div style="flex:1"></div>
         <div class="nav-links">
           <a href="/">New scan</a>
