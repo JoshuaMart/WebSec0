@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/JoshuaMart/websec0/internal/config"
+	"github.com/JoshuaMart/websec0/internal/history"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 	"github.com/JoshuaMart/websec0/internal/scan"
 	"github.com/JoshuaMart/websec0/internal/scanner"
@@ -21,8 +22,9 @@ import (
 // fakeScanner is the in-memory ScanService used by API tests. It avoids
 // the real DNS + probe pipeline entirely.
 type fakeScanner struct {
-	runFunc func(context.Context, scanner.Request) (*scan.Result, error)
-	store   map[string]*scan.Result
+	runFunc     func(context.Context, scanner.Request) (*scan.Result, error)
+	store       map[string]*scan.Result
+	historyList []history.Entry
 }
 
 func (f *fakeScanner) Run(ctx context.Context, req scanner.Request) (*scan.Result, error) {
@@ -35,6 +37,13 @@ func (f *fakeScanner) Run(ctx context.Context, req scanner.Request) (*scan.Resul
 func (f *fakeScanner) Get(id string) (*scan.Result, bool) {
 	r, ok := f.store[id]
 	return r, ok
+}
+
+func (f *fakeScanner) History(limit int) []history.Entry {
+	if limit > 0 && limit < len(f.historyList) {
+		return f.historyList[:limit]
+	}
+	return f.historyList
 }
 
 func newTestServer(t *testing.T, s ScanService) *httptest.Server {

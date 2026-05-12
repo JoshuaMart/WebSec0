@@ -18,6 +18,7 @@ import (
 	"github.com/JoshuaMart/websec0/internal/config"
 	"github.com/JoshuaMart/websec0/internal/custom"
 	"github.com/JoshuaMart/websec0/internal/headers"
+	"github.com/JoshuaMart/websec0/internal/history"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 	"github.com/JoshuaMart/websec0/internal/scan"
 	"github.com/JoshuaMart/websec0/internal/scoring"
@@ -33,15 +34,22 @@ const rawProbeTimeout = 5 * time.Second
 type Scanner struct {
 	cfg      *config.Config
 	cache    *cache.Cache[*scan.Result]
+	history  *history.History
 	resolver *safehttp.Resolver
 }
 
 // New returns a Scanner wired with the given config. The cache is sized
-// from cfg.Cache, the resolver uses cfg.Security.
+// from cfg.Cache, the resolver uses cfg.Security, and a history is created
+// when cfg.History.Enabled.
 func New(cfg *config.Config) *Scanner {
+	var hist *history.History
+	if cfg.History.Enabled {
+		hist = history.New(cfg.History.Retention.Std())
+	}
 	return &Scanner{
-		cfg:   cfg,
-		cache: cache.New[*scan.Result](cfg.Cache.MaxEntries, cfg.Cache.TTL.Std()),
+		cfg:     cfg,
+		cache:   cache.New[*scan.Result](cfg.Cache.MaxEntries, cfg.Cache.TTL.Std()),
+		history: hist,
 		resolver: &safehttp.Resolver{
 			Policy: safehttp.Policy{
 				AllowPrivate: cfg.Security.AllowPrivateTargets,
@@ -102,6 +110,9 @@ func (s *Scanner) Run(ctx context.Context, req Request) (*scan.Result, error) {
 	result.DurationMs = time.Since(start).Milliseconds()
 
 	s.cache.Put(result.ID, result)
+	if req.ListInHistory && s.history != nil {
+		s.history.Add(summarise(result))
+	}
 	return result, nil
 }
 
@@ -109,6 +120,31 @@ func (s *Scanner) Run(ctx context.Context, req Request) (*scan.Result, error) {
 // if the ID is unknown or has expired.
 func (s *Scanner) Get(id string) (*scan.Result, bool) {
 	return s.cache.Get(id)
+}
+
+// History returns up to limit recent opt-in scan summaries. When the
+// history feature is disabled (cfg.History.Enabled = false), the returned
+// slice is empty.
+func (s *Scanner) History(limit int) []history.Entry {
+	if s.history == nil {
+		return nil
+	}
+	return s.history.List(limit)
+}
+
+func summarise(r *scan.Result) history.Entry {
+	e := history.Entry{
+		ID:        r.ID,
+		Host:      r.Host,
+		ScannedAt: r.ScannedAt,
+	}
+	if r.TLS != nil {
+		e.TLSGrade = r.TLS.Grade
+	}
+	if r.Headers != nil {
+		e.HeaderGrade = r.Headers.Grade
+	}
+	return e
 }
 
 // runProbes fans out the probes against a resolved Target. Each probe runs

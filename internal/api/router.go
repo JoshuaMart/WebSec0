@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/JoshuaMart/websec0/internal/config"
+	"github.com/JoshuaMart/websec0/internal/history"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 	"github.com/JoshuaMart/websec0/internal/scan"
 	"github.com/JoshuaMart/websec0/internal/scanner"
@@ -23,6 +24,7 @@ import (
 type ScanService interface {
 	Run(ctx context.Context, req scanner.Request) (*scan.Result, error)
 	Get(id string) (*scan.Result, bool)
+	History(limit int) []history.Entry
 }
 
 // Deps groups the runtime dependencies used to build a router.
@@ -52,6 +54,7 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(perIPRateLimit(ipLimiter)).Post("/scan", scanPostHandler(d.Scanner, hostLimiter))
 		r.Get("/scan/{id}", scanGetHandler(d.Scanner))
 		r.Get("/checks", checksHandler())
+		r.Get("/history", historyHandler(d.Scanner))
 	})
 
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {

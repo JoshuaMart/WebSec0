@@ -17,6 +17,19 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
+// stubResultWithGrades is a tiny factory used by tests in the package that
+// need a populated *scan.Result without running probes.
+func stubResultWithGrades(id, host, tlsGrade, headersGrade string) *scan.Result {
+	r := &scan.Result{ID: id, Host: host, ScannedAt: time.Now()}
+	if tlsGrade != "" {
+		r.TLS = &scan.TLSReport{Grade: scan.Grade(tlsGrade)}
+	}
+	if headersGrade != "" {
+		r.Headers = &scan.HeadersReport{Grade: scan.Grade(headersGrade)}
+	}
+	return r
+}
+
 // targetFor builds a Target pinned to the httptest server's loopback
 // address. The integration tests exercise runProbes directly because the
 // production resolver blocks loopback regardless of config (see SPEC §8.3).
