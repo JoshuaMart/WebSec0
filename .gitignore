@@ -18,6 +18,12 @@ coverage.html
 /web/.astro/
 /web/.cache/
 
+# Embedded frontend bundle — its contents are produced by `make frontend`
+# and copied here, except for .keep which is committed so //go:embed has
+# at least one file on a fresh clone.
+/internal/frontend/dist/*
+!/internal/frontend/dist/.keep
+
 # Logs
 *.log
 

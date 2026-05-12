@@ -161,7 +161,7 @@
 - [ ] Implement copy-button on every remediation snippet
 - [ ] Loading / error states for the report island
 - [x] Astro build pipeline → `web/dist/` (`make frontend`, ~36 KB output)
-- [ ] `internal/frontend/embed.go`: `//go:embed dist` of a copy populated from `web/dist`, served at `/`, with `index.html` SPA fallback for `/r/<id>`
+- [x] `internal/frontend/embed.go`: `//go:embed all:dist` populated by `make frontend` rsync from `web/dist`, served at `/*` with `index.html` SPA fallback (direct write of bytes to avoid Go's `/index.html → ./` redirect loop)
 - [x] Production build size budget: bundle ≤ 80 KB gzip — currently 36 KB total, well under (CI check still TBD)
 
 ## Phase 12 — AI artefacts

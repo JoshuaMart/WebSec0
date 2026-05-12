@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/JoshuaMart/websec0/internal/config"
+	"github.com/JoshuaMart/websec0/internal/frontend"
 	"github.com/JoshuaMart/websec0/internal/history"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 	"github.com/JoshuaMart/websec0/internal/scan"
@@ -57,8 +58,32 @@ func NewRouter(d Deps) *chi.Mux {
 		r.Get("/history", historyHandler(d.Scanner))
 	})
 
-	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusNotFound, "not_found", "route does not exist")
+	// Catch unmatched /api/* paths with a typed JSON 404 so a typo never
+	// silently falls through to the frontend SPA.
+	r.HandleFunc("/api/*", func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusNotFound, "not_found", "no such API route")
 	})
+
+	// Mount the embedded frontend at /*. A missing build is non-fatal —
+	// the binary still serves the API while logging a warning.
+	mountFrontend(r, d.Config.Frontend.Enabled, logger)
 	return r
+}
+
+func mountFrontend(r *chi.Mux, enabled bool, logger *slog.Logger) {
+	if !enabled {
+		r.NotFound(noFrontendNotFound)
+		return
+	}
+	h, err := frontend.Handler()
+	if err != nil {
+		logger.Warn("frontend disabled", slog.String("reason", err.Error()))
+		r.NotFound(noFrontendNotFound)
+		return
+	}
+	r.Handle("/*", h)
+}
+
+func noFrontendNotFound(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotFound, "not_found", "route does not exist")
 }

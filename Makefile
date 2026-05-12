@@ -33,11 +33,13 @@ tidy: ## go mod tidy
 frontend-install: ## Install frontend dependencies (pnpm)
 	cd web && $(PNPM) install
 
-frontend: ## Build the Astro frontend into web/dist
+frontend: ## Build the Astro frontend and sync it into internal/frontend/dist
 	cd web && $(PNPM) build
+	rsync -a --delete --exclude='.keep' web/dist/ internal/frontend/dist/
 
 docker: ## Build the distroless Docker image
 	docker build -t $(BINARY):$(VERSION) .
 
-clean: ## Remove build artefacts
+clean: ## Remove build artefacts (keeps internal/frontend/dist/.keep)
 	rm -rf dist web/dist coverage.out coverage.html
+	find internal/frontend/dist -mindepth 1 ! -name '.keep' -exec rm -rf {} + 2>/dev/null || true
