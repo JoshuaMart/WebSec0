@@ -1185,7 +1185,7 @@ function CustomTab({ findings }: { findings: CustomFinding[] }) {
             </div>
             <div>
               <h4>{f.title}</h4>
-              <DetailsBlock details={f.details} />
+              <CustomFactStrip finding={f} />
             </div>
             <div>
               <SevPill level={statusSev(f.status)} />
@@ -1197,15 +1197,116 @@ function CustomTab({ findings }: { findings: CustomFinding[] }) {
   );
 }
 
-function DetailsBlock({ details }: { details?: Record<string, unknown> }) {
-  if (!details) return null;
+type FactLevel = Severity | 'neutral';
+type Fact = { label: string; level: FactLevel };
+
+const ZERO_TIME = '0001-01-01T00:00:00Z';
+
+function prettyKey(k: string): string {
+  const s = k.replace(/_/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function fmtExpires(iso: string): Fact | null {
+  if (!iso || iso === ZERO_TIME) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const date = iso.slice(0, 10);
+  return { label: `Expires ${date}`, level: t > Date.now() ? 'good' : 'warn' };
+}
+
+function factsForFinding(f: CustomFinding): Fact[] {
+  const d = f.details ?? {};
+  const facts: Fact[] = [];
+
+  if (f.id === 'custom.security_txt') {
+    if (typeof d.rfc9116_compliant === 'boolean') {
+      facts.push(
+        d.rfc9116_compliant
+          ? { label: '✓ RFC 9116', level: 'good' }
+          : { label: '✗ RFC 9116', level: 'bad' },
+      );
+    }
+    if (typeof d.signed === 'boolean') {
+      facts.push(
+        d.signed ? { label: '✓ Signed', level: 'good' } : { label: '✗ Signed', level: 'bad' },
+      );
+    }
+    if (typeof d.contact_count === 'number') {
+      const n = d.contact_count;
+      facts.push({
+        label: `${n} contact${n === 1 ? '' : 's'}`,
+        level: n > 0 ? 'good' : 'bad',
+      });
+    }
+    const exp = typeof d.expires === 'string' ? fmtExpires(d.expires) : null;
+    if (exp) facts.push(exp);
+    if (typeof d.note === 'string' && d.note) {
+      facts.push({ label: `⚠ ${d.note}`, level: 'warn' });
+    }
+    return facts;
+  }
+
+  if (f.id === 'custom.robots_txt') {
+    if (typeof d.parseable === 'boolean') {
+      facts.push(
+        d.parseable
+          ? { label: '✓ Parseable', level: 'good' }
+          : { label: '✗ Parseable', level: 'bad' },
+      );
+    }
+    if (typeof d.size_bytes === 'number') {
+      facts.push({ label: `${d.size_bytes} bytes`, level: 'neutral' });
+    }
+    if (Array.isArray(d.suspicious_disallow) && d.suspicious_disallow.length > 0) {
+      const items = d.suspicious_disallow as string[];
+      const head = items.slice(0, 3).join(', ');
+      const suffix = items.length > 3 ? ` +${items.length - 3} more` : '';
+      facts.push({ label: `⚠ Suspicious: ${head}${suffix}`, level: 'warn' });
+    }
+    if (typeof d.note === 'string' && d.note) {
+      facts.push({ label: `⚠ ${d.note}`, level: 'warn' });
+    }
+    return facts;
+  }
+
+  // Unknown check — generic key/value chips, filtering noise.
+  for (const [k, v] of Object.entries(d)) {
+    if (k === 'url' || k === 'note') continue;
+    if (v === null || v === undefined || v === '') continue;
+    if (typeof v === 'string' && v === ZERO_TIME) continue;
+    if (Array.isArray(v) && v.length === 0) continue;
+    const value =
+      typeof v === 'object' ? JSON.stringify(v) : typeof v === 'boolean' ? (v ? 'yes' : 'no') : String(v);
+    facts.push({ label: `${prettyKey(k)}: ${value}`, level: 'neutral' });
+  }
+  if (typeof d.note === 'string' && d.note) {
+    facts.push({ label: `⚠ ${d.note}`, level: 'warn' });
+  }
+  return facts;
+}
+
+function CustomFactStrip({ finding }: { finding: CustomFinding }) {
+  const url = typeof finding.details?.url === 'string' ? (finding.details.url as string) : null;
+  const facts = factsForFinding(finding);
+  if (!url && !facts.length) return null;
   return (
-    <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--muted)' }}>
-      {Object.entries(details)
-        .filter(([, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
-        .join(' · ')}
-    </p>
+    <>
+      {url && (
+        <a class="fact-url" href={url} target="_blank" rel="noreferrer">
+          → {url}
+        </a>
+      )}
+      {facts.length > 0 && (
+        <div class="fact-strip">
+          {facts.map((f, i) => (
+            <span key={i} class={f.level === 'neutral' ? 'pill' : `pill ${f.level}`}>
+              {f.label}
+            </span>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
