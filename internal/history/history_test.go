@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JoshuaMart/websec0/internal/scoring"
+	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
 func TestHistory_AddListOrder(t *testing.T) {
@@ -71,11 +71,11 @@ func TestHistory_PreservesGrades(t *testing.T) {
 		ID:          "x",
 		Host:        "example.com",
 		ScannedAt:   time.Now(),
-		TLSGrade:    scoring.GradeAPlus,
-		HeaderGrade: scoring.GradeB,
+		TLSGrade:    scan.GradeAPlus,
+		HeaderGrade: scan.GradeB,
 	})
 	got := h.List(1)[0]
-	if got.TLSGrade != scoring.GradeAPlus || got.HeaderGrade != scoring.GradeB {
+	if got.TLSGrade != scan.GradeAPlus || got.HeaderGrade != scan.GradeB {
 		t.Errorf("grades not preserved: %+v", got)
 	}
 }

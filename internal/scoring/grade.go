@@ -1,32 +1,10 @@
-// Package scoring contains grade types and threshold tables shared by the
-// TLS and HTTP header scoring engines.
+// Package scoring contains the threshold tables and computation rules that
+// turn observation reports into a 0–100 score and a [scan.Grade] letter.
+// The Grade type itself lives in internal/scan so this package can import
+// scan without creating a cycle.
 package scoring
 
-// Grade is the canonical letter grade returned in API responses.
-// The ordering, from best to worst, is: A+ A B C D E F T.
-// GradeT ("no trust") is reserved for cases where certificate validation
-// fails — it is considered the worst outcome.
-type Grade string
-
-const (
-	GradeAPlus Grade = "A+"
-	GradeA     Grade = "A"
-	GradeB     Grade = "B"
-	GradeC     Grade = "C"
-	GradeD     Grade = "D"
-	GradeE     Grade = "E"
-	GradeF     Grade = "F"
-	GradeT     Grade = "T"
-)
-
-// IsValid reports whether g is one of the known grades.
-func (g Grade) IsValid() bool {
-	switch g {
-	case GradeAPlus, GradeA, GradeB, GradeC, GradeD, GradeE, GradeF, GradeT:
-		return true
-	}
-	return false
-}
+import "github.com/JoshuaMart/websec0/internal/scan"
 
 // Thresholds defines the inclusive lower bound for each non-F grade.
 // A score below E maps to F.
@@ -40,22 +18,22 @@ type Thresholds struct {
 }
 
 // Grade returns the grade letter for the given score under these thresholds.
-func (t Thresholds) Grade(score int) Grade {
+func (t Thresholds) Grade(score int) scan.Grade {
 	switch {
 	case score >= t.APlus:
-		return GradeAPlus
+		return scan.GradeAPlus
 	case score >= t.A:
-		return GradeA
+		return scan.GradeA
 	case score >= t.B:
-		return GradeB
+		return scan.GradeB
 	case score >= t.C:
-		return GradeC
+		return scan.GradeC
 	case score >= t.D:
-		return GradeD
+		return scan.GradeD
 	case score >= t.E:
-		return GradeE
+		return scan.GradeE
 	default:
-		return GradeF
+		return scan.GradeF
 	}
 }
 
@@ -65,32 +43,32 @@ var TLSThresholds = Thresholds{APlus: 95, A: 80, B: 65, C: 50, D: 35, E: 20}
 // HeadersThresholds follows SPEC §4.2.
 var HeadersThresholds = Thresholds{APlus: 95, A: 85, B: 70, C: 55, D: 40, E: 25}
 
-// Worst returns the worse of two grades. GradeT outranks F (it represents a
-// trust failure, not merely a low score).
-func Worst(a, b Grade) Grade {
+// Worst returns the worse of two grades. GradeT outranks F (it represents
+// a trust failure, not merely a low score).
+func Worst(a, b scan.Grade) scan.Grade {
 	if rank(a) < rank(b) {
 		return a
 	}
 	return b
 }
 
-func rank(g Grade) int {
+func rank(g scan.Grade) int {
 	switch g {
-	case GradeAPlus:
+	case scan.GradeAPlus:
 		return 8
-	case GradeA:
+	case scan.GradeA:
 		return 7
-	case GradeB:
+	case scan.GradeB:
 		return 6
-	case GradeC:
+	case scan.GradeC:
 		return 5
-	case GradeD:
+	case scan.GradeD:
 		return 4
-	case GradeE:
+	case scan.GradeE:
 		return 3
-	case GradeF:
+	case scan.GradeF:
 		return 2
-	case GradeT:
+	case scan.GradeT:
 		return 1
 	default:
 		return 0

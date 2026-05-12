@@ -6,8 +6,6 @@ package scan
 import (
 	"encoding/json"
 	"time"
-
-	"github.com/JoshuaMart/websec0/internal/scoring"
 )
 
 // Status is a per-finding outcome label used in header and custom checks.
@@ -58,7 +56,7 @@ type Result struct {
 // TLSReport mirrors SPEC §6.4, with two extensions added during Phase 4:
 // ChainTrust (overall trust outcome) and OCSPStapling (presence only).
 type TLSReport struct {
-	Grade            scoring.Grade          `json:"grade"`
+	Grade            Grade                  `json:"grade"`
 	Scores           TLSScores              `json:"scores"`
 	Protocols        []ProtocolSupport      `json:"protocols"`
 	Ciphers          []Cipher               `json:"ciphers"`
@@ -137,7 +135,7 @@ type VulnerabilityFinding struct {
 
 // HeadersReport mirrors SPEC §6.5.
 type HeadersReport struct {
-	Grade      scoring.Grade           `json:"grade"`
+	Grade      Grade                   `json:"grade"`
 	Score      int                     `json:"score"`
 	Core       map[string]HeaderResult `json:"core"`
 	Additional AdditionalHeaders       `json:"additional"`

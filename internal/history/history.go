@@ -8,16 +8,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JoshuaMart/websec0/internal/scoring"
+	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
 // Entry is a single row of the "Recent scans" landing strip.
 type Entry struct {
-	ID          string        `json:"id"`
-	Host        string        `json:"host"`
-	ScannedAt   time.Time     `json:"scanned_at"`
-	TLSGrade    scoring.Grade `json:"tls_grade"`
-	HeaderGrade scoring.Grade `json:"headers_grade"`
+	ID          string     `json:"id"`
+	Host        string     `json:"host"`
+	ScannedAt   time.Time  `json:"scanned_at"`
+	TLSGrade    scan.Grade `json:"tls_grade"`
+	HeaderGrade scan.Grade `json:"headers_grade"`
 }
 
 // History is a thread-safe time-bounded list, newest first.

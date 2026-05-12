@@ -81,12 +81,12 @@
 
 ## Phase 5 — Header probe & scoring
 
-- [ ] `internal/headers/fetch.go`: GET request via `safehttp` client, capture all response headers (including duplicates)
-- [ ] `internal/headers/parse.go`: per-header parsers (HSTS directives, CSP source list, `Set-Cookie` attributes, `Permissions-Policy`)
-- [ ] `internal/headers/core.go`: evaluate the 6 core headers per SPEC §4.2 (status + value)
-- [ ] `internal/headers/additional.go`: evaluate bonus / malus signals (COOP/COEP/CORP, `Server` version leak, `Set-Cookie` flags, `Access-Control-Allow-Origin`)
-- [ ] `internal/scoring/headers.go`: compute final 0–100 + grade letter
-- [ ] Unit tests: each core header maps to its weight; each malus deducts the right amount; clamp to [0, 100] works
+- [x] `internal/headers/fetch.go`: GET request via `safehttp` client, capture all response headers (including duplicates)
+- [x] `internal/headers/parse.go`: per-header parsers (HSTS directives, CSP source list, `Set-Cookie` attributes, `Permissions-Policy`)
+- [x] `internal/headers/core.go`: evaluate the 6 core headers per SPEC §4.2 (status + value)
+- [x] `internal/headers/additional.go`: evaluate bonus / malus signals (COOP/COEP/CORP, `Server` version leak, `Set-Cookie` flags, `Access-Control-Allow-Origin`)
+- [x] `internal/scoring/headers.go`: compute final 0–100 + grade letter
+- [x] Unit tests: each core header maps to its weight; each malus deducts the right amount; clamp to [0, 100] works
 
 ## Phase 6 — Scoring TLS
 
