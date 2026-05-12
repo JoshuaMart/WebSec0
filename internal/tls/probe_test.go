@@ -117,7 +117,7 @@ func TestDeriveWeaknesses_FlagsObservedBadness(t *testing.T) {
 		{Protocol: "TLS 1.0", Name: "TLS_RSA_WITH_3DES_EDE_CBC_SHA"},
 		{Protocol: "TLS 1.0", Name: "TLS_RSA_WITH_RC4_128_SHA"},
 	}
-	vulns := deriveWeaknesses(protocols, ciphers)
+	vulns := DeriveWeaknesses(protocols, ciphers, "")
 
 	byID := map[string]scan.VulnerabilityFinding{}
 	for _, v := range vulns {
@@ -138,9 +138,88 @@ func TestDeriveWeaknesses_FlagsObservedBadness(t *testing.T) {
 	if byID["DROWN"].State != "Not vulnerable" {
 		t.Error("DROWN: SSLv2 not in protocols → Not vulnerable")
 	}
-	if byID["Heartbleed"].Level != scan.SeverityInfo {
-		t.Error("Heartbleed: should be info-level (not assessed in passive mode)")
+	if _, ok := byID["ROBOT"]; ok {
+		t.Error("ROBOT should no longer be emitted")
 	}
+}
+
+func TestIsHeartbleedVulnerable(t *testing.T) {
+	cases := map[string]bool{
+		"":                                     false,
+		"nginx/1.27.1":                         false,
+		"Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1f": true,
+		"Apache/2.4.6 (CentOS) OpenSSL/1.0.1e-fips":   true,
+		"Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1":         true,
+		"Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1a":        true,
+		"Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1g":        false, // patched
+		"Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1z":        false,
+		"Apache/2.4.7 (Ubuntu) OpenSSL/1.0.2k":        false,
+		"Apache/2.4.7 (Ubuntu) OpenSSL/3.0.1":         false,
+		"openssl/1.0.1F":                              true, // case-insensitive
+		"Server-OpenSSL/1.0.1e-fips Mod_security/3.0": true,
+	}
+	for in, want := range cases {
+		if got := isHeartbleedVulnerable(in); got != want {
+			t.Errorf("%q: got %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestDeriveWeaknesses_HeartbleedFromServerHeader(t *testing.T) {
+	vulns := DeriveWeaknesses(nil, nil, "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1f")
+	h := findVulnByID(vulns, "Heartbleed")
+	if h == nil || h.State != "Vulnerable" {
+		t.Errorf("Heartbleed: expected Vulnerable for OpenSSL 1.0.1f, got %+v", h)
+	}
+
+	vulns = DeriveWeaknesses(nil, nil, "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1g")
+	h = findVulnByID(vulns, "Heartbleed")
+	if h == nil || h.State != "Not vulnerable" {
+		t.Errorf("Heartbleed: 1.0.1g is patched, got %+v", h)
+	}
+}
+
+func TestDeriveWeaknesses_Lucky13(t *testing.T) {
+	// TLS 1.0 + CBC cipher on TLS 1.0 → Vulnerable.
+	protocols := []scan.ProtocolSupport{{Name: "TLS 1.0", Offered: true}}
+	ciphers := []scan.Cipher{{Protocol: "TLS 1.0", Name: "TLS_RSA_WITH_AES_256_CBC_SHA", AEAD: false}}
+	vulns := DeriveWeaknesses(protocols, ciphers, "")
+	l := findVulnByID(vulns, "Lucky13")
+	if l == nil || l.State != "Vulnerable" {
+		t.Errorf("Lucky13: expected Vulnerable, got %+v", l)
+	}
+
+	// TLS 1.2 + CBC → not Lucky13 (mitigations are in TLS 1.2 server impls).
+	protocols = []scan.ProtocolSupport{{Name: "TLS 1.2", Offered: true}}
+	ciphers = []scan.Cipher{{Protocol: "TLS 1.2", Name: "TLS_RSA_WITH_AES_256_CBC_SHA", AEAD: false}}
+	vulns = DeriveWeaknesses(protocols, ciphers, "")
+	l = findVulnByID(vulns, "Lucky13")
+	if l == nil || l.State != "Not vulnerable" {
+		t.Errorf("Lucky13: TLS 1.2 + CBC should not trigger, got %+v", l)
+	}
+}
+
+func TestDeriveWeaknesses_Ticketbleed(t *testing.T) {
+	vulns := DeriveWeaknesses(nil, nil, "BIG-IP")
+	tb := findVulnByID(vulns, "Ticketbleed")
+	if tb == nil || tb.State != "Potentially vulnerable" || tb.Level != scan.SeverityWarn {
+		t.Errorf("Ticketbleed: expected Potentially vulnerable + warn, got %+v", tb)
+	}
+
+	vulns = DeriveWeaknesses(nil, nil, "nginx/1.27.1")
+	tb = findVulnByID(vulns, "Ticketbleed")
+	if tb == nil || tb.State != "Not vulnerable" {
+		t.Errorf("Ticketbleed: nginx server should not trigger, got %+v", tb)
+	}
+}
+
+func findVulnByID(vulns []scan.VulnerabilityFinding, id string) *scan.VulnerabilityFinding {
+	for i := range vulns {
+		if vulns[i].ID == id {
+			return &vulns[i]
+		}
+	}
+	return nil
 }
 
 func TestCipherStrength(t *testing.T) {

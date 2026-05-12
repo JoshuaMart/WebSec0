@@ -76,14 +76,13 @@
 - [x] **BEAST** (CVE-2011-3389) — detected via TLS 1.0 offered — passive
 - [x] **Sweet32** (CVE-2016-2183) — detected via 3DES cipher offered — passive
 - [x] **RC4 weakness** (CVE-2015-2808) — detected via RC4 cipher offered — passive
-- [ ] **Heartbleed** (CVE-2014-0160) — placeholder *Not assessed* — **easy / passive** via `Server:` header OpenSSL version range, with false-positive risk
-- [ ] **Lucky13** (CVE-2013-0169) — placeholder *Not assessed* — **easy / passive** (TLS 1.0/1.1 + CBC ciphers offered; overlaps BEAST)
-- [ ] **Ticketbleed** (CVE-2016-9244) — placeholder *Not assessed* — **easy / passive** (`Server:` header contains "BIG-IP")
+- [x] **Heartbleed** (CVE-2014-0160) — detected via `Server:` header OpenSSL 1.0.1 through 1.0.1f range — passive (heuristic, false-positive risk on non-OpenSSL servers)
+- [x] **Lucky13** (CVE-2013-0169) — detected via TLS 1.0 or 1.1 offered alongside non-AEAD ciphers on those protocols — passive
+- [x] **Ticketbleed** (CVE-2016-9244) — detected via `Server:` header containing "BIG-IP" — passive (heuristic warn-level)
 - [ ] **FREAK** (CVE-2015-0204) — placeholder *Not assessed* — **moderate / passive** (export cipher enumeration; not in stdlib, needs raw ClientHello)
 - [ ] **Logjam** (CVE-2015-4000) — placeholder *Not assessed* — **complex / passive** (parse ServerKeyExchange DH group, reject < 1024 bits)
 - [ ] **CRIME** (CVE-2012-4929) — placeholder *Not assessed* — **complex / passive** (TLS compression detection; stdlib disables it client-side, so requires raw probing)
 - [ ] **Raccoon Attack** (CVE-2020-1968) — placeholder *Not assessed* — **complex / passive** (multi-handshake DH-share comparison)
-- [ ] **ROBOT** (CVE-2017-13099) — placeholder *Not assessed* — **complex / active** (requires sending malformed RSA padding; out of scope of a passive scanner)
 
 ### SSLv2 (`internal/sslv2`)
 

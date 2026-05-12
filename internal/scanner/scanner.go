@@ -158,6 +158,13 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 			scan.ProtocolSupport{Name: "SSL 3.0", Offered: ssl3Offered, Probe: scan.ProbeRawClientHello},
 			scan.ProtocolSupport{Name: "SSL 2.0", Offered: ssl2Offered, Probe: scan.ProbeRawClientHello},
 		)
+		// Weakness derivation needs the Server header (Heartbleed, Ticketbleed)
+		// in addition to the TLS observations.
+		var serverHeader string
+		if headersReport != nil && headersReport.Additional.Server != nil {
+			serverHeader = headersReport.Additional.Server.Value
+		}
+		tlsReport.Vulnerabilities = tlsprobe.DeriveWeaknesses(tlsReport.Protocols, tlsReport.Ciphers, serverHeader)
 	}
 
 	// Score after observations are complete. Headers first because TLS A+

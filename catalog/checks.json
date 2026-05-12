@@ -242,6 +242,42 @@
       }
     },
     {
+      "id": "vuln.heartbleed",
+      "category": "tls.vulnerability",
+      "title": "Heartbleed (CVE-2014-0160)",
+      "severity_when_fail": "critical",
+      "score_impact": "Critical memory disclosure; passively detected when the Server header advertises an OpenSSL 1.0.1 through 1.0.1f build",
+      "remediation": {
+        "summary": "Upgrade OpenSSL to 1.0.1g or later (or any 1.0.2+/3.x line) and reissue the certificate — assume the private key was leaked while running a vulnerable build.",
+        "example_stack": "shell",
+        "example_snippet": "apt-get update && apt-get install --only-upgrade openssl libssl1.1\nsystemctl restart nginx"
+      }
+    },
+    {
+      "id": "vuln.lucky13",
+      "category": "tls.vulnerability",
+      "title": "Lucky13 (CVE-2013-0169)",
+      "severity_when_fail": "warn",
+      "score_impact": "Detected when TLS 1.0 or 1.1 is offered alongside CBC-mode ciphers — exploitable via padding-oracle timing on those protocols",
+      "remediation": {
+        "summary": "Disable TLS 1.0 and 1.1, or remove non-AEAD ciphers from their cipher list. The clean fix is to disable both protocols.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_protocols TLSv1.2 TLSv1.3;"
+      }
+    },
+    {
+      "id": "vuln.ticketbleed",
+      "category": "tls.vulnerability",
+      "title": "Ticketbleed (CVE-2016-9244)",
+      "severity_when_fail": "warn",
+      "score_impact": "Heuristic — flagged when the Server header advertises F5 BIG-IP. Confirm the running version is patched.",
+      "remediation": {
+        "summary": "Update F5 BIG-IP to at least 11.6.1 HF1, 12.0.0 HF2, or any newer release. If not on F5, this finding is a false positive driven by a copied Server header.",
+        "example_stack": "shell",
+        "example_snippet": "tmsh show /sys version | grep -i version"
+      }
+    },
+    {
       "id": "headers.strict_transport_security",
       "category": "headers.core",
       "title": "Strict-Transport-Security",
