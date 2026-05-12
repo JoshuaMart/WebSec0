@@ -1,0 +1,39 @@
+# WebSec0 configuration — example
+# Resolution order: $WEBSEC0_CONFIG → ./websec0.yaml → /etc/websec0/websec0.yaml
+# See SPECIFICATIONS.md §7 for the authoritative reference.
+
+server:
+  listen: "0.0.0.0:8080"
+  trusted_proxies: []           # CIDRs allowed to set X-Forwarded-For
+
+scan:
+  timeout: 15s                  # global per-scan budget
+  parallel_probes: true
+  follow_redirects: true        # for header probing
+  max_redirects: 3
+
+security:
+  # Public instance: keep both `false`. Self-hosted on a private network:
+  # set to `true` to scan internal targets and/or non-443 ports.
+  allow_private_targets: false
+  allow_custom_ports: false
+  allowed_schemes: ["https"]    # `http` will become an opt-in in v1.1
+  extra_blocked_cidrs: []       # e.g. ["10.20.0.0/16", "2001:db8::/32"]
+
+cache:
+  ttl: 24h                      # how long a scan ID remains retrievable
+  max_entries: 1000             # LRU bound
+
+history:
+  enabled: true                 # exposes the "Recent scans" strip on the landing
+  retention: 7d                 # scans listed publicly are purged after this
+  rate_limit:
+    per_ip: "10/hour"
+    per_host: "1/minute"        # avoid hammering a target
+
+frontend:
+  enabled: true                 # serve the embedded UI at /
+  base_path: "/"
+
+telemetry:
+  anonymous_stats: false        # if true, send scan counts (no hostnames) to a stats endpoint

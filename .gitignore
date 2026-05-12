@@ -1,0 +1,39 @@
+# Local design references — not part of v1
+/maquette
+
+# Go build artefacts
+/dist/
+/bin/
+/websec0
+/websec0-*
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Frontend (Astro/Node)
+/web/dist/
+/web/node_modules/
+/web/.astro/
+/web/.cache/
+
+# Logs
+*.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Env files (should never be committed)
+.env
+.env.*
+!.env.example
+
+# Local-only Claude/agent state
+.claude/settings.local.json
+.claude/local/

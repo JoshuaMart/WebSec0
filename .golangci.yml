@@ -1,0 +1,54 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard       # govet, errcheck, ineffassign, staticcheck, unused
+  enable:
+    - gosec               # security audit
+    - revive              # style + correctness
+    - gocritic            # opinionated bug/style checks
+    - bodyclose           # ensure http.Response.Body is closed
+    - misspell
+    - unconvert
+    - unparam
+
+  settings:
+    gosec:
+      excludes:
+        - G304            # file inclusion via variable — we read configured paths
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
