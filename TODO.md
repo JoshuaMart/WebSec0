@@ -153,16 +153,16 @@
 
 - [x] `web/`: scaffold Astro 6 project (manual minimal scaffold via `pnpm add`), TypeScript strict
 - [x] `astro.config.mjs`: integrations `@astrojs/preact`, `output: 'static'`, `compressHTML: true`
-- [ ] Port maquette `styles.css` → `web/src/styles/global.css`, keep CSS custom properties as the design tokens
-- [ ] Port `landing.html` → `web/src/pages/index.astro` (form posts to `/api/v1/scan`, redirect to `/r/<id>`)
-- [ ] Wire `GET /api/v1/history` into the landing for the "Recent scans" strip
+- [x] Port maquette `styles.css` → `web/src/styles/global.css`, keep CSS custom properties as the design tokens
+- [x] Port `landing.html` → `web/src/pages/index.astro` (form posts to `/api/v1/scan`, redirects to `/r/<id>` on success, surfaces typed API errors, opt-in `list_in_history` checkbox)
+- [x] Wire `GET /api/v1/history` into the landing for the "Recent scans" strip (`limit=4`, grade chip + relative time, hidden when empty)
 - [ ] Port `index.html` (report) → `web/src/pages/r/[id].astro` (Astro page) + `web/src/islands/Report.tsx` (Preact island that fetches `/api/v1/scan/:id`)
 - [ ] Port React components from `app.jsx` to Preact (TS, function components, `preact/compat` only where strictly needed)
 - [ ] Implement copy-button on every remediation snippet
 - [ ] Loading / error states for the report island
-- [x] Astro build pipeline → `web/dist/` (`make frontend`, ~36 KB output)
+- [x] Astro build pipeline → `web/dist/` (`make frontend`, ~68 KB output with the real landing)
 - [x] `internal/frontend/embed.go`: `//go:embed all:dist` populated by `make frontend` rsync from `web/dist`, served at `/*` with `index.html` SPA fallback (direct write of bytes to avoid Go's `/index.html → ./` redirect loop)
-- [x] Production build size budget: bundle ≤ 80 KB gzip — currently 36 KB total, well under (CI check still TBD)
+- [x] Production build size budget: bundle ≤ 80 KB gzip — currently 68 KB total, under (CI check still TBD)
 
 ## Phase 12 — AI artefacts
 
