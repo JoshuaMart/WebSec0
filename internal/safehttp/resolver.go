@@ -55,6 +55,34 @@ func (t *Target) URL(path string) string {
 	return t.Scheme + "://" + t.HostPort() + path
 }
 
+// NewTarget builds a Target directly from already-resolved inputs. It bypasses
+// DNS lookup and the IP policy check — callers must have verified the IP
+// against [Policy.IsBlocked] themselves (or be writing tests).
+//
+// The returned Target carries the same pinning guarantees as one produced by
+// [Resolver.Resolve]: all subsequent [PinnedDialer] connections must hit ip.
+func NewTarget(scheme, host string, port int, ip netip.Addr) (*Target, error) {
+	if scheme == "" {
+		return nil, fmt.Errorf("%w: empty scheme", ErrInvalidScheme)
+	}
+	if host == "" {
+		return nil, fmt.Errorf("%w: empty host", ErrInvalidHost)
+	}
+	if port < 1 || port > 65535 {
+		return nil, fmt.Errorf("%w: port %d out of range", ErrInvalidHost, port)
+	}
+	if !ip.IsValid() {
+		return nil, fmt.Errorf("%w: invalid ip", ErrInvalidHost)
+	}
+	return &Target{
+		Scheme:   scheme,
+		Host:     host,
+		Port:     port,
+		IP:       ip,
+		addrPort: netip.AddrPortFrom(ip, uint16(port)), //nolint:gosec // port range-checked above
+	}, nil
+}
+
 // Resolver owns the single-lookup contract: it picks the first IP returned
 // by the resolver that satisfies the policy, and locks the result for the
 // rest of the scan.

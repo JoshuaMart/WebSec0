@@ -55,29 +55,29 @@
 
 ### Modern (`internal/tls`)
 
-- [ ] Enumerate offered protocols (TLS 1.0, 1.1, 1.2, 1.3) via successive handshakes with `MinVersion = MaxVersion = X`
-- [ ] Enumerate cipher suites per protocol (loop through stdlib suite IDs, observe what the server picks)
-- [ ] Detect server preference vs client preference (compare server pick when client order is reversed)
-- [ ] Extract full certificate chain, parse leaf + intermediates (subject, SAN, issuer, validity, key alg, sig alg, serial, SHA-256)
-- [ ] Verify chain against Mozilla root store (`crypto/x509` `SystemCertPool` + bundled CCADB fallback)
-- [ ] OCSP stapling presence detection
-- [ ] OCSP response parsing if stapled
-- [ ] SCT extraction from certificate extensions (TLS extension `signed_certificate_timestamp`)
-- [ ] Session ticket / session ID / 0-RTT detection
-- [ ] Known weakness heuristics (presence-based, no exploitation): Heartbleed, ROBOT, POODLE, BEAST, CRIME, Logjam, FREAK, DROWN, Sweet32, Lucky13, Raccoon, Ticketbleed
-- [ ] Unit tests against `crypto/tls` test servers (`httptest.NewTLSServer` with crafted configs)
+- [x] Enumerate offered protocols (TLS 1.0, 1.1, 1.2, 1.3) via successive handshakes with `MinVersion = MaxVersion = X`
+- [x] Enumerate cipher suites per protocol (loop through stdlib suite IDs, observe what the server picks)
+- [ ] Detect server preference vs client preference (compare server pick when client order is reversed) — *deferred to v1.1*
+- [x] Extract full certificate chain, parse leaf + intermediates (subject, SAN, issuer, validity, key alg, sig alg, serial, SHA-256)
+- [x] Verify chain against Mozilla root store (`crypto/x509` `SystemCertPool` + bundled CCADB fallback) — *system roots only in v1; CCADB fallback deferred*
+- [x] OCSP stapling presence detection
+- [ ] OCSP response parsing if stapled — *deferred to v1.1*
+- [ ] SCT extraction from certificate extensions (TLS extension `signed_certificate_timestamp`) — *deferred to v1.1*
+- [ ] Session ticket / session ID / 0-RTT detection — *deferred to v1.1*
+- [x] Known weakness heuristics (presence-based, no exploitation): Heartbleed, ROBOT, POODLE, BEAST, CRIME, Logjam, FREAK, DROWN, Sweet32, Lucky13, Raccoon, Ticketbleed
+- [x] Unit tests against `crypto/tls` test servers (`httptest.NewTLSServer` with crafted configs)
 
 ### SSLv2 (`internal/sslv2`)
 
-- [ ] Forge SSLv2 CLIENT-HELLO bytes (record type 0x01, length-prefix `\x80\x2e`, 7 cipher specs incl. `0x010080`)
-- [ ] Classify response: `0x04 …` → supported, `0x16 0x03 …` → not supported, RST/timeout → not supported
-- [ ] Unit tests with golden bytes for each response class
+- [x] Forge SSLv2 CLIENT-HELLO bytes (record type 0x01, length-prefix `\x80\x2e`, 7 cipher specs incl. `0x010080`)
+- [x] Classify response: `0x04 …` → supported, `0x16 0x03 …` → not supported, RST/timeout → not supported
+- [x] Unit tests with golden bytes for each response class
 
 ### SSLv3 (`internal/sslv3`)
 
-- [ ] Forge TLS-framed ClientHello with `record.version = 0x03 0x00` and `client_hello.version = 0x03 0x00`
-- [ ] Classify response: `0x16 0x03 0x00 …` → supported, `0x15 …` → not supported, `0x16 0x03 0x01+ …` → not supported
-- [ ] Unit tests with golden bytes for each response class
+- [x] Forge TLS-framed ClientHello with `record.version = 0x03 0x00` and `client_hello.version = 0x03 0x00`
+- [x] Classify response: `0x16 0x03 0x00 …` → supported, `0x15 …` → not supported, `0x16 0x03 0x01+ …` → not supported
+- [x] Unit tests with golden bytes for each response class
 
 ## Phase 5 — Header probe & scoring
 

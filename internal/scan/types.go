@@ -55,15 +55,32 @@ type Result struct {
 	Custom     []CustomFinding `json:"custom,omitempty"`
 }
 
-// TLSReport mirrors SPEC §6.4.
+// TLSReport mirrors SPEC §6.4, with two extensions added during Phase 4:
+// ChainTrust (overall trust outcome) and OCSPStapling (presence only).
 type TLSReport struct {
 	Grade            scoring.Grade          `json:"grade"`
 	Scores           TLSScores              `json:"scores"`
 	Protocols        []ProtocolSupport      `json:"protocols"`
 	Ciphers          []Cipher               `json:"ciphers"`
 	CertificateChain []Certificate          `json:"certificate_chain"`
+	ChainTrust       ChainTrust             `json:"chain_trust"`
+	OCSPStapling     bool                   `json:"ocsp_stapling"`
 	Vulnerabilities  []VulnerabilityFinding `json:"vulnerabilities"`
 }
+
+// ChainTrust enumerates the outcome of certificate-chain validation.
+type ChainTrust string
+
+// ChainTrust values.
+const (
+	ChainTrustUnknown          ChainTrust = ""
+	ChainTrustTrusted          ChainTrust = "trusted"
+	ChainTrustNoChain          ChainTrust = "no_chain"
+	ChainTrustSelfSigned       ChainTrust = "self_signed"
+	ChainTrustExpired          ChainTrust = "expired"
+	ChainTrustHostnameMismatch ChainTrust = "hostname_mismatch"
+	ChainTrustUntrusted        ChainTrust = "untrusted"
+)
 
 // TLSScores is the four-sub-score + final breakdown.
 type TLSScores struct {
