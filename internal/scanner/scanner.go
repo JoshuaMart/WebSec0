@@ -140,11 +140,31 @@ func summarise(r *scan.Result) history.Entry {
 	}
 	if r.TLS != nil {
 		e.TLSGrade = r.TLS.Grade
+		e.HighestTLS = highestOfferedProtocol(r.TLS.Protocols)
 	}
 	if r.Headers != nil {
 		e.HeaderGrade = r.Headers.Grade
 	}
 	return e
+}
+
+// protocolPriority orders protocols from most to least desirable so the
+// best offered one can be picked for the landing-strip subtitle.
+var protocolPriority = []string{"TLS 1.3", "TLS 1.2", "TLS 1.1", "TLS 1.0", "SSL 3.0", "SSL 2.0"}
+
+func highestOfferedProtocol(protocols []scan.ProtocolSupport) string {
+	offered := map[string]bool{}
+	for _, p := range protocols {
+		if p.Offered {
+			offered[p.Name] = true
+		}
+	}
+	for _, name := range protocolPriority {
+		if offered[name] {
+			return name
+		}
+	}
+	return ""
 }
 
 // runProbes fans out the probes against a resolved Target. Each probe runs

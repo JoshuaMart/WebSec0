@@ -18,6 +18,10 @@ type Entry struct {
 	ScannedAt   time.Time  `json:"scanned_at"`
 	TLSGrade    scan.Grade `json:"tls_grade"`
 	HeaderGrade scan.Grade `json:"headers_grade"`
+	// HighestTLS is the best protocol version offered by the target,
+	// shown as the subtitle in the landing strip. Empty when no TLS
+	// version is offered or the probe failed.
+	HighestTLS string `json:"highest_tls,omitempty"`
 }
 
 // History is a thread-safe time-bounded list, newest first.

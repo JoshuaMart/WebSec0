@@ -7,7 +7,7 @@
  * pulling a shared module) to keep the bundle compact.
  */
 
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -280,11 +280,18 @@ function TrustPill({ trust }: { trust?: string }) {
 
 function GradePanel({ data }: { data: ScanResult }) {
   const tlsGrade = data.tls?.grade ?? '';
+  const tlsScore = data.tls?.scores.final ?? 0;
   const headersGrade = data.headers?.grade ?? '';
+  const headersScore = data.headers?.score ?? 0;
   return (
     <div class="grade-panel" style={{ gridTemplateColumns: '1fr 1fr' }}>
       <div class="grade-cell">
-        <GradeCard label="TLS grade" grade={tlsGrade} sub={data.tls?.chain_trust ?? ''} />
+        <GradeCard
+          label="TLS grade"
+          grade={tlsGrade}
+          score={tlsScore}
+          sub={prettyTrust(data.tls?.chain_trust)}
+        />
         {data.tls && (
           <div class="score-list" style={{ marginTop: 24 }}>
             <ScoreBar name="Certificate" value={data.tls.scores.certificate} />
@@ -295,7 +302,12 @@ function GradePanel({ data }: { data: ScanResult }) {
         )}
       </div>
       <div class="grade-cell">
-        <GradeCard label="Headers grade" grade={headersGrade} sub={`Score ${data.headers?.score ?? 0}/100`} />
+        <GradeCard
+          label="Headers grade"
+          grade={headersGrade}
+          score={headersScore}
+          sub={`${headersScore}/100`}
+        />
         {data.headers && (
           <div class="score-list" style={{ marginTop: 24 }}>
             {Object.entries(data.headers.core).map(([name, r]) => (
@@ -312,28 +324,79 @@ function GradePanel({ data }: { data: ScanResult }) {
   );
 }
 
-function GradeCard({ label, grade, sub }: { label: string; grade: string; sub: string }) {
-  const ringClass = gradeRingClass(grade || 'F');
+function GradeCard({
+  label,
+  grade,
+  score,
+  sub,
+}: {
+  label: string;
+  grade: string;
+  score: number;
+  sub: string;
+}) {
   return (
     <div style={{ display: 'grid', placeItems: 'center', padding: '8px 0 4px' }}>
-      <div style={{ position: 'relative', width: 132, height: 132 }}>
-        <span
-          class={'grade-chip' + ringClass}
-          style={{
-            width: '100%',
-            height: '100%',
-            fontSize: 44,
-            position: 'absolute',
-            inset: 0,
-          }}
-        >
-          {grade || '—'}
-        </span>
-      </div>
+      <GradeRing grade={grade} score={score} />
       <div class="grade-label">{label}</div>
       <div class="grade-sub">{sub || ''}</div>
     </div>
   );
+}
+
+// GradeRing renders the maquette's SVG ring: a dark inner disc, a faint
+// background circle, an arc whose length scales with the score, and the
+// grade letter centred. The ring colour comes from the grade letter
+// (good for A/A+, warn for B/C, bad below) — independent of the score
+// so a chain-trust-capped scan stays visually consistent.
+function GradeRing({ grade, score }: { grade: string; score: number }) {
+  const r = 70;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0.02, Math.min(1, (score || 0) / 100));
+  const visible = c * pct;
+  const color = gradeColorVar(grade);
+  const showGrade = grade || '—';
+  return (
+    <svg viewBox="0 0 168 168" width="132" height="132" aria-label={`Grade ${showGrade}`}>
+      <circle cx="84" cy="84" r={r} fill="var(--ink)" />
+      <circle cx="84" cy="84" r={r} fill="none" stroke="var(--line)" stroke-width="6" />
+      <circle
+        cx="84"
+        cy="84"
+        r={r}
+        fill="none"
+        stroke={color}
+        stroke-width="6"
+        stroke-linecap="round"
+        stroke-dasharray={`${visible} ${c}`}
+        transform="rotate(-90 84 84)"
+      />
+      <text
+        x="84"
+        y="98"
+        text-anchor="middle"
+        fill="white"
+        font-family="var(--font-mono)"
+        font-weight="600"
+        font-size="44"
+        letter-spacing="-0.02em"
+      >
+        {showGrade}
+      </text>
+    </svg>
+  );
+}
+
+function gradeColorVar(grade: string): string {
+  if (grade === 'A+' || grade === 'A') return 'var(--good)';
+  if (grade === 'B' || grade === 'C') return 'var(--warn)';
+  return 'var(--bad)';
+}
+
+function prettyTrust(trust?: string): string {
+  if (!trust) return '';
+  if (trust === 'trusted') return 'Browser-trusted';
+  return trust.replace(/_/g, ' ');
 }
 
 function ScoreBar({ name, value }: { name: string; value: number }) {
@@ -438,9 +501,37 @@ function Overview({ data }: { data: ScanResult }) {
   const headers = data.headers;
   const offeredProtos = (tls?.protocols ?? []).filter((p) => p.offered).map((p) => p.name);
   const leaf = tls?.certificate_chain[0];
+  const highlights = deriveHighlights(data);
   return (
     <div class="section">
       <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h3>Highlights</h3>
+            <span class="sub">{highlights.length} findings</span>
+          </div>
+          <div class="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {highlights.map((h, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '14px 1fr',
+                  gap: 12,
+                  alignItems: 'flex-start',
+                  paddingTop: i ? 12 : 0,
+                  borderTop: i ? '1px dashed var(--line)' : 'none',
+                }}
+              >
+                <span class={`sev ${h.level}`} style={{ marginTop: 6 }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{h.title}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{h.body}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         <div class="card">
           <div class="card-head">
             <h3>At a glance</h3>
@@ -486,33 +577,6 @@ function Overview({ data }: { data: ScanResult }) {
                 </>
               )}
             </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head">
-            <h3>Highlights</h3>
-            <span class="sub">{deriveHighlights(data).length} findings</span>
-          </div>
-          <div class="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {deriveHighlights(data).map((h, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '14px 1fr',
-                  gap: 12,
-                  alignItems: 'flex-start',
-                  paddingTop: i ? 12 : 0,
-                  borderTop: i ? '1px dashed var(--line)' : 'none',
-                }}
-              >
-                <span class={`sev ${h.level}`} style={{ marginTop: 6 }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{h.title}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{h.body}</div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -726,18 +790,45 @@ function CiphersTab({
   ciphers: Cipher[];
   pref?: 'server' | 'client' | '';
 }) {
+  const [tooltip, setTooltip] = useState<
+    | {
+        x: number;
+        y: number;
+        c: Cipher;
+        parsed: ReturnType<typeof parseCipherName>;
+      }
+    | null
+  >(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
   if (!ciphers.length) return <EmptyCard message="No ciphers enumerated." />;
   const grouped = useMemo(() => {
     const g: Record<string, Cipher[]> = {};
     for (const c of ciphers) (g[c.protocol] ??= []).push(c);
     return g;
   }, [ciphers]);
+
+  function onMove(e: MouseEvent, c: Cipher) {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTooltip({
+      x: e.clientX - rect.left + 14,
+      y: e.clientY - rect.top + 14,
+      c,
+      parsed: parseCipherName(c.name),
+    });
+  }
+
   return (
-    <div class="card">
+    <div class="card" ref={wrapRef} style={{ position: 'relative' }}>
       <div class="card-head">
         <h3>
-          Cipher suites <span class="sub">· {pref ? `${pref} preference` : 'preference unknown'} · forward secrecy required</span>
+          Cipher suites{' '}
+          <span class="sub">
+            · {pref ? `${pref} preference` : 'preference unknown'} · forward secrecy required
+          </span>
         </h3>
+        <span class="muted" style={{ fontSize: 12 }}>Hover for details</span>
       </div>
       <div class="card-body flush">
         {Object.entries(grouped).map(([proto, list]) => (
@@ -760,7 +851,12 @@ function CiphersTab({
             <table class="tbl">
               <tbody>
                 {list.map((c) => (
-                  <tr key={c.code} class="hoverable cipher-row">
+                  <tr
+                    key={c.code}
+                    class="hoverable cipher-row"
+                    onMouseMove={(e) => onMove(e, c)}
+                    onMouseLeave={() => setTooltip(null)}
+                  >
                     <td>
                       <span class={`sev ${c.level}`} />
                     </td>
@@ -804,8 +900,77 @@ function CiphersTab({
           </div>
         ))}
       </div>
+      {tooltip && (
+        <div class="tt" style={{ left: tooltip.x, top: tooltip.y }}>
+          <h5>
+            {tooltip.c.code} · {tooltip.c.protocol}
+          </h5>
+          <p style={{ marginBottom: 8 }}>{tooltip.c.name}</p>
+          <div class="row">
+            <span class="k">Key exchange</span>
+            <span class="v">{tooltip.parsed.kx}</span>
+          </div>
+          <div class="row">
+            <span class="k">Authentication</span>
+            <span class="v">{tooltip.parsed.auth}</span>
+          </div>
+          <div class="row">
+            <span class="k">Cipher</span>
+            <span class="v">{tooltip.parsed.cipher}</span>
+          </div>
+          <div class="row">
+            <span class="k">MAC</span>
+            <span class="v">{tooltip.parsed.mac}</span>
+          </div>
+          <div class="row">
+            <span class="k">Strength</span>
+            <span class="v">{tooltip.c.strength} bits</span>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// parseCipherName derives the canonical components (key exchange,
+// authentication, bulk cipher, MAC) from an IANA-style suite name.
+// TLS 1.3 names omit KX/auth (always (EC)DHE/AEAD), so we fill the gap.
+function parseCipherName(name: string): { kx: string; auth: string; cipher: string; mac: string } {
+  // TLS 1.3 names like TLS_AES_256_GCM_SHA384 lack the _WITH_ pivot.
+  if (!name.includes('_WITH_')) {
+    let cipher = '—';
+    if (name.includes('CHACHA20')) cipher = 'ChaCha20-Poly1305';
+    else if (name.includes('AES_256_GCM')) cipher = 'AES-256-GCM';
+    else if (name.includes('AES_128_GCM')) cipher = 'AES-128-GCM';
+    else if (name.includes('AES_128_CCM')) cipher = 'AES-128-CCM';
+    return { kx: '(EC)DHE', auth: 'signed via cert', cipher, mac: 'AEAD' };
+  }
+  const [pre, post] = name.replace(/^TLS_/, '').split('_WITH_');
+  if (!post) return { kx: '?', auth: '?', cipher: '?', mac: '?' };
+  let kx = pre;
+  let auth = pre;
+  if (pre.includes('_')) {
+    const parts = pre.split('_');
+    kx = parts.slice(0, -1).join('-');
+    auth = parts[parts.length - 1];
+  }
+  const aead = post.includes('GCM') || post.includes('CHACHA20') || post.includes('POLY1305');
+  let cipher = '—';
+  if (post.startsWith('AES_256_GCM')) cipher = 'AES-256-GCM';
+  else if (post.startsWith('AES_128_GCM')) cipher = 'AES-128-GCM';
+  else if (post.startsWith('CHACHA20')) cipher = 'ChaCha20-Poly1305';
+  else if (post.includes('AES_256_CBC')) cipher = 'AES-256-CBC';
+  else if (post.includes('AES_128_CBC')) cipher = 'AES-128-CBC';
+  else if (post.includes('3DES')) cipher = '3DES-EDE-CBC';
+  else if (post.includes('RC4')) cipher = 'RC4-128';
+  let mac = aead ? 'AEAD' : 'HMAC';
+  if (!aead) {
+    if (post.endsWith('SHA384')) mac = 'HMAC-SHA384';
+    else if (post.endsWith('SHA256')) mac = 'HMAC-SHA256';
+    else if (post.endsWith('SHA')) mac = 'HMAC-SHA1';
+    else if (post.endsWith('MD5')) mac = 'HMAC-MD5';
+  }
+  return { kx, auth, cipher, mac };
 }
 
 function HeadersTab({ headers }: { headers?: HeadersReport }) {

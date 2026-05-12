@@ -443,6 +443,7 @@ import '../styles/global.css';
         scanned_at: string;
         tls_grade: string;
         headers_grade: string;
+        highest_tls?: string;
       };
 
       function gradeRing(grade: string): string {
@@ -472,12 +473,15 @@ import '../styles/global.css';
         grid.innerHTML = entries
           .map((e) => {
             const grade = e.tls_grade || e.headers_grade || '?';
+            const subtitle = e.highest_tls
+              ? `${timeAgo(e.scanned_at)} · ${e.highest_tls}`
+              : timeAgo(e.scanned_at);
             return `
               <a class="recent-card" href="/r/${encodeURIComponent(e.id)}">
                 <span class="grade-chip${gradeRing(grade)}">${grade}</span>
                 <div class="meta">
                   <div class="dom">${e.host}</div>
-                  <div class="ago">${timeAgo(e.scanned_at)}</div>
+                  <div class="ago">${subtitle}</div>
                 </div>
               </a>`;
           })
