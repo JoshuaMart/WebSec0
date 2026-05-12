@@ -29,20 +29,20 @@
 
 ## Phase 2 — `safehttp` (the security-critical core)
 
-- [ ] `internal/safehttp/policy.go`: `IsBlocked(netip.Addr)` using stdlib `IsLoopback`, `IsLinkLocalUnicast`, `IsLinkLocalMulticast`, `IsMulticast`, `IsUnspecified`, `IsPrivate`
-- [ ] `internal/safehttp/policy.go`: extra hardcoded blocklist (CGNAT, IETF test nets, doc ranges, NAT64) per SPEC §8.3
-- [ ] `internal/safehttp/policy.go`: IPv4-mapped IPv6 unwrapping before policy check
-- [ ] `internal/safehttp/policy.go`: support for `extra_blocked_cidrs` from config
-- [ ] `internal/safehttp/input.go`: scheme / port / hostname validation per SPEC §8.1 (reject IP literals, userinfo, invalid FQDN, disallowed schemes)
-- [ ] `internal/safehttp/dialer.go`: `net.Dialer` with `Control` callback enforcing IP pin
-- [ ] `internal/safehttp/resolver.go`: single resolution → pinned IP, returns typed errors (`ErrPrivateTarget`, `ErrNoAllowedIP`, …)
-- [ ] `internal/safehttp/httpclient.go`: factory for `*http.Client` using the pinned dialer, with body cap (1 MB) and redirect cap (3) per SPEC §8.4
-- [ ] `internal/safehttp/redirect.go`: detect off-host redirects, stop following, surface as finding
-- [ ] `internal/safehttp/ratelimit.go`: per-IP + per-host limiters (in-memory, token bucket)
-- [ ] Unit tests: each blocked range produces `ErrPrivateTarget`
-- [ ] Unit tests: pinned dialer rejects a connect to a different IP
-- [ ] Integration test: rebinding scenario (resolver returns IP_A then IP_B) — only IP_A is ever connected
-- [ ] Integration test: redirect to a different host on a different IP is refused
+- [x] `internal/safehttp/policy.go`: `IsBlocked(netip.Addr)` using stdlib `IsLoopback`, `IsLinkLocalUnicast`, `IsLinkLocalMulticast`, `IsMulticast`, `IsUnspecified`, `IsPrivate`
+- [x] `internal/safehttp/policy.go`: extra hardcoded blocklist (CGNAT, IETF test nets, doc ranges, NAT64) per SPEC §8.3
+- [x] `internal/safehttp/policy.go`: IPv4-mapped IPv6 unwrapping before policy check
+- [x] `internal/safehttp/policy.go`: support for `extra_blocked_cidrs` from config
+- [x] `internal/safehttp/input.go`: scheme / port / hostname validation per SPEC §8.1 (reject IP literals, userinfo, invalid FQDN, disallowed schemes)
+- [x] `internal/safehttp/dialer.go`: `net.Dialer` with `Control` callback enforcing IP pin
+- [x] `internal/safehttp/resolver.go`: single resolution → pinned IP, returns typed errors (`ErrPrivateTarget`, `ErrNoAllowedIP`, …)
+- [x] `internal/safehttp/httpclient.go`: factory for `*http.Client` using the pinned dialer, with body cap (1 MB) and redirect cap (3) per SPEC §8.4
+- [x] `internal/safehttp/redirect.go`: detect off-host redirects, stop following, surface as finding
+- [x] `internal/safehttp/ratelimit.go`: per-IP + per-host limiters (in-memory, token bucket)
+- [x] Unit tests: each blocked range produces `ErrPrivateTarget`
+- [x] Unit tests: pinned dialer rejects a connect to a different IP
+- [x] Integration test: rebinding scenario (resolver returns IP_A then IP_B) — only IP_A is ever connected
+- [x] Integration test: redirect to a different host on a different IP is refused
 
 ## Phase 3 — Cache & history
 

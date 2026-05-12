@@ -45,6 +45,14 @@ linters:
         - performance
         - style
 
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - unparam
+
 formatters:
   enable:
     - gofumpt
