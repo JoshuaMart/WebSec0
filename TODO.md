@@ -90,14 +90,14 @@
 
 ## Phase 6 — Scoring TLS
 
-- [ ] `internal/scoring/tls_cert.go`: certificate sub-score (0–100)
-- [ ] `internal/scoring/tls_protocol.go`: protocol-support sub-score
-- [ ] `internal/scoring/tls_kx.go`: key-exchange sub-score
-- [ ] `internal/scoring/tls_cipher.go`: cipher-strength sub-score
-- [ ] `internal/scoring/tls.go`: combine via the SPEC §5.1 formula, apply all floors
-- [ ] `internal/scoring/tls.go`: A+ bonus when HSTS-preload-eligible (cross-module read from headers result)
-- [ ] Unit tests: every floor condition produces the expected cap
-- [ ] Reference fixtures: snapshot scores for 5 well-known sites in CI (no live network, replay captured handshakes)
+- [x] `internal/scoring/tls_cert.go`: certificate sub-score (0–100)
+- [x] `internal/scoring/tls_protocol.go`: protocol-support sub-score
+- [x] `internal/scoring/tls_kx.go`: key-exchange sub-score
+- [x] `internal/scoring/tls_cipher.go`: cipher-strength sub-score
+- [x] `internal/scoring/tls.go`: combine via the SPEC §5.1 formula, apply all floors
+- [x] `internal/scoring/tls.go`: A+ bonus when HSTS-preload-eligible (cross-module read from headers result)
+- [x] Unit tests: every floor condition produces the expected cap
+- [ ] Reference fixtures: snapshot scores for 5 well-known sites in CI (no live network, replay captured handshakes) — *deferred to v1.1*
 
 ## Phase 7 — Custom checks
 
