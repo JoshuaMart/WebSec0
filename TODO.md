@@ -192,5 +192,5 @@
 - [ ] README: usage section (run a scan via curl, run via UI, run in Docker)
 - [ ] README: configuration section pointing to `websec0.yaml.example`
 - [ ] README: minimal architecture diagram (mermaid)
-- [ ] README: contribution guide stub (`CONTRIBUTING.md`) explaining how to add a new check
+- [x] README: contribution guide stub (`CONTRIBUTING.md`) explaining how to add a new check — quick-start, dev workflow (test/lint/bundle-size), Conventional Commits, the three flavours of "add a check" (custom / TLS heuristic / config field), and the non-obvious invariants (safehttp, embed copy, scan package never imports probes)
 - [ ] Tag `v1.0.0`, write release notes
