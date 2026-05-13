@@ -37,12 +37,12 @@ remain anonymous).
 In scope:
 
 - The WebSec0 binary built from this repository (`cmd/websec0`).
-- The HTTP API documented in `SPECIFICATIONS.md` and in
-  `skills/websec0/SKILL.md`.
+- The HTTP API documented in `skills/websec0/SKILL.md`.
 - The static frontend embedded in the binary
   (`internal/frontend/`).
 - The `safehttp` security gate (SSRF, IP pinning, DNS rebinding) and
-  its documented invariants (SPEC §8).
+  its documented invariants — see the "SSRF defence" section of
+  `CLAUDE.md`.
 
 Out of scope:
 

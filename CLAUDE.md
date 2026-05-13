@@ -5,9 +5,13 @@ embeds an Astro/Preact frontend and exposes a chi-routed HTTP API that
 runs TLS, HTTP-header and custom checks against a single hostname.
 
 **Authoritative docs** (read these before non-trivial work):
-- `SPECIFICATIONS.md` — v1 contract: scope, scoring model, SSRF defence,
-  payload shapes. Cite as "SPEC §X.Y" in commits and code comments.
-- `TODO.md` — what's done, what's deferred (with reason), what's open.
+- `skills/websec0/SKILL.md` — full API contract, grading model and
+  finding interpretation, written for AI agents but human-readable.
+  Treat as the canonical reference when SPEC-level detail is needed.
+- `catalog/checks.json` — every check the scanner emits, with its
+  remediation snippet.
+- `websec0.yaml.example` — every configurable field, annotated.
+- `TODO.md` — what's open for v1.1 (deferred items, with reason).
 - `README.md` — public-facing summary.
 
 The maquette in `/maquette/` is a **design reference only** (gitignored).
@@ -84,7 +88,7 @@ violating any of them will cause regressions.
    orchestrator has both reports in scope.
 8. **`Loopback`, link-local, multicast and unspecified are ALWAYS blocked**
    in `safehttp.Policy.IsBlocked`, even with `AllowPrivate: true`. This
-   is intentional per SPEC §8.3 — do not relax without a config change.
+   is intentional — do not relax without a config change.
 9. **Catalog IDs and runtime IDs are currently misaligned**. Catalog uses
    `vuln.poodle`; runtime weakness findings emit `"POODLE"`. A future
    refactor will reconcile; do not "fix" one without the other.
@@ -115,8 +119,7 @@ violating any of them will cause regressions.
 1. Add to `internal/config/config.go` struct
 2. Update `internal/config/defaults.go`
 3. Update `internal/config/validate.go` if it needs bounds
-4. Mirror in `websec0.yaml.example`
-5. Update `SPECIFICATIONS.md` §7 (config block)
+4. Mirror in `websec0.yaml.example` (the user-facing config doc)
 
 **Lint exceptions are tracked**, not handed out. `errcheck`, `gosec`,
 `unparam` and `bodyclose` are silenced **only in `*_test.go`** via
@@ -131,7 +134,7 @@ reason on the same line (existing examples in `safehttp` and `tls`).
   (`scoring/tls.go::Worst(grade, ...)`). E.g. SSLv3 enabled → F.
 - **Pin / pinning** — `safehttp.Target.IP` is locked at resolve-time.
   Subsequent `Dial` calls hit that exact IP regardless of what DNS says
-  later (anti-rebinding, SPEC §8.2).
+  later (anti-rebinding).
 - **Probe** — a per-domain inspector (`tls.Probe`, `sslv2.Probe`,
   `headers.Probe`, `custom.RunAll`). Each probe is independent and
   resilient: failure produces a partial report, not a scan error.
@@ -139,5 +142,33 @@ reason on the same line (existing examples in `safehttp` and `tls`).
   Source of truth for remediation snippets.
 - **Maquette** — the design mockup in `/maquette/` (HTML+React via Babel
   CDN, gitignored). Reference only — not part of the build.
-- **SPEC §X.Y** — refers to a section of `SPECIFICATIONS.md`. Use this
-  notation in commits and code comments; it's stable across edits.
+
+## SSRF defence
+
+The scanner ingests user-supplied hostnames, so every outbound request
+must be funnelled through `internal/safehttp`. Four cooperating layers,
+each owning one file in the package:
+
+1. **Input validation** (`safehttp/input.go`) — `ValidateInput` parses
+   the raw target, applies the scheme allow-list and refuses IP
+   literals, userinfo and odd ports.
+2. **Resolution & pinning** (`safehttp/resolver.go`, `safehttp/dialer.go`)
+   — DNS is resolved exactly once at `Resolver.Resolve`; the chosen IP
+   is frozen in the `*Target`. `PinnedDialer` then dials that single
+   IP for every subsequent request, defeating DNS rebinding.
+3. **IP policy** (`safehttp/policy.go`) — `Policy.IsBlocked` filters
+   IPs. Loopback, link-local, multicast and unspecified are always
+   rejected; RFC 1918 / ULA / 100.64 are rejected unless
+   `AllowPrivate: true`. Operators can extend the deny list via
+   `Policy.Extra`.
+4. **Behavioural limits** (`safehttp/redirect.go` + per-host rate
+   limiter, body cap, timeouts) — `AllowRedirect` refuses off-host
+   redirects (with the apex↔www sibling carve-out wired in the
+   orchestrator); the client caps body size and dial/handshake
+   timeouts.
+
+Adding a new outbound call: never `net.Dial` or `http.Get` directly.
+Build a `*safehttp.Target` via the resolver and use
+`safehttp.NewClient(...)` or `safehttp.PinnedDialer(...)`. All
+existing probes (`tls`, `sslv2`, `sslv3`, `headers`, `custom`) follow
+this pattern; mirror them.
