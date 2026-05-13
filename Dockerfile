@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------
 # Stage 1: build the static Go binary.
 # ------------------------------------------------------------------------
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26-alpine@sha256:91eda9776261207ea25fd06b5b7fed8d397dd2c0a283e77f2ab6e91bfa71079d AS builder
 
 WORKDIR /src
 
@@ -31,7 +31,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 # Stage 2: minimal distroless runtime.
 # Uses the nonroot variant so the process never runs as UID 0.
 # ------------------------------------------------------------------------
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:a9329520abc449e3b14d5bc3a6ffae065bdde0f02667fa10880c49b35c109fd1
 
 COPY --from=builder /out/websec0 /usr/local/bin/websec0
 
