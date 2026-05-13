@@ -129,6 +129,26 @@ func TestSecurityTxt_Fail_404(t *testing.T) {
 	}
 }
 
+// TestSecurityTxt_Fail_HTMLContentType — RFC 9116 §2.4 requires
+// text/plain; an HTML SPA fallback served on /.well-known/security.txt
+// means the file is missing, not that we should try to parse the HTML.
+func TestSecurityTxt_Fail_HTMLContentType(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("<!doctype html><html><body>landing</body></html>"))
+	}))
+	defer srv.Close()
+	f := SecurityTxt{}.Run(context.Background(), makeTarget(t, srv))
+	if f.Status != scan.StatusFail {
+		t.Errorf("HTML response: got %s, want fail", f.Status)
+	}
+	var d securityTxtDetails
+	_ = json.Unmarshal(f.Details, &d)
+	if d.Note == "" {
+		t.Errorf("HTML response should set a Note explaining the situation")
+	}
+}
+
 func TestSecurityTxt_Warn_Expired(t *testing.T) {
 	body := "Contact: mailto:x@example.com\nExpires: " + time.Now().Add(-time.Hour).Format(time.RFC3339) + "\n"
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

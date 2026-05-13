@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/JoshuaMart/websec0/internal/safehttp"
@@ -13,10 +15,12 @@ import (
 // fetchTimeout is the per-check budget for fetching a single resource.
 const fetchTimeout = 10 * time.Second
 
-// fetchText runs a GET via safehttp's pinned client and returns the body
-// (up to maxBytes), the HTTP status, and any transport error. The body cap
-// prevents adversarial servers from streaming an unbounded response.
-func fetchText(ctx context.Context, target *safehttp.Target, path string, maxBytes int64) (body string, status int, err error) {
+// fetchText runs a GET via safehttp's pinned client and returns the
+// body (up to maxBytes), the HTTP status, the parsed media type from
+// the Content-Type header (lowercase, parameters stripped — empty when
+// the header is absent or malformed) and any transport error. The body
+// cap prevents adversarial servers from streaming an unbounded response.
+func fetchText(ctx context.Context, target *safehttp.Target, path string, maxBytes int64) (body string, status int, mediaType string, err error) {
 	client := safehttp.NewClient(safehttp.ClientOpts{
 		Target:       target,
 		MaxBodyBytes: maxBytes,
@@ -24,15 +28,23 @@ func fetchText(ctx context.Context, target *safehttp.Target, path string, maxByt
 	})
 	req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, target.URL(path), http.NoBody)
 	if reqErr != nil {
-		return "", 0, reqErr
+		return "", 0, "", reqErr
 	}
 	resp, doErr := client.Do(req)
 	if doErr != nil {
-		return "", 0, doErr
+		return "", 0, "", doErr
 	}
 	defer func() { _ = resp.Body.Close() }()
 	raw, _ := io.ReadAll(resp.Body) // ErrBodyTooLarge is fine — we keep what we got.
-	return string(raw), resp.StatusCode, nil
+	mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	return string(raw), resp.StatusCode, strings.ToLower(mt), nil
+}
+
+// isHTMLMediaType reports whether mt is a recognised HTML/XHTML media
+// type. Used by the custom checks to reject SPA-fallback responses
+// served on /robots.txt or /.well-known/security.txt.
+func isHTMLMediaType(mt string) bool {
+	return mt == "text/html" || mt == "application/xhtml+xml"
 }
 
 // mustJSON marshals v to JSON, panicking on error. Only safe with types

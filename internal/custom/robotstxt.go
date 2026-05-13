@@ -33,7 +33,7 @@ type robotsTxtDetails struct {
 // Run implements Check.
 func (r RobotsTxt) Run(ctx context.Context, target *safehttp.Target) scan.CustomFinding {
 	url := target.URL("/robots.txt")
-	body, status, err := fetchText(ctx, target, "/robots.txt", robotsTxtMaxBytes)
+	body, status, mediaType, err := fetchText(ctx, target, "/robots.txt", robotsTxtMaxBytes)
 	finding := scan.CustomFinding{ID: r.ID(), Title: "robots.txt"}
 
 	if err != nil || status != http.StatusOK {
@@ -45,15 +45,18 @@ func (r RobotsTxt) Run(ctx context.Context, target *safehttp.Target) scan.Custom
 		return finding
 	}
 
-	// SPA-style sites answer 200 OK on /robots.txt with the landing HTML.
-	// Treat that as "no robots.txt" rather than a parseable file.
-	if !looksLikeRobotsTxt(body) {
+	// Content-Type is the authoritative signal that a server actually
+	// serves a robots.txt rather than answering /robots.txt with its SPA
+	// shell. RFC 9309 doesn't mandate a specific media type but every
+	// real-world implementation uses text/plain; an HTML response is
+	// unambiguous evidence the file is missing.
+	if isHTMLMediaType(mediaType) {
 		finding.Status = scan.StatusInfo
 		finding.Details = mustJSON(robotsTxtDetails{
 			URL:       url,
 			SizeBytes: len(body),
 			Parseable: false,
-			Note:      "response is not a robots.txt (likely an SPA fallback or unrelated HTML)",
+			Note:      fmt.Sprintf("served as %s — likely a SPA fallback, not a robots.txt", mediaType),
 		})
 		return finding
 	}
@@ -72,27 +75,6 @@ func (r RobotsTxt) Run(ctx context.Context, target *safehttp.Target) scan.Custom
 	}
 	finding.Details = mustJSON(details)
 	return finding
-}
-
-// looksLikeRobotsTxt is a permissive sanity check: an empty body is a
-// valid "everything allowed" robots.txt per RFC 9309 §2.2.1, but a body
-// that opens with HTML markup (typical when a SPA serves the landing on
-// any unknown route) clearly isn't one.
-func looksLikeRobotsTxt(body string) bool {
-	trimmed := strings.TrimSpace(body)
-	if trimmed == "" {
-		return true
-	}
-	if trimmed[0] == '<' {
-		return false
-	}
-	lower := strings.ToLower(trimmed)
-	if strings.Contains(lower, "<html") ||
-		strings.Contains(lower, "<!doctype html") ||
-		strings.Contains(lower, "</body>") {
-		return false
-	}
-	return true
 }
 
 // suspiciousPathPrefixes is the closed list of path prefixes that, when

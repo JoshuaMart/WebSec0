@@ -35,7 +35,7 @@ type securityTxtDetails struct {
 // Run implements Check.
 func (s SecurityTxt) Run(ctx context.Context, target *safehttp.Target) scan.CustomFinding {
 	url := target.URL("/.well-known/security.txt")
-	body, status, err := fetchText(ctx, target, "/.well-known/security.txt", securityTxtMaxBytes)
+	body, status, mediaType, err := fetchText(ctx, target, "/.well-known/security.txt", securityTxtMaxBytes)
 	if err != nil || status != http.StatusOK {
 		return scan.CustomFinding{
 			ID:     s.ID(),
@@ -44,6 +44,21 @@ func (s SecurityTxt) Run(ctx context.Context, target *safehttp.Target) scan.Cust
 			Details: mustJSON(securityTxtDetails{
 				URL:  url,
 				Note: fmt.Sprintf("HTTP %d", status),
+			}),
+		}
+	}
+
+	// RFC 9116 §2.4 mandates text/plain. Anything else (especially an
+	// HTML SPA fallback served on /.well-known/security.txt) means the
+	// file is missing — surface that rather than parsing the HTML.
+	if isHTMLMediaType(mediaType) {
+		return scan.CustomFinding{
+			ID:     s.ID(),
+			Title:  "security.txt",
+			Status: scan.StatusFail,
+			Details: mustJSON(securityTxtDetails{
+				URL:  url,
+				Note: fmt.Sprintf("served as %s — RFC 9116 §2.4 requires text/plain, likely a SPA fallback", mediaType),
 			}),
 		}
 	}

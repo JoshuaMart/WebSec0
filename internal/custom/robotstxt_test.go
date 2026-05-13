@@ -92,49 +92,43 @@ func TestRobotsTxt_Info_Missing(t *testing.T) {
 	}
 }
 
-// TestRobotsTxt_Info_HTMLFallback ensures we don't mark an SPA's
-// landing-page HTML as a parseable robots.txt just because the server
-// answered 200 on /robots.txt.
-func TestRobotsTxt_Info_HTMLFallback(t *testing.T) {
-	html := "<!doctype html><html><head><title>landing</title></head><body>…</body></html>"
+// TestRobotsTxt_Info_HTMLContentType ensures that a 200 response served
+// as text/html (typical SPA fallback) is reported as not-parseable,
+// regardless of body content. The signal is the response media type,
+// not body sniffing.
+func TestRobotsTxt_Info_HTMLContentType(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(html))
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("<!doctype html><html><body>landing</body></html>"))
 	}))
 	defer srv.Close()
 	f := RobotsTxt{}.Run(context.Background(), makeTarget(t, srv))
 	if f.Status != scan.StatusInfo {
-		t.Errorf("HTML body: got %s, want info", f.Status)
+		t.Errorf("HTML response: got %s, want info", f.Status)
 	}
 	var d robotsTxtDetails
 	_ = json.Unmarshal(f.Details, &d)
 	if d.Parseable {
-		t.Errorf("HTML body must not be marked parseable, got %+v", d)
+		t.Errorf("HTML response must not be parseable, got %+v", d)
 	}
 	if d.Note == "" {
-		t.Errorf("HTML body should set a Note explaining the situation, got empty")
+		t.Errorf("HTML response should set a Note, got empty")
 	}
 }
 
-func TestLooksLikeRobotsTxt(t *testing.T) {
-	cases := []struct {
-		name string
-		body string
-		want bool
-	}{
-		{"empty", "", true},
-		{"whitespace only", "  \n\t \n", true},
-		{"plain robots", "User-agent: *\nDisallow: /admin\n", true},
-		{"comments only", "# this is a comment\n# another\n", true},
-		{"html doctype", "<!doctype html><html>…", false},
-		{"html start tag", "<html><body>oops</body></html>", false},
-		{"html with leading whitespace", "   <html>oops</html>", false},
-		{"closing body tag mid-body", "User-agent: *\n</body>\n", false},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			if got := looksLikeRobotsTxt(c.body); got != c.want {
-				t.Errorf("got %v, want %v", got, c.want)
-			}
-		})
+// TestRobotsTxt_Pass_NoContentType accepts a server that returns plain
+// text without a Content-Type header — we don't have evidence it's HTML,
+// so the parser runs as usual.
+func TestRobotsTxt_Pass_NoContentType(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Go's http.ResponseWriter auto-sniffs the Content-Type from the
+		// body when not set. Disable that by overriding to empty.
+		w.Header()["Content-Type"] = nil
+		_, _ = w.Write([]byte("User-agent: *\nDisallow: /tmp/\n"))
+	}))
+	defer srv.Close()
+	f := RobotsTxt{}.Run(context.Background(), makeTarget(t, srv))
+	if f.Status != scan.StatusPass {
+		t.Errorf("no Content-Type but plain body: got %s, want pass", f.Status)
 	}
 }
