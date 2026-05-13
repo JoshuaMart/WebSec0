@@ -16,9 +16,6 @@
 
 # WebSec0
 
-> [!WARNING]
-> Work In Progress
-
 **WebSec0** is an open-source, self-hostable, **passive** web security
 configuration scanner. In a single ~15 MB binary, it inspects a host's TLS
 configuration and HTTP security headers, runs a handful of custom checks
