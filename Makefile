@@ -14,7 +14,7 @@ PNPM        ?= pnpm
 
 BUNDLE_BUDGET_BYTES ?= 81920  # 80 KB gzip — see SPEC + TODO Phase 11
 
-.PHONY: help build test lint frontend frontend-install bundle-size docker clean tidy
+.PHONY: help build test lint frontend frontend-install bundle-size docker release-dry-run clean tidy
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Targets:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -54,6 +54,9 @@ bundle-size: ## Assert the Astro JS+CSS bundle stays under BUNDLE_BUDGET_BYTES g
 
 docker: ## Build the distroless Docker image
 	docker build -t $(BINARY):$(VERSION) .
+
+release-dry-run: ## Run goreleaser in snapshot mode (skips signing, publish and docker push)
+	goreleaser release --snapshot --clean --skip=publish --skip=sign --skip=docker --skip=sbom
 
 clean: ## Remove build artefacts (keeps internal/frontend/dist/.keep)
 	rm -rf dist web/dist coverage.out coverage.html

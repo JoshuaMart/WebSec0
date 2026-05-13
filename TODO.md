@@ -182,7 +182,7 @@
 
 - [x] CI workflow (`.github/workflows/ci.yml`): `go vet`, `go test -race -count=1 -coverprofile`, `golangci-lint` (pinned `v2.11.4`), frontend `pnpm build`, and a `make bundle-size` gate that asserts the gzipped JS+CSS bundle stays under 80 KB. Three parallel jobs (`go`, `lint`, `frontend`)
 - [x] CI workflow (`.github/workflows/codeql.yml`): CodeQL for Go + JavaScript/TypeScript with `security-extended,security-and-quality` queries; weekly cron + push/PR triggers
-- [ ] CI workflow (`.github/workflows/release.yml`): tagged release → `goreleaser` produces multi-arch binaries + Docker image — *deferred*
+- [x] CI workflow (`.github/workflows/release.yml`): pushing a `v*` tag runs goreleaser end-to-end — multi-arch binaries (linux/darwin × amd64/arm64) as tar.gz, multi-arch distroless Docker image on `ghcr.io/joshuamart/websec0:<tag>` + `:latest`, syft-generated SBOMs and cosign keyless signatures (checksum blob + Docker manifest). `make release-dry-run` exercises the binary/archive pipeline locally
 - [x] OpenSSF Scorecard workflow (`.github/workflows/scorecard.yml`): weekly cron + branch-protection-rule trigger; SARIF published to the Security tab and to the Scorecard API for the README badge
 - [x] Coverage report uploaded as CI artefact (`coverage.out` produced by the `go` job, retained 14 days)
 - [x] `SECURITY.md` (responsible disclosure) — GitHub Security Advisory channel; scope, SLA and supported-versions block; referenced by the project's own `security.txt` when we host an instance

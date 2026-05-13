@@ -1,3 +1,8 @@
+# Release plan: multi-arch binaries (linux/darwin × amd64/arm64), a
+# multi-arch distroless Docker image on GHCR, an SBOM produced by syft
+# and a cosign keyless signature on the checksum file and on the
+# Docker manifest. The frontend is rebuilt in the `before` hook so
+# the //go:embed bundle always matches the tagged commit.
 version: 2
 
 project_name: websec0
@@ -17,44 +22,151 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/JoshuaMart/websec0/internal/version.Version={{.Version}}
-      - -X github.com/JoshuaMart/websec0/internal/version.Commit={{.ShortCommit}}
-      - -X github.com/JoshuaMart/websec0/internal/version.Date={{.Date}}
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
+      - -X github.com/JoshuaMart/websec0/internal/version.Version={{ .Version }}
+      - -X github.com/JoshuaMart/websec0/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/JoshuaMart/websec0/internal/version.Date={{ .Date }}
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
 
 archives:
-  - id: default
+  - id: websec0
     formats: [tar.gz]
-    name_template: >-
-      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
-    format_overrides:
-      - goos: windows
-        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
       - README.md
+      - SECURITY.md
       - websec0.yaml.example
+      - skills/websec0/SKILL.md
 
 checksum:
   name_template: "checksums.txt"
   algorithm: sha256
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-dev"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
+  use: github
   sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Documentation
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 2
+    - title: CI / build
+      regexp: '^.*?ci(\(.+\))??!?:.+$'
+      order: 3
+    - title: Chores
+      regexp: '^.*?chore(\(.+\))??!?:.+$'
+      order: 4
+    - title: Other changes
+      order: 999
   filters:
     exclude:
-      - "^docs:"
-      - "^chore:"
-      - "^ci:"
-      - "^test:"
-      - Merge pull request
-      - Merge branch
+      - '^chore\(deps\):'
+      - '^Merge pull request'
+      - '^Merge branch'
+
+dockers:
+  - id: linux-amd64
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.goreleaser
+    use: buildx
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description=Passive TLS + HTTP headers scanner"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source=https://github.com/JoshuaMart/WebSec0"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - id: linux-arm64
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.goreleaser
+    use: buildx
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description=Passive TLS + HTTP headers scanner"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source=https://github.com/JoshuaMart/WebSec0"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+docker_manifests:
+  - name_template: "ghcr.io/joshuamart/websec0:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Version }}-amd64"
+      - "ghcr.io/joshuamart/websec0:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/joshuamart/websec0:latest"
+    image_templates:
+      - "ghcr.io/joshuamart/websec0:{{ .Version }}-amd64"
+      - "ghcr.io/joshuamart/websec0:{{ .Version }}-arm64"
+
+sboms:
+  - id: archive
+    artifacts: archive
+
+signs:
+  - id: cosign-checksum
+    cmd: cosign
+    artifacts: checksum
+    output: true
+    args:
+      - sign-blob
+      - "--yes"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+
+docker_signs:
+  - id: cosign-image
+    cmd: cosign
+    artifacts: manifests
+    output: true
+    args:
+      - sign
+      - "--yes"
+      - "${artifact}@${digest}"
+
+release:
+  github:
+    owner: JoshuaMart
+    name: WebSec0
+  draft: false
+  prerelease: auto
+  mode: replace
+  name_template: "{{ .Tag }}"
+  header: |
+    ## WebSec0 {{ .Tag }}
+
+    Multi-arch binaries and a distroless Docker image. The binary embeds
+    the Astro frontend; running `./websec0` exposes the UI on `:8080`.
+  footer: |
+    ---
+
+    **Docker image** — `ghcr.io/joshuamart/websec0:{{ .Tag }}` (linux/amd64 + linux/arm64).
+
+    **Verifying release artefacts** — the `checksums.txt` file and the
+    Docker manifest are signed with cosign keyless via Sigstore. To
+    verify the checksum signature:
+
+    ```bash
+    cosign verify-blob \
+      --certificate-identity-regexp 'https://github.com/JoshuaMart/WebSec0/.github/workflows/release.yml@refs/tags/' \
+      --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+      --signature checksums.txt.sig \
+      checksums.txt
+    ```

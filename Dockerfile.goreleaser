@@ -1,0 +1,12 @@
+# Minimal release Dockerfile used by goreleaser. The Go binary has
+# already been built by goreleaser for the target arch and dropped
+# into the build context — this image just adds the distroless
+# runtime on top.
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:a9329520abc449e3b14d5bc3a6ffae065bdde0f02667fa10880c49b35c109fd1
+
+COPY websec0 /usr/local/bin/websec0
+
+USER nonroot:nonroot
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/websec0"]
