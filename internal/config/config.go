@@ -60,6 +60,12 @@ type HistoryLimits struct {
 type Frontend struct {
 	Enabled  bool   `yaml:"enabled"`
 	BasePath string `yaml:"base_path"`
+	// HeadInject is a raw HTML fragment spliced just before </head> in
+	// every embedded shell page (landing + report). Intended for opt-in
+	// analytics on a public deployment (Umami, Plausible, …). Empty by
+	// default so self-hosters get an untouched bundle. The string is
+	// trusted operator-supplied content — not escaped.
+	HeadInject string `yaml:"head_inject"`
 }
 
 // Telemetry holds optional anonymous-stats reporting flags.

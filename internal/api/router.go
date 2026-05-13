@@ -66,16 +66,16 @@ func NewRouter(d Deps) *chi.Mux {
 
 	// Mount the embedded frontend at /*. A missing build is non-fatal —
 	// the binary still serves the API while logging a warning.
-	mountFrontend(r, d.Config.Frontend.Enabled, logger)
+	mountFrontend(r, d.Config.Frontend, logger)
 	return r
 }
 
-func mountFrontend(r *chi.Mux, enabled bool, logger *slog.Logger) {
-	if !enabled {
+func mountFrontend(r *chi.Mux, cfg config.Frontend, logger *slog.Logger) {
+	if !cfg.Enabled {
 		r.NotFound(noFrontendNotFound)
 		return
 	}
-	h, err := frontend.Handler()
+	h, err := frontend.Handler(cfg.HeadInject)
 	if err != nil {
 		logger.Warn("frontend disabled", slog.String("reason", err.Error()))
 		r.NotFound(noFrontendNotFound)

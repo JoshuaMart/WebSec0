@@ -8,6 +8,7 @@
 package frontend
 
 import (
+	"bytes"
 	"embed"
 	"errors"
 	"io/fs"
@@ -49,7 +50,13 @@ var ErrIndexMissing = errors.New("frontend: index.html missing — run `make fro
 // When the embedded dist does not contain index.html, Handler returns
 // ErrIndexMissing so callers can choose to disable the frontend route
 // gracefully rather than panic.
-func Handler() (http.Handler, error) {
+//
+// headInject, when non-empty, is spliced once into every shell HTML just
+// before </head>. Used to opt the public deployment into analytics
+// without touching self-hosted builds. The snippet is trusted operator
+// config — not escaped. If </head> is absent (or the snippet is empty)
+// the bytes are served verbatim.
+func Handler(headInject string) (http.Handler, error) {
 	sub, err := FS()
 	if err != nil {
 		return nil, err
@@ -58,9 +65,13 @@ func Handler() (http.Handler, error) {
 	if err != nil {
 		return nil, ErrIndexMissing
 	}
+	indexBytes = injectHead(indexBytes, headInject)
 	// The report shell is optional — if it has not been built yet, /r/* paths
 	// fall back to the landing.
 	reportBytes, _ := fs.ReadFile(sub, reportIndexPath)
+	if reportBytes != nil {
+		reportBytes = injectHead(reportBytes, headInject)
+	}
 	server := http.FileServer(http.FS(sub))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -80,6 +91,25 @@ func Handler() (http.Handler, error) {
 		}
 		writeIndex(w, indexBytes)
 	}), nil
+}
+
+// injectHead splices snippet just before the first </head> in body.
+// Returns body unchanged when snippet is empty or no </head> marker is
+// found, so a malformed shell still ships rather than panicking.
+func injectHead(body []byte, snippet string) []byte {
+	if snippet == "" {
+		return body
+	}
+	marker := []byte("</head>")
+	i := bytes.Index(body, marker)
+	if i < 0 {
+		return body
+	}
+	out := make([]byte, 0, len(body)+len(snippet))
+	out = append(out, body[:i]...)
+	out = append(out, snippet...)
+	out = append(out, body[i:]...)
+	return out
 }
 
 func writeIndex(w http.ResponseWriter, body []byte) {

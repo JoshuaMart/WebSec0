@@ -34,6 +34,13 @@ history:
 frontend:
   enabled: true                 # serve the embedded UI at /
   base_path: "/"
+  # Raw HTML spliced before </head> in every served page. Intended for
+  # analytics on a public deployment (Umami, Plausible, …). Trusted: not
+  # escaped. Empty = no injection (default, what self-hosters get).
+  head_inject: ""
+  # head_inject: |
+  #   <script defer src="https://umami.example.com/script.js"
+  #           data-website-id="xxxx-xxxx"></script>
 
 telemetry:
   anonymous_stats: false        # if true, send scan counts (no hostnames) to a stats endpoint
