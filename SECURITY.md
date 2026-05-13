@@ -5,7 +5,7 @@
 If you believe you have found a security issue in WebSec0, please report
 it privately via GitHub's "Report a vulnerability" workflow:
 
-**https://github.com/JoshuaMart/websec0/security/advisories/new**
+**https://github.com/JoshuaMart/WebSec0/security/advisories/new**
 
 This opens a private security advisory only visible to the project
 maintainers. Do not open a public issue, pull request, or social-media

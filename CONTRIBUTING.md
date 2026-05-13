@@ -153,7 +153,7 @@ alongside the TLS and Headers reports.
 ## Reporting issues
 
 - Functional bugs and feature requests:
-  <https://github.com/JoshuaMart/websec0/issues>.
+  <https://github.com/JoshuaMart/WebSec0/issues>.
 - Security issues: please follow
   [`SECURITY.md`](./SECURITY.md) and report privately via the GitHub
   Security Advisory workflow.
