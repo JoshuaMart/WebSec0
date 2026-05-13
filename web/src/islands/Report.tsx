@@ -110,12 +110,6 @@ type ScanResult = {
 // ────────────────────────────────────────────────────────────────────────────
 // Tiny utilities
 
-function gradeRingClass(grade: string): string {
-  if (grade === 'A+' || grade === 'A') return '';
-  if (grade === 'B' || grade === 'C') return ' warn';
-  return ' bad';
-}
-
 function statusSev(status: Status): Severity {
   if (status === 'pass') return 'good';
   if (status === 'warn') return 'warn';
@@ -161,15 +155,6 @@ function fmtDuration(ms: number): string {
 function scanIDFromPath(): string {
   const m = location.pathname.match(/^\/r\/([^/?#]+)/);
   return m ? decodeURIComponent(m[1]) : '';
-}
-
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
