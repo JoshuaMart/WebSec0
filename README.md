@@ -48,15 +48,39 @@ but human-readable.
 
 ## Self-host
 
-Run the distroless image locally:
+Pull and run the published multi-arch image. Defaults work out of the box:
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/joshuamart/websec0:latest
+```
+
+Open <http://localhost:8080>. The distroless image weighs ~15 MB and runs as a
+non-root user. To override the defaults (listen address, rate limits, SSRF
+policy, history retention), mount a config file:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -v "$(pwd)/websec0.yaml":/etc/websec0/websec0.yaml:ro \
+  ghcr.io/joshuamart/websec0:latest \
+  --config /etc/websec0/websec0.yaml
+```
+
+Use [`websec0.yaml.example`](./websec0.yaml.example) as a starting point —
+every field is annotated.
+
+<details>
+<summary><strong>Build the image yourself</strong></summary>
+
+The repo ships two Dockerfiles. `Dockerfile` builds Go inside Docker and is
+what `make docker` invokes; `Dockerfile.goreleaser` is the minimal copy-only
+runtime used by the release pipeline.
 
 ```bash
 docker build -t websec0 .
 docker run --rm -p 8080:8080 websec0
 ```
 
-Then open <http://localhost:8080>. The image weighs ~15 MB and runs as a
-non-root user.
+</details>
 
 <details>
 <summary><strong>From source</strong></summary>
@@ -72,17 +96,6 @@ make build
 
 `make frontend` builds the Astro bundle and rsyncs it into
 `internal/frontend/dist/` where `//go:embed` picks it up at build time.
-
-</details>
-
-<details>
-<summary><strong>Configuration</strong></summary>
-
-WebSec0 runs with sensible defaults; no configuration file is required for
-local use. To tune the listen address, rate limits, history retention or
-the SSRF policy, copy [`websec0.yaml.example`](./websec0.yaml.example) next
-to the binary as `websec0.yaml` — it is auto-discovered on startup. Use
-`--config /path/to/file.yaml` to override the search path.
 
 </details>
 
