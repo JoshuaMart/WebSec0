@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -83,11 +84,19 @@ func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 	}
 	server := http.FileServer(http.FS(sub))
 
-	var overlay http.Handler
+	var (
+		overlay       http.Handler
+		overlayAbsDir string
+	)
 	if staticOverlayDir != "" {
-		// http.Dir rejects ".." and absolute paths in the URL, so an
-		// attacker cannot escape the overlay tree. The overlay is read-only
-		// from the binary's perspective (we never write here).
+		abs, absErr := filepath.Abs(staticOverlayDir)
+		if absErr != nil {
+			return nil, fmt.Errorf("frontend: static_overlay_dir: %w", absErr)
+		}
+		overlayAbsDir = abs
+		// http.Dir already rejects ".." and absolute paths in the URL; we
+		// add an explicit "stays under the overlay dir" check below as
+		// belt-and-suspenders defence and to keep static analyzers happy.
 		overlay = http.FileServer(http.Dir(staticOverlayDir))
 	}
 
@@ -98,12 +107,17 @@ func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 			return
 		}
 		// Overlay wins when configured AND the path is allowed AND the
-		// file exists on disk; otherwise fall through to the embedded
-		// fs so an upstream-shipped file is still served.
+		// resolved file stays inside the overlay tree AND the file
+		// exists on disk; otherwise fall through to the embedded fs so
+		// an upstream-shipped file is still served.
 		if overlay != nil && overlayAllowed(rel) {
-			if info, err := os.Stat(filepath.Join(staticOverlayDir, rel)); err == nil && !info.IsDir() {
-				overlay.ServeHTTP(w, r)
-				return
+			joined := filepath.Join(overlayAbsDir, rel)
+			if joined == overlayAbsDir ||
+				strings.HasPrefix(joined, overlayAbsDir+string(filepath.Separator)) {
+				if info, err := os.Stat(joined); err == nil && !info.IsDir() {
+					overlay.ServeHTTP(w, r)
+					return
+				}
 			}
 		}
 		if info, err := fs.Stat(sub, rel); err == nil && !info.IsDir() {
