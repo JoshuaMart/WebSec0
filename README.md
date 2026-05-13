@@ -1,3 +1,5 @@
+![Image](https://github.com/user-attachments/assets/90d66777-7611-4bfc-994c-b4e5de1a469f)
+
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-111111?style=for-the-badge&logo=unlicense&logoColor=#FFF"></a>
   <img src="https://img.shields.io/badge/Go-1.26+-111111?style=for-the-badge&logo=go&logoColor=#00a6d2">
