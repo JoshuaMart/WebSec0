@@ -12,7 +12,9 @@ GO          ?= go
 GOLANGCI    ?= golangci-lint
 PNPM        ?= pnpm
 
-.PHONY: help build test lint frontend frontend-install docker clean tidy
+BUNDLE_BUDGET_BYTES ?= 81920  # 80 KB gzip — see SPEC + TODO Phase 11
+
+.PHONY: help build test lint frontend frontend-install bundle-size docker clean tidy
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Targets:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -36,6 +38,19 @@ frontend-install: ## Install frontend dependencies (pnpm)
 frontend: ## Build the Astro frontend and sync it into internal/frontend/dist
 	cd web && $(PNPM) build
 	rsync -a --delete --exclude='.keep' web/dist/ internal/frontend/dist/
+
+bundle-size: ## Assert the Astro JS+CSS bundle stays under BUNDLE_BUDGET_BYTES gzipped
+	@if [ ! -d web/dist/_astro ]; then \
+	  echo "web/dist/_astro/ missing — run 'cd web && $(PNPM) build' first"; \
+	  exit 1; \
+	fi
+	@size=$$(cat web/dist/_astro/*.js web/dist/_astro/*.css 2>/dev/null | gzip -9c | wc -c | tr -d ' '); \
+	budget=$(BUNDLE_BUDGET_BYTES); \
+	echo "bundle gzip: $$size bytes (budget $$budget)"; \
+	if [ "$$size" -gt "$$budget" ]; then \
+	  echo "Bundle over budget by $$((size - budget)) bytes"; \
+	  exit 1; \
+	fi
 
 docker: ## Build the distroless Docker image
 	docker build -t $(BINARY):$(VERSION) .
