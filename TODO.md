@@ -189,8 +189,8 @@
 
 ## Phase 15 — Documentation polish
 
-- [ ] README: usage section (run a scan via curl, run via UI, run in Docker)
-- [ ] README: configuration section pointing to `websec0.yaml.example`
-- [ ] README: minimal architecture diagram (mermaid)
+- [x] README: usage section (run a scan via curl, run via UI, run in Docker) — hosted instance at https://www.websec0.com sits above the fold with a curl one-liner; Docker is the default self-host path; "From source" is collapsed in `<details>`
+- [x] README: configuration section pointing to `websec0.yaml.example` — kept in a `<details>` block since defaults cover the local-use case
+- [x] README: minimal architecture diagram (mermaid) — single flowchart showing the safehttp gate, parallel probes and scoring path, paired with a one-paragraph commentary
 - [x] README: contribution guide stub (`CONTRIBUTING.md`) explaining how to add a new check — quick-start, dev workflow (test/lint/bundle-size), Conventional Commits, the three flavours of "add a check" (custom / TLS heuristic / config field), and the non-obvious invariants (safehttp, embed copy, scan package never imports probes)
 - [ ] Tag `v1.0.0`, write release notes
