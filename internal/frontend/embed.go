@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"embed"
 	"errors"
-	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -84,19 +83,12 @@ func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 	}
 	server := http.FileServer(http.FS(sub))
 
-	var (
-		overlay       http.Handler
-		overlayAbsDir string
-	)
+	var overlay http.Handler
 	if staticOverlayDir != "" {
-		abs, absErr := filepath.Abs(staticOverlayDir)
-		if absErr != nil {
-			return nil, fmt.Errorf("frontend: static_overlay_dir: %w", absErr)
-		}
-		overlayAbsDir = abs
-		// http.Dir already rejects ".." and absolute paths in the URL; we
-		// add an explicit "stays under the overlay dir" check below as
-		// belt-and-suspenders defence and to keep static analyzers happy.
+		// http.Dir already rejects ".." and absolute paths in the URL;
+		// the per-request filepath.IsLocal check below is the
+		// documented (and CodeQL-recognised) sanitiser for path-
+		// traversal, so the os.Stat call cannot escape the overlay.
 		overlay = http.FileServer(http.Dir(staticOverlayDir))
 	}
 
@@ -106,18 +98,15 @@ func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 			writeIndex(w, indexBytes)
 			return
 		}
-		// Overlay wins when configured AND the path is allowed AND the
-		// resolved file stays inside the overlay tree AND the file
-		// exists on disk; otherwise fall through to the embedded fs so
-		// an upstream-shipped file is still served.
-		if overlay != nil && overlayAllowed(rel) {
-			joined := filepath.Join(overlayAbsDir, rel)
-			if joined == overlayAbsDir ||
-				strings.HasPrefix(joined, overlayAbsDir+string(filepath.Separator)) {
-				if info, err := os.Stat(joined); err == nil && !info.IsDir() {
-					overlay.ServeHTTP(w, r)
-					return
-				}
+		// Overlay wins when configured AND the path is allowed AND it
+		// stays local to the overlay tree (filepath.IsLocal rejects
+		// absolute paths, "..", and Windows volume references) AND the
+		// file exists on disk. Otherwise fall through to the embedded
+		// fs so an upstream-shipped file is still served.
+		if overlay != nil && overlayAllowed(rel) && filepath.IsLocal(rel) {
+			if info, err := os.Stat(filepath.Join(staticOverlayDir, rel)); err == nil && !info.IsDir() {
+				overlay.ServeHTTP(w, r)
+				return
 			}
 		}
 		if info, err := fs.Stat(sub, rel); err == nil && !info.IsDir() {
