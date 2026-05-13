@@ -38,7 +38,7 @@ func TestProbe_HappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	report, err := Probe(context.Background(), makeTarget(t, srv))
+	report, _, err := Probe(context.Background(), makeTarget(t, srv))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestProbe_EmptyResponse_AllCoreFail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	report, err := Probe(context.Background(), makeTarget(t, srv))
+	report, _, err := Probe(context.Background(), makeTarget(t, srv))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,11 +90,34 @@ func TestFetch_CapturesMultipleSetCookie(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	h, err := Fetch(context.Background(), makeTarget(t, srv))
+	h, _, err := Fetch(context.Background(), makeTarget(t, srv))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := len(h.Values("Set-Cookie")); got != 2 {
 		t.Errorf("expected 2 Set-Cookie values, got %d", got)
+	}
+}
+
+// When safehttp.AllowRedirect rejects an off-host 3xx, Fetch should still
+// surface the 3xx headers (HSTS, Server, …) and report the Location so the
+// orchestrator can decide whether to retry on a sibling host.
+func TestFetch_OffHostRedirect_ReturnsPartialHeaders(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		w.Header().Set("Location", "https://www.example.test/")
+		w.WriteHeader(http.StatusMovedPermanently)
+	}))
+	defer srv.Close()
+
+	h, redirect, err := Fetch(context.Background(), makeTarget(t, srv))
+	if err != nil {
+		t.Fatalf("Fetch should swallow off-host rejection, got err=%v", err)
+	}
+	if redirect != "https://www.example.test/" {
+		t.Errorf("redirect: got %q, want https://www.example.test/", redirect)
+	}
+	if got := h.Get("Strict-Transport-Security"); got == "" {
+		t.Errorf("HSTS from 3xx should be captured, got empty")
 	}
 }

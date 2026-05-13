@@ -176,6 +176,11 @@ type HeadersReport struct {
 	Score      int                     `json:"score"`
 	Core       map[string]HeaderResult `json:"core"`
 	Additional AdditionalHeaders       `json:"additional"`
+	// ProbedHost names the host whose response actually populated this
+	// report when the original target redirected to a www-sibling
+	// (e.g. cloudflare.com → www.cloudflare.com). Empty when the probe
+	// stayed on the original host.
+	ProbedHost string `json:"probed_host,omitempty"`
 }
 
 // HeaderResult is the evaluation of a single response header.

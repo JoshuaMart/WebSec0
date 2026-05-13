@@ -87,6 +87,7 @@ type HeadersReport = {
     'cross-origin-embedder-policy'?: HeaderResult;
     'cross-origin-resource-policy'?: HeaderResult;
   };
+  probed_host?: string;
 };
 type CustomFinding = {
   id: string;
@@ -322,7 +323,11 @@ function GradePanel({ data }: { data: ScanResult }) {
           label="Headers grade"
           grade={headersGrade}
           score={headersScore}
-          sub={`${headersScore}/100`}
+          sub={
+            data.headers?.probed_host
+              ? `${headersScore}/100 · via ${data.headers.probed_host}`
+              : `${headersScore}/100`
+          }
         />
         {data.headers && (
           <div class="score-list" style={{ marginTop: 24 }}>

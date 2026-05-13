@@ -10,7 +10,9 @@ package scanner
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -196,10 +198,35 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 	}()
 	go func() {
 		defer wg.Done()
-		r, err := headers.Probe(ctx, target)
-		if err == nil {
-			headersReport = r
+		r, redirect, err := headers.Probe(ctx, target)
+		if err != nil {
+			return
 		}
+		headersReport = r
+		// If the target redirected to a www-sibling (apex/www toggle), the
+		// real headers live there. Re-resolve through the same SSRF policy
+		// and re-probe; replace the partial report on success. Strictly
+		// off-host redirects (different registrable host) still surface
+		// whatever the 3xx already exposed (HSTS, Server, …) — no retry.
+		if redirect == "" {
+			return
+		}
+		u, perr := url.Parse(redirect)
+		if perr != nil || !wwwSibling(target.Host, u.Hostname()) {
+			return
+		}
+		sibling, rerr := s.resolver.Resolve(ctx, &safehttp.Validated{
+			Scheme: target.Scheme, Host: strings.ToLower(u.Hostname()), Port: target.Port,
+		})
+		if rerr != nil {
+			return
+		}
+		r2, _, perr := headers.Probe(ctx, sibling)
+		if perr != nil || r2 == nil {
+			return
+		}
+		r2.ProbedHost = sibling.Host
+		headersReport = r2
 	}()
 	go func() {
 		defer wg.Done()
@@ -247,4 +274,17 @@ var _ = func(host string, port int) string {
 		return host
 	}
 	return host + ":" + strconv.Itoa(port)
+}
+
+// wwwSibling returns true when a and b differ only by the leading "www."
+// label — cloudflare.com ↔ www.cloudflare.com. This is intentionally narrow
+// (no public-suffix awareness) so the orchestrator only retries the dominant
+// apex/www toggle case, not arbitrary same-eTLD+1 hosts.
+func wwwSibling(a, b string) bool {
+	a = strings.ToLower(strings.TrimSpace(a))
+	b = strings.ToLower(strings.TrimSpace(b))
+	if a == "" || b == "" || a == b {
+		return false
+	}
+	return b == "www."+a || a == "www."+b
 }
