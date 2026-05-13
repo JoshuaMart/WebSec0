@@ -186,7 +186,7 @@ import '../styles/global.css';
           <a href="/api/v1/checks" class="btn">Read the catalog →</a>
         </div>
         <pre class="codeblock"><span class="cmt"># scan a host and read the TLS grade</span>
-<span class="kw">curl</span> <span class="str">-sS</span> http://localhost:8080/api/v1/scan \
+<span class="kw">curl</span> <span class="str">-sS</span> https://www.websec0.com/api/v1/scan \
   <span class="str">-H</span> <span class="str">"Content-Type: application/json"</span> \
   <span class="str">-d</span> <span class="str">{`{"host":"github.com"}`}</span> \
   | jq <span class="str">'.tls.grade'</span>
