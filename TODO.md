@@ -166,9 +166,9 @@
 
 ## Phase 12 — AI artefacts
 
-- [ ] `skills/websec0/SKILL.md`: written for agents — explains the API, the grading model in one paragraph each, the catalog endpoint, and how to interpret findings
-- [ ] Include a worked example (single API call → interpretation of the response)
-- [ ] Add a `metadata` front-matter block with `tools`, `inputs`, `outputs`
+- [x] `skills/websec0/SKILL.md`: written for agents — explains the API, the grading model in one paragraph each, the catalog endpoint, and how to interpret findings. Follows the Anthropic Agent Skills authoring conventions (canonical `name` + `description` frontmatter, third-person discovery copy, ≤500-line body, progressive disclosure with one-level refs)
+- [x] Include a worked example (single API call → interpretation of the response) — `cloudflare.com` walked through end-to-end in §6
+- [x] Add a `metadata` front-matter block with `tools`, `inputs`, `outputs` (project-specific extension, alongside the canonical Anthropic fields)
 
 ## Phase 13 — Entry point & packaging
 
