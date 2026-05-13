@@ -66,6 +66,12 @@ type Frontend struct {
 	// default so self-hosters get an untouched bundle. The string is
 	// trusted operator-supplied content — not escaped.
 	HeadInject string `yaml:"head_inject"`
+	// WellKnownDir, when non-empty, is served verbatim at /.well-known/*
+	// and takes precedence over anything embedded in the binary. Lets
+	// self-hosters publish their own security.txt (or any other
+	// well-known artefact) without rebuilding the binary. Falls back to
+	// the embedded fs when a path is not present in the overlay.
+	WellKnownDir string `yaml:"well_known_dir"`
 }
 
 // Telemetry holds optional anonymous-stats reporting flags.

@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -37,7 +39,7 @@ func TestHandler_NoIndexReturnsErrIndexMissing(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err == nil {
 		t.Skip("frontend dist contains index.html — skipping the no-index path")
 	}
-	_, err := Handler("")
+	_, err := Handler("", "")
 	if !errors.Is(err, ErrIndexMissing) {
 		t.Fatalf("expected ErrIndexMissing, got %v", err)
 	}
@@ -51,7 +53,7 @@ func TestHandler_ServesIndex(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
-	h, err := Handler("")
+	h, err := Handler("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +79,7 @@ func TestHandler_SPAFallback(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
-	h, err := Handler("")
+	h, err := Handler("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +148,7 @@ func TestHandler_InjectsSnippetInBothShells(t *testing.T) {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
 	const snippet = `<script data-test="websec0-inject"></script>`
-	h, err := Handler(snippet)
+	h, err := Handler(snippet, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +181,7 @@ func TestHandler_EmptyInjectKeepsBodyVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h, err := Handler("")
+	h, err := Handler("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +206,7 @@ func TestHandler_404ForMissingAsset(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
-	h, err := Handler("")
+	h, err := Handler("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,5 +220,60 @@ func TestHandler_404ForMissingAsset(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("status %d, want 200 (SPA fallback)", resp.StatusCode)
+	}
+}
+
+// TestHandler_WellKnownOverlay_ServesAndFallsBack verifies that:
+//   - when the overlay dir is set, files inside it are served at
+//     /.well-known/<name> with their on-disk content;
+//   - paths not present in the overlay still fall through to the
+//     embedded fs (so an upstream-shipped file would still ship);
+//   - the SPA fallback applies for paths the binary truly does not know.
+func TestHandler_WellKnownOverlay_ServesAndFallsBack(t *testing.T) {
+	sub, _ := FS()
+	if _, err := fs.Stat(sub, indexPath); err != nil {
+		t.Skip("frontend dist not built — run `make frontend` first")
+	}
+
+	dir := t.TempDir()
+	securityTxt := "Contact: https://example.test/sec\nExpires: 2099-01-01T00:00:00Z\n"
+	if err := os.WriteFile(filepath.Join(dir, "security.txt"), []byte(securityTxt), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	h, err := Handler("", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	// 1) Overlay hit — content from disk.
+	resp, err := http.Get(srv.URL + "/.well-known/security.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("overlay GET: status %d, want 200", resp.StatusCode)
+	}
+	if string(body) != securityTxt {
+		t.Errorf("overlay GET body mismatch:\nwant %q\ngot  %q", securityTxt, string(body))
+	}
+
+	// 2) Overlay miss — path not present on disk falls through. Since the
+	// embedded fs does not ship anything at /.well-known/missing.txt
+	// either, we expect the SPA index fallback (status 200, HTML body).
+	resp, err = http.Get(srv.URL + "/.well-known/missing.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("overlay miss: status %d, want 200 (SPA fallback)", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("overlay miss: content-type %q, want text/html…", ct)
 	}
 }

@@ -41,6 +41,13 @@ frontend:
   # head_inject: |
   #   <script defer src="https://umami.example.com/script.js"
   #           data-website-id="xxxx-xxxx"></script>
+  # Optional directory served verbatim at /.well-known/*. Files in this
+  # directory take precedence over anything embedded in the binary. Use
+  # it to publish your security.txt (RFC 9116) or any other well-known
+  # artefact without rebuilding. Mount it read-only in your container:
+  #   volumes:
+  #     - ./well-known:/etc/websec0/well-known:ro
+  well_known_dir: ""
 
 telemetry:
   anonymous_stats: false        # if true, send scan counts (no hostnames) to a stats endpoint

@@ -13,7 +13,9 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -56,7 +58,12 @@ var ErrIndexMissing = errors.New("frontend: index.html missing — run `make fro
 // without touching self-hosted builds. The snippet is trusted operator
 // config — not escaped. If </head> is absent (or the snippet is empty)
 // the bytes are served verbatim.
-func Handler(headInject string) (http.Handler, error) {
+//
+// wellKnownDir, when non-empty, is served verbatim at /.well-known/* and
+// takes precedence over anything embedded under that prefix. Lets
+// self-hosters publish their own security.txt (or other RFC well-known
+// artefacts) without rebuilding the binary.
+func Handler(headInject, wellKnownDir string) (http.Handler, error) {
 	sub, err := FS()
 	if err != nil {
 		return nil, err
@@ -74,11 +81,31 @@ func Handler(headInject string) (http.Handler, error) {
 	}
 	server := http.FileServer(http.FS(sub))
 
+	var overlay http.Handler
+	if wellKnownDir != "" {
+		// http.Dir rejects ".." and absolute paths in the URL, so an
+		// attacker cannot escape the overlay tree. The overlay is read-only
+		// from the binary's perspective (we never write here).
+		overlay = http.StripPrefix("/.well-known/", http.FileServer(http.Dir(wellKnownDir)))
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rel := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 		if rel == "" || rel == indexPath {
 			writeIndex(w, indexBytes)
 			return
+		}
+		// /.well-known/ overlay wins when configured and the file exists
+		// on disk; otherwise fall through to the embedded fs so an
+		// upstream-shipped file is still served.
+		if overlay != nil && strings.HasPrefix(rel, ".well-known/") {
+			overlayRel := strings.TrimPrefix(rel, ".well-known/")
+			if overlayRel != "" {
+				if info, err := os.Stat(filepath.Join(wellKnownDir, overlayRel)); err == nil && !info.IsDir() {
+					overlay.ServeHTTP(w, r)
+					return
+				}
+			}
 		}
 		if info, err := fs.Stat(sub, rel); err == nil && !info.IsDir() {
 			server.ServeHTTP(w, r)
