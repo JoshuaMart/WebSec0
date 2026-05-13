@@ -59,11 +59,13 @@ var ErrIndexMissing = errors.New("frontend: index.html missing — run `make fro
 // config — not escaped. If </head> is absent (or the snippet is empty)
 // the bytes are served verbatim.
 //
-// wellKnownDir, when non-empty, is served verbatim at /.well-known/* and
-// takes precedence over anything embedded under that prefix. Lets
-// self-hosters publish their own security.txt (or other RFC well-known
-// artefacts) without rebuilding the binary.
-func Handler(headInject, wellKnownDir string) (http.Handler, error) {
+// staticOverlayDir, when non-empty, is a directory whose tree mirrors
+// URL paths. Anything under .well-known/ is served from the overlay
+// when the file exists; at the root only a closed whitelist (robots.txt,
+// humans.txt, ads.txt, sitemap.xml) is honoured so a misconfigured
+// overlay cannot accidentally hijack index.html or the report shell.
+// Paths absent from the overlay fall back to the embedded fs.
+func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 	sub, err := FS()
 	if err != nil {
 		return nil, err
@@ -82,11 +84,11 @@ func Handler(headInject, wellKnownDir string) (http.Handler, error) {
 	server := http.FileServer(http.FS(sub))
 
 	var overlay http.Handler
-	if wellKnownDir != "" {
+	if staticOverlayDir != "" {
 		// http.Dir rejects ".." and absolute paths in the URL, so an
 		// attacker cannot escape the overlay tree. The overlay is read-only
 		// from the binary's perspective (we never write here).
-		overlay = http.StripPrefix("/.well-known/", http.FileServer(http.Dir(wellKnownDir)))
+		overlay = http.FileServer(http.Dir(staticOverlayDir))
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -95,16 +97,13 @@ func Handler(headInject, wellKnownDir string) (http.Handler, error) {
 			writeIndex(w, indexBytes)
 			return
 		}
-		// /.well-known/ overlay wins when configured and the file exists
-		// on disk; otherwise fall through to the embedded fs so an
-		// upstream-shipped file is still served.
-		if overlay != nil && strings.HasPrefix(rel, ".well-known/") {
-			overlayRel := strings.TrimPrefix(rel, ".well-known/")
-			if overlayRel != "" {
-				if info, err := os.Stat(filepath.Join(wellKnownDir, overlayRel)); err == nil && !info.IsDir() {
-					overlay.ServeHTTP(w, r)
-					return
-				}
+		// Overlay wins when configured AND the path is allowed AND the
+		// file exists on disk; otherwise fall through to the embedded
+		// fs so an upstream-shipped file is still served.
+		if overlay != nil && overlayAllowed(rel) {
+			if info, err := os.Stat(filepath.Join(staticOverlayDir, rel)); err == nil && !info.IsDir() {
+				overlay.ServeHTTP(w, r)
+				return
 			}
 		}
 		if info, err := fs.Stat(sub, rel); err == nil && !info.IsDir() {
@@ -118,6 +117,27 @@ func Handler(headInject, wellKnownDir string) (http.Handler, error) {
 		}
 		writeIndex(w, indexBytes)
 	}), nil
+}
+
+// staticRootOverlayAllowed is the closed set of root-level files an
+// operator may override via the static overlay. Embedded SPA artefacts
+// (index.html, the report shell, hashed Astro assets) are deliberately
+// excluded so a misconfigured overlay can't break the UI.
+var staticRootOverlayAllowed = map[string]bool{
+	"robots.txt":  true,
+	"humans.txt":  true,
+	"ads.txt":     true,
+	"sitemap.xml": true,
+}
+
+// overlayAllowed returns true when rel may be served from the overlay
+// directory. Anything under .well-known/ is always allowed; at the root
+// the whitelist applies.
+func overlayAllowed(rel string) bool {
+	if strings.HasPrefix(rel, ".well-known/") {
+		return true
+	}
+	return staticRootOverlayAllowed[rel]
 }
 
 // injectHead splices snippet just before the first </head> in body.

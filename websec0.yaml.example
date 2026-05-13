@@ -41,13 +41,23 @@ frontend:
   # head_inject: |
   #   <script defer src="https://umami.example.com/script.js"
   #           data-website-id="xxxx-xxxx"></script>
-  # Optional directory served verbatim at /.well-known/*. Files in this
-  # directory take precedence over anything embedded in the binary. Use
-  # it to publish your security.txt (RFC 9116) or any other well-known
-  # artefact without rebuilding. Mount it read-only in your container:
+  # Optional directory whose tree mirrors URL paths. Files inside take
+  # precedence over anything embedded in the binary:
+  #
+  #   <dir>/.well-known/security.txt → /.well-known/security.txt  (RFC 9116)
+  #   <dir>/robots.txt               → /robots.txt
+  #   <dir>/humans.txt               → /humans.txt
+  #   <dir>/ads.txt                  → /ads.txt
+  #   <dir>/sitemap.xml              → /sitemap.xml
+  #
+  # Anything under .well-known/ is allowed; at the root only the four
+  # files above are honoured (so a misconfigured overlay cannot hijack
+  # the SPA shell). Paths absent from the overlay fall back to the
+  # embedded fs. Mount it read-only in your container:
+  #
   #   volumes:
-  #     - ./well-known:/etc/websec0/well-known:ro
-  well_known_dir: ""
+  #     - ./public:/etc/websec0/public:ro
+  static_overlay_dir: ""
 
 telemetry:
   anonymous_stats: false        # if true, send scan counts (no hostnames) to a stats endpoint

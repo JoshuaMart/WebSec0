@@ -223,21 +223,36 @@ func TestHandler_404ForMissingAsset(t *testing.T) {
 	}
 }
 
-// TestHandler_WellKnownOverlay_ServesAndFallsBack verifies that:
-//   - when the overlay dir is set, files inside it are served at
-//     /.well-known/<name> with their on-disk content;
-//   - paths not present in the overlay still fall through to the
-//     embedded fs (so an upstream-shipped file would still ship);
-//   - the SPA fallback applies for paths the binary truly does not know.
-func TestHandler_WellKnownOverlay_ServesAndFallsBack(t *testing.T) {
+// TestHandler_StaticOverlay verifies that:
+//   - .well-known/* files inside the overlay dir are served from disk;
+//   - root-level whitelisted files (robots.txt, humans.txt, …) are
+//     served from disk;
+//   - non-whitelisted root files in the overlay are IGNORED (no UI
+//     hijack via index.html);
+//   - paths absent from the overlay fall back to the embedded fs / SPA.
+func TestHandler_StaticOverlay(t *testing.T) {
 	sub, _ := FS()
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
 
 	dir := t.TempDir()
+	// security.txt under .well-known/
 	securityTxt := "Contact: https://example.test/sec\nExpires: 2099-01-01T00:00:00Z\n"
-	if err := os.WriteFile(filepath.Join(dir, "security.txt"), []byte(securityTxt), 0o644); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".well-known"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".well-known", "security.txt"), []byte(securityTxt), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// robots.txt at the root.
+	robots := "User-agent: *\nDisallow: /private/\n"
+	if err := os.WriteFile(filepath.Join(dir, "robots.txt"), []byte(robots), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A non-whitelisted root file — must NOT be served from the overlay.
+	hijack := "<html>HIJACKED</html>"
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(hijack), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -248,23 +263,42 @@ func TestHandler_WellKnownOverlay_ServesAndFallsBack(t *testing.T) {
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 
-	// 1) Overlay hit — content from disk.
+	// 1) .well-known/security.txt → overlay.
 	resp, err := http.Get(srv.URL + "/.well-known/security.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("overlay GET: status %d, want 200", resp.StatusCode)
-	}
-	if string(body) != securityTxt {
-		t.Errorf("overlay GET body mismatch:\nwant %q\ngot  %q", securityTxt, string(body))
+	if resp.StatusCode != http.StatusOK || string(body) != securityTxt {
+		t.Errorf(".well-known/security.txt: status=%d body=%q", resp.StatusCode, string(body))
 	}
 
-	// 2) Overlay miss — path not present on disk falls through. Since the
-	// embedded fs does not ship anything at /.well-known/missing.txt
-	// either, we expect the SPA index fallback (status 200, HTML body).
+	// 2) /robots.txt → overlay.
+	resp, err = http.Get(srv.URL + "/robots.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || string(body) != robots {
+		t.Errorf("/robots.txt: status=%d body=%q", resp.StatusCode, string(body))
+	}
+
+	// 3) /index.html — overlay file is NOT served (would hijack the SPA).
+	// Either the embedded SPA shell is served, or the SPA fallback kicks
+	// in. Either way the response must NOT contain the hijack marker.
+	resp, err = http.Get(srv.URL + "/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if bytes.Contains(body, []byte("HIJACKED")) {
+		t.Errorf("/index.html: overlay must not override the SPA shell, got hijacked content")
+	}
+
+	// 4) Overlay miss — .well-known path not on disk falls through to SPA.
 	resp, err = http.Get(srv.URL + "/.well-known/missing.txt")
 	if err != nil {
 		t.Fatal(err)

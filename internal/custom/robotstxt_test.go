@@ -91,3 +91,50 @@ func TestRobotsTxt_Info_Missing(t *testing.T) {
 		t.Errorf("404: got %s, want info", f.Status)
 	}
 }
+
+// TestRobotsTxt_Info_HTMLFallback ensures we don't mark an SPA's
+// landing-page HTML as a parseable robots.txt just because the server
+// answered 200 on /robots.txt.
+func TestRobotsTxt_Info_HTMLFallback(t *testing.T) {
+	html := "<!doctype html><html><head><title>landing</title></head><body>…</body></html>"
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(html))
+	}))
+	defer srv.Close()
+	f := RobotsTxt{}.Run(context.Background(), makeTarget(t, srv))
+	if f.Status != scan.StatusInfo {
+		t.Errorf("HTML body: got %s, want info", f.Status)
+	}
+	var d robotsTxtDetails
+	_ = json.Unmarshal(f.Details, &d)
+	if d.Parseable {
+		t.Errorf("HTML body must not be marked parseable, got %+v", d)
+	}
+	if d.Note == "" {
+		t.Errorf("HTML body should set a Note explaining the situation, got empty")
+	}
+}
+
+func TestLooksLikeRobotsTxt(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"empty", "", true},
+		{"whitespace only", "  \n\t \n", true},
+		{"plain robots", "User-agent: *\nDisallow: /admin\n", true},
+		{"comments only", "# this is a comment\n# another\n", true},
+		{"html doctype", "<!doctype html><html>…", false},
+		{"html start tag", "<html><body>oops</body></html>", false},
+		{"html with leading whitespace", "   <html>oops</html>", false},
+		{"closing body tag mid-body", "User-agent: *\n</body>\n", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := looksLikeRobotsTxt(c.body); got != c.want {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}

@@ -66,12 +66,19 @@ type Frontend struct {
 	// default so self-hosters get an untouched bundle. The string is
 	// trusted operator-supplied content — not escaped.
 	HeadInject string `yaml:"head_inject"`
-	// WellKnownDir, when non-empty, is served verbatim at /.well-known/*
-	// and takes precedence over anything embedded in the binary. Lets
-	// self-hosters publish their own security.txt (or any other
-	// well-known artefact) without rebuilding the binary. Falls back to
-	// the embedded fs when a path is not present in the overlay.
-	WellKnownDir string `yaml:"well_known_dir"`
+	// StaticOverlayDir, when non-empty, is a directory whose layout
+	// mirrors URL paths. Files inside are served verbatim and take
+	// precedence over anything embedded in the binary:
+	//
+	//   <dir>/.well-known/security.txt → /.well-known/security.txt
+	//   <dir>/robots.txt               → /robots.txt
+	//   <dir>/humans.txt               → /humans.txt
+	//
+	// Anything under .well-known/ is always allowed; at the root only a
+	// closed whitelist of static files is honoured so a misconfigured
+	// overlay cannot hijack the SPA shell (e.g. index.html). Paths
+	// absent from the overlay fall back to the embedded fs.
+	StaticOverlayDir string `yaml:"static_overlay_dir"`
 }
 
 // Telemetry holds optional anonymous-stats reporting flags.

@@ -75,7 +75,7 @@ func mountFrontend(r *chi.Mux, cfg config.Frontend, logger *slog.Logger) {
 		r.NotFound(noFrontendNotFound)
 		return
 	}
-	h, err := frontend.Handler(cfg.HeadInject, cfg.WellKnownDir)
+	h, err := frontend.Handler(cfg.HeadInject, cfg.StaticOverlayDir)
 	if err != nil {
 		logger.Warn("frontend disabled", slog.String("reason", err.Error()))
 		r.NotFound(noFrontendNotFound)
