@@ -15,7 +15,7 @@ const (
 // historyHandler serves the opt-in "Recent scans" list. Only scans that
 // were submitted with `list_in_history: true` reach this endpoint, and
 // only as long as they are inside the configured retention window
-// (see SPEC §7 history.* and §4.3).
+// (see the history.* block in websec0.yaml.example).
 func historyHandler(s ScanService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit := defaultHistoryLimit

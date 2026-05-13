@@ -32,7 +32,7 @@ func stubResultWithGrades(id, host, tlsGrade, headersGrade string) *scan.Result 
 
 // targetFor builds a Target pinned to the httptest server's loopback
 // address. The integration tests exercise runProbes directly because the
-// production resolver blocks loopback regardless of config (see SPEC §8.3).
+// production resolver blocks loopback regardless of config (see).
 func targetFor(t *testing.T, srv *httptest.Server) *safehttp.Target {
 	t.Helper()
 	u, _ := url.Parse(srv.URL)

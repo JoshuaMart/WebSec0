@@ -1,7 +1,7 @@
 // Package api hosts the HTTP routing layer: a chi router that exposes
 // /api/v1/scan (POST + GET by id) and /api/v1/checks, wired with
 // request-ID, slog request logger, panic recovery and per-IP rate limiting.
-// All inbound JSON shapes and error codes follow SPEC §6.
+// All inbound JSON shapes and error codes follow
 package api
 
 import (

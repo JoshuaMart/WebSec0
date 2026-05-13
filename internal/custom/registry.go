@@ -1,7 +1,7 @@
 // Package custom hosts the non-scoring "additional findings" checks. Each
 // check is small, focused and self-contained; new ones plug in by adding
 // an entry to All(). Findings never contribute to the TLS or Headers
-// grade — they surface as a list in the scan response (SPEC §4.3 / §6.6).
+// grade — they surface as the `custom` array in the scan response.
 package custom
 
 import (

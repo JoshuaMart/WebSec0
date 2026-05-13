@@ -2,7 +2,7 @@
 // connection made by a scan. It validates user input, resolves DNS once,
 // pins the destination IP for the lifetime of the scan, refuses off-host
 // redirects, caps response bodies and rate-limits both clients and targets.
-// See SPECIFICATIONS.md §8.
+// See
 package safehttp
 
 import "errors"

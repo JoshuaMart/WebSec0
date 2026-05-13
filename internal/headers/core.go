@@ -11,7 +11,6 @@ import (
 const MinHSTSMaxAge = 31536000 // one year
 
 // CoreHeaderNames lists the six score-contributing headers in stable order
-// (SPEC §4.2).
 var CoreHeaderNames = []string{
 	"strict-transport-security",
 	"content-security-policy",
@@ -22,7 +21,7 @@ var CoreHeaderNames = []string{
 }
 
 // EvaluateCore returns one HeaderResult per core header. Map keys match
-// SPEC §6.5 (lowercase header names).
+// (lowercase header names).
 func EvaluateCore(h http.Header) map[string]scan.HeaderResult {
 	return map[string]scan.HeaderResult{
 		"strict-transport-security": evalHSTS(h.Get("Strict-Transport-Security")),

@@ -1,7 +1,8 @@
 // Package cache provides a thread-safe TTL + LRU cache used to retain
 // recently completed scan results. Values are bounded both by entry count
-// (LRU eviction) and by age (time expiry). See SPEC §7 (cache.ttl,
-// cache.max_entries) and §3 (no persistent storage — restart loses cache).
+// (LRU eviction, configured via cache.max_entries) and by age (time
+// expiry, configured via cache.ttl). No persistent storage — a restart
+// loses the cache.
 package cache
 
 import (

@@ -23,7 +23,7 @@ type InputPolicy struct {
 	DefaultPort      int // typically 443
 }
 
-// ValidateInput parses raw, applies SPEC §8.1, and returns the canonical
+// ValidateInput parses raw, applies, and returns the canonical
 // components — or a typed error from this package.
 func ValidateInput(raw string, p InputPolicy) (*Validated, error) {
 	raw = strings.TrimSpace(raw)

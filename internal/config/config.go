@@ -1,5 +1,5 @@
 // Package config loads, validates and exposes the websec0.yaml runtime
-// configuration. See SPECIFICATIONS.md §7 for the authoritative reference.
+// configuration.
 package config
 
 import "net/netip"

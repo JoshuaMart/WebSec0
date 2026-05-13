@@ -1,6 +1,6 @@
 // Package scan defines the public payload shapes returned by the scanner
-// API. These types mirror SPEC §6.1, §6.4–6.6 and are intended for JSON
-// marshalling — the field names are normative.
+// API. These types are intended for JSON marshalling — the field names
+// are normative and consumed by both the frontend and downstream agents.
 package scan
 
 import (
@@ -40,7 +40,7 @@ const (
 	ProbeRawClientHello Probe = "raw_clienthello"
 )
 
-// Result is the top-level scan response (SPEC §6.1).
+// Result is the top-level scan response.
 type Result struct {
 	ID         string          `json:"id"`
 	Host       string          `json:"host"`
@@ -53,9 +53,11 @@ type Result struct {
 	Custom     []CustomFinding `json:"custom,omitempty"`
 }
 
-// TLSReport mirrors SPEC §6.4, extended with: ChainTrust (overall trust
-// outcome), OCSPStapling + OCSPStatus (stapling presence and the parsed
-// status), CipherPreference (server vs client) and SessionResumption.
+// TLSReport carries the full TLS observation: the four sub-scores and
+// final grade, the offered protocol matrix, the cipher list, the chain
+// trust outcome (ChainTrust), OCSP stapling state, the negotiated
+// CipherPreference (server vs client), session-resumption support, and
+// the derived vulnerability findings.
 type TLSReport struct {
 	Grade             Grade                  `json:"grade"`
 	Scores            TLSScores              `json:"scores"`
@@ -170,7 +172,10 @@ type VulnerabilityFinding struct {
 	Body  string   `json:"body"`
 }
 
-// HeadersReport mirrors SPEC §6.5.
+// HeadersReport is the scored summary of the HTTP-response headers
+// observed during the scan. Core is the weighted six (CSP, HSTS, XFO,
+// XCTO, Referrer-Policy, Permissions-Policy); Additional carries the
+// bonus/malus signals (COOP/COEP/CORP, Server, Set-Cookie, ACAO).
 type HeadersReport struct {
 	Grade      Grade                   `json:"grade"`
 	Score      int                     `json:"score"`
@@ -210,8 +215,9 @@ type CookieResult struct {
 	Status   Status  `json:"status"`
 }
 
-// CustomFinding mirrors SPEC §6.6. The Details payload is finding-specific
-// and is left opaque at this layer.
+// CustomFinding is one entry in the non-scoring custom-checks list
+// (e.g. security.txt, robots.txt). The Details payload is
+// finding-specific and is left opaque at this layer.
 type CustomFinding struct {
 	ID      string          `json:"id"`
 	Title   string          `json:"title"`

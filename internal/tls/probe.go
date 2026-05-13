@@ -2,7 +2,7 @@
 // enumeration per legacy protocol, certificate-chain extraction with
 // system-root validation, OCSP-stapling presence and presence-based
 // weakness heuristics. SSLv2 and SSLv3 are handled by dedicated raw-probe
-// packages (internal/sslv2, internal/sslv3). See SPEC §4.1 / §6.4.
+// packages (internal/sslv2, internal/sslv3).
 package tls
 
 import (

@@ -1,8 +1,6 @@
 // Package sslv2 detects whether a server speaks the obsolete SSLv2
 // protocol. The Go stdlib has no SSLv2 support, so we forge a CLIENT-HELLO
 // at the raw TCP layer and classify the first bytes of the response. See
-// SPEC §9.1.
-//
 // Protocol reference: draft-hickman-netscape-ssl-00 §1.5 (CLIENT-HELLO)
 // and §1.6 (SERVER-HELLO).
 package sslv2
@@ -83,12 +81,11 @@ func buildClientHello() ([]byte, error) {
 }
 
 // classify maps the first response bytes to a yes/no decision.
-//
-//   - TLS handshake framing (0x16 0x03 *) or TLS alert (0x15 0x03 *) →
-//     the server speaks TLS, not SSLv2.
-//   - SSLv2 record framing (high bit of byte 0 set) followed by message
-//     type 0x04 (SERVER-HELLO) → SSLv2 supported.
-//   - Anything else, including a short read → not supported.
+// - TLS handshake framing (0x16 0x03 *) or TLS alert (0x15 0x03 *) →
+// the server speaks TLS, not SSLv2.
+// - SSLv2 record framing (high bit of byte 0 set) followed by message
+// type 0x04 (SERVER-HELLO) → SSLv2 supported.
+// - Anything else, including a short read → not supported.
 func classify(b []byte) bool {
 	if len(b) < 3 {
 		return false

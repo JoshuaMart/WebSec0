@@ -1,7 +1,7 @@
 // Package history maintains the opt-in, in-memory list of recently
 // completed public scans. Only one-line summaries are stored — the full
 // scan body lives in internal/cache. Entries older than the configured
-// retention are purged lazily on Add and List. See SPEC §7 (history.*).
+// retention are purged lazily on Add and List. See (history.*).
 package history
 
 import (

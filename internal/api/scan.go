@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// scanRequest is the JSON body accepted by POST /api/v1/scan (SPEC §6.1).
+// scanRequest is the JSON body accepted by POST /api/v1/scan.
 type scanRequest struct {
 	Host          string `json:"host"`
 	Port          int    `json:"port"`

@@ -2,7 +2,7 @@ package config
 
 import "time"
 
-// Defaults returns a Config populated with the values from SPEC §7.
+// Defaults returns a Config populated with the values
 // The returned pointer is safe to mutate by the caller (e.g. a YAML decoder
 // merging user-provided overrides on top).
 func Defaults() *Config {

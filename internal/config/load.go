@@ -17,12 +17,12 @@ const (
 	PathSystem    = "/etc/websec0/websec0.yaml"
 )
 
-// Load resolves the configuration following SPEC §7:
-//   - $WEBSEC0_CONFIG, if set, is treated as an explicit path: missing → error.
-//   - Otherwise ./websec0.yaml then /etc/websec0/websec0.yaml are tried, and
-//     a missing file falls through to the next candidate.
-//   - If no file is found at all, validated defaults are returned with an
-//     empty source path.
+// Load resolves the configuration:
+// - $WEBSEC0_CONFIG, if set, is treated as an explicit path: missing → error.
+// - Otherwise ./websec0.yaml then /etc/websec0/websec0.yaml are tried, and
+// a missing file falls through to the next candidate.
+// - If no file is found at all, validated defaults are returned with an
+// empty source path.
 func Load() (*Config, string, error) {
 	if explicit := os.Getenv(EnvConfigPath); explicit != "" {
 		cfg, err := LoadFile(explicit)

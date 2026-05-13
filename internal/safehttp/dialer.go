@@ -10,7 +10,7 @@ import (
 
 // PinnedDialer returns a *net.Dialer whose Control callback refuses to
 // connect to any address other than target.AddrPort(). It is the second
-// layer of the SSRF defence (SPEC §8.2): callers should pass the pinned
+// layer of the SSRF defence: callers should pass the pinned
 // address to DialContext directly, and Control is the belt-and-braces
 // check that the address was not silently swapped.
 func PinnedDialer(target *Target, timeout time.Duration) *net.Dialer {

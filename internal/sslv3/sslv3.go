@@ -1,6 +1,5 @@
 // Package sslv3 detects whether a server speaks SSLv3 by sending a
 // TLS-framed ClientHello with version 0x0300 and classifying the response.
-// See SPEC §9.2.
 package sslv3
 
 import (
@@ -71,7 +70,8 @@ func buildClientHello() ([]byte, error) {
 		0x03, 0x00, // SSLv3 version
 	}
 	hello = append(hello, random...) // 32-byte random
-	hello = append(hello,
+	hello = append(
+		hello,
 		0x00,       // session_id_length
 		0x00, 0x06, // cipher_suites_length: 6 (3 suites)
 		0x00, 0x05, // RSA_WITH_RC4_128_SHA
@@ -84,11 +84,10 @@ func buildClientHello() ([]byte, error) {
 }
 
 // classify maps the first 3+ bytes of the server response to a yes/no.
-//
-//   - 0x16 0x03 0x00 …  → ServerHello with SSLv3 negotiated → supported.
-//   - 0x15 …            → TLS alert (protocol_version, handshake_failure) → not supported.
-//   - 0x16 0x03 0x01+ … → server insists on a higher version → not SSLv3.
-//   - anything else / short read → not supported.
+// - 0x16 0x03 0x00 … → ServerHello with SSLv3 negotiated → supported.
+// - 0x15 … → TLS alert (protocol_version, handshake_failure) → not supported.
+// - 0x16 0x03 0x01+ … → server insists on a higher version → not SSLv3.
+// - anything else / short read → not supported.
 func classify(b []byte) bool {
 	if len(b) < 3 {
 		return false

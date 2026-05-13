@@ -6,9 +6,9 @@ import (
 )
 
 // AllowRedirect is the http.Client CheckRedirect predicate enforced by
-// NewClient. It refuses any redirect that leaves target.Host (off-host,
-// SPEC §8.4) and caps the redirect chain at maxHops. If maxHops is zero
-// or negative, no redirect is followed at all.
+// NewClient. It refuses any redirect that leaves target.Host (off-host)
+// and caps the redirect chain at maxHops. If maxHops is zero or
+// negative, no redirect is followed at all.
 func AllowRedirect(target *Target, maxHops int) func(*http.Request, []*http.Request) error {
 	return func(req *http.Request, via []*http.Request) error {
 		if maxHops <= 0 {

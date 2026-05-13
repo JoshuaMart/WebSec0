@@ -6,7 +6,7 @@ import (
 	"github.com/JoshuaMart/websec0/catalog"
 )
 
-// checksHandler serves the embedded checks catalog (SPEC §6.3). The bytes
+// checksHandler serves the embedded checks catalog. The bytes
 // are loaded once at handler construction; the JSON is byte-for-byte
 // identical to catalog/checks.json. Cache-Control allows downstream
 // caching since the catalog is immutable per build.

@@ -7,7 +7,7 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
-// TLSFinal combines the four sub-scores via the SPEC §5.1 formula, applies
+// TLSFinal combines the four sub-scores via the formula, applies
 // trust/protocol/cipher floors and finally enforces the HSTS-preload
 // requirement for A+. A nil HeadersReport caps the grade at A even when
 // the score would otherwise reach A+ (preload eligibility is unknown).

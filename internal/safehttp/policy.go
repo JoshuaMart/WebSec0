@@ -3,7 +3,7 @@ package safehttp
 import "net/netip"
 
 // extraBlockedRanges catches the ranges the stdlib helpers do not flag as
-// "private". Operators can extend this via Policy.Extra. See SPEC §8.3.
+// "private". Operators can extend this via Policy.Extra.
 var extraBlockedRanges = []netip.Prefix{
 	// IPv4
 	netip.MustParsePrefix("100.64.0.0/10"),   // CGNAT (RFC 6598)

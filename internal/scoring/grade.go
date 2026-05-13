@@ -37,10 +37,10 @@ func (t Thresholds) Grade(score int) scan.Grade {
 	}
 }
 
-// TLSThresholds follows SPEC §5.1.
+// TLSThresholds follows
 var TLSThresholds = Thresholds{APlus: 95, A: 80, B: 65, C: 50, D: 35, E: 20}
 
-// HeadersThresholds follows SPEC §4.2.
+// HeadersThresholds follows
 var HeadersThresholds = Thresholds{APlus: 95, A: 85, B: 70, C: 55, D: 40, E: 25}
 
 // Worst returns the worse of two grades. GradeT outranks F (it represents

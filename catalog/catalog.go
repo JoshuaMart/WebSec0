@@ -2,7 +2,7 @@
 // GET /api/v1/checks. The JSON file is embedded at compile time, parsed
 // + validated at startup, and exposed both as the parsed Catalog struct
 // (for in-process lookups) and as the original bytes (for direct HTTP
-// serving). See SPEC §6.3.
+// serving).
 package catalog
 
 import (

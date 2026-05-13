@@ -6,7 +6,7 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
-// Per-header weights from SPEC §4.2. Their sum is 100 — A+ thresholds use
+// Per-header weights Their sum is 100 — A+ thresholds use
 // HeadersThresholds (this file does not override them).
 const (
 	weightHSTS        = 20
@@ -30,7 +30,7 @@ const (
 
 // HeadersFinal computes the final 0–100 score and the matching grade for a
 // HeadersReport. Status "pass" earns the full weight, "warn" earns half,
-// "fail" earns nothing. Bonuses and maluses are then applied per SPEC §4.2,
+// "fail" earns nothing. Bonuses and maluses are then applied,
 // the total is clamped to [0, 100] and mapped through HeadersThresholds.
 func HeadersFinal(r *scan.HeadersReport) (int, scan.Grade) {
 	score := coreScore(r.Core) + additionalAdjustment(r.Additional)

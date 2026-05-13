@@ -8,7 +8,7 @@ import (
 )
 
 // EvaluateAdditional inspects the bonus/malus headers and returns the
-// AdditionalHeaders shape (SPEC §6.5). All fields are pointers so they
+// AdditionalHeaders shape. All fields are pointers so they
 // can be omitted from the JSON output when absent.
 func EvaluateAdditional(h http.Header) scan.AdditionalHeaders {
 	out := scan.AdditionalHeaders{}

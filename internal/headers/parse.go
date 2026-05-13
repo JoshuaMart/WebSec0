@@ -1,12 +1,9 @@
 // Package headers fetches and evaluates the HTTP security headers exposed
 // by a target. The package is split in four files:
-//
-//   - parse.go      — per-header tokenisers (HSTS, CSP, Set-Cookie, …)
-//   - core.go       — evaluation of the 6 score-contributing headers
-//   - additional.go — bonus/malus signals (COOP/COEP/CORP, Server, cookies, …)
-//   - fetch.go      — Fetch + Probe orchestrator
-//
-// See SPEC §4.2 and §6.5 for the authoritative scoring and payload shapes.
+// - parse.go — per-header tokenisers (HSTS, CSP, Set-Cookie, …)
+// - core.go — evaluation of the 6 score-contributing headers
+// - additional.go — bonus/malus signals (COOP/COEP/CORP, Server, cookies, …)
+// - fetch.go — Fetch + Probe orchestrator
 package headers
 
 import (

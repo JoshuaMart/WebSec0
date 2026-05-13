@@ -2,7 +2,6 @@
 // the probes (tls, sslv2, sslv3, headers, custom) and the scoring engine
 // together, fans them out under the configured scan budget, assembles a
 // scan.Result and stores it in the cache.
-//
 // The orchestrator deliberately lives outside internal/scan to avoid an
 // import cycle: probes return scan.* types, scan must not import probes.
 package scanner
@@ -61,7 +60,8 @@ func New(cfg *config.Config) *Scanner {
 	}
 }
 
-// Request is the input shape accepted by Run, mirroring SPEC §6.1.
+// Request is the input shape accepted by Run, mirroring the JSON body
+// of POST /api/v1/scan.
 type Request struct {
 	Host          string
 	Port          int // 0 → default 443
@@ -237,7 +237,8 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 	// Merge SSLv2/v3 results into the TLS protocols list so consumers see
 	// one consolidated protocol matrix.
 	if tlsReport != nil {
-		tlsReport.Protocols = append(tlsReport.Protocols,
+		tlsReport.Protocols = append(
+			tlsReport.Protocols,
 			scan.ProtocolSupport{Name: "SSL 3.0", Offered: ssl3Offered, Probe: scan.ProbeRawClientHello},
 			scan.ProtocolSupport{Name: "SSL 2.0", Offered: ssl2Offered, Probe: scan.ProbeRawClientHello},
 		)

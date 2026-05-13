@@ -10,7 +10,7 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scanner"
 )
 
-// errorBody is the JSON shape returned on every error (SPEC §6.1).
+// errorBody is the JSON shape returned on every error.
 type errorBody struct {
 	Error errorInner `json:"error"`
 }
