@@ -184,6 +184,7 @@ button { font-family: inherit; cursor: pointer; }
   box-shadow: var(--shadow-sm);
   margin-bottom: 22px;
 }
+.grade-panel-two { grid-template-columns: 1fr 1fr; }
 .grade-cell {
   padding: 26px var(--pad);
   border-right: 1px solid var(--line);
@@ -597,3 +598,62 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 4px;
 }
 @keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ===== Mobile (report + shared) ===== */
+@media (max-width: 880px) {
+  .grade-panel,
+  .grade-panel-two { grid-template-columns: 1fr; }
+  .grade-cell { border-right: 0; border-bottom: 1px solid var(--line); }
+  .grade-cell:last-child { border-bottom: 0; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .page { padding: 18px 16px; }
+
+  .header { flex-direction: column; gap: 14px; }
+  .h-actions { width: 100%; justify-content: flex-start; }
+  .h-title { font-size: 20px; gap: 10px; flex-wrap: wrap; }
+  .h-meta { gap: 6px 12px; font-size: 12px; }
+
+  .grade-cell { padding: 20px 16px; }
+  .grade-ring svg { width: 132px; height: 132px; }
+
+  /* Score bars: shrink the name column so the bar has room. */
+  .score-row { grid-template-columns: 110px 1fr 44px; gap: 10px; }
+  .score-row .name { font-size: 12px; }
+
+  /* Cert chain: single col, less indent. */
+  .cert-head { padding: 12px 14px; gap: 10px; }
+  .cert-body {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 4px 14px 16px 14px;
+  }
+  .cert-body .k { padding-top: 8px; }
+  .cert-body .v { padding-bottom: 8px; }
+
+  /* Key-value grid: shrink the key column. */
+  .kv-grid { grid-template-columns: 120px 1fr; }
+
+  /* Card padding tighter. */
+  .card-head { padding: 12px 14px; }
+  .card-body { padding: 14px; }
+
+  /* Tables: smaller cells, allow horizontal scroll on the parent card-body. */
+  .card-body.flush { overflow-x: auto; }
+  .tbl th, .tbl td { padding: 8px 12px; font-size: 12.5px; }
+
+  /* Vuln + proto rows: tighter padding. */
+  .vuln-row { padding: 12px 14px; gap: 12px; }
+  .proto-row { padding: 12px 14px; }
+
+  /* Tabs: keep horizontal scroll, just reduce padding. */
+  .tab { padding: 10px 12px; font-size: 12.5px; }
+
+  /* Footer stacks. */
+  .footer { flex-direction: column; align-items: flex-start; gap: 10px; padding: 20px 0 32px; }
+
+  /* Scan-in-progress overlay: fit the viewport. */
+  .scan-card { width: auto; max-width: calc(100vw - 32px); padding: 20px; }
+}

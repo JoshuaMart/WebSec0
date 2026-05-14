@@ -286,7 +286,7 @@ function GradePanel({ data }: { data: ScanResult }) {
   const headersGrade = data.headers?.grade ?? '';
   const headersScore = data.headers?.score ?? 0;
   return (
-    <div class="grade-panel" style={{ gridTemplateColumns: '1fr 1fr' }}>
+    <div class="grade-panel grade-panel-two">
       <div class="grade-cell">
         <GradeCard
           label="TLS grade"
