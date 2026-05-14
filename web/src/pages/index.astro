@@ -359,6 +359,46 @@ import '../styles/global.css';
         .features { grid-template-columns: 1fr; }
         .api { grid-template-columns: 1fr; }
       }
+
+      /* Mobile: keep the desktop inline layout, just compact the button so it fits. */
+      @media (max-width: 720px) {
+        .scan-form { padding: 4px; }
+        .scan-form .prefix { padding: 0 2px 0 10px; font-size: 13px; }
+        .scan-form input { min-width: 0; font-size: 14px; padding: 10px 4px; }
+        .scan-form .btn-primary {
+          height: 38px; padding: 0 12px;
+          font-size: 13px; border-radius: 8px;
+        }
+      }
+      /* Very narrow phones: drop the label, keep just the arrow as a square submit. */
+      @media (max-width: 380px) {
+        .scan-form .btn-primary {
+          width: 38px; padding: 0; gap: 0;
+          font-size: 0;
+          justify-content: center;
+        }
+        .scan-form .btn-primary::after {
+          content: "→"; font-size: 16px; line-height: 1;
+        }
+      }
+
+      @media (max-width: 600px) {
+        main { padding: 0 16px; }
+        .hero { padding: 24px 0 24px; }
+        .hero h1 { font-size: 28px; letter-spacing: -0.025em; }
+        .hero h1 br { display: none; }
+        .hero p.lede { font-size: 14.5px; margin-bottom: 24px; }
+
+        .features { margin-top: 40px; }
+        .api { margin-top: 48px; }
+        .api h2 { font-size: 19px; }
+        .api .codeblock { font-size: 11.5px; padding: 14px; }
+
+        .landing-footer {
+          margin-top: 56px; padding: 20px 16px 40px;
+          flex-direction: column; align-items: flex-start; gap: 14px;
+        }
+      }
     </style>
 
     <style is:global>
@@ -426,6 +466,9 @@ import '../styles/global.css';
 
       @media (max-width: 880px) {
         .recent-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (max-width: 600px) {
+        .recent-grid { grid-template-columns: 1fr; }
       }
     </style>
 
