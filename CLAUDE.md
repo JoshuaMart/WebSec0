@@ -20,17 +20,22 @@ Don't import from it; port the look manually to `web/`.
 ## Commands
 
 ```bash
-make build              # build dist/websec0  (does NOT rebuild the frontend)
+make build              # build dist/websec0 (rebuilds the frontend if web/ sources changed)
 make test               # go test -race ./...
 make lint               # golangci-lint run ./...
-make frontend           # pnpm build in web/, then rsync to internal/frontend/dist
+make frontend           # pnpm build in web/, then rsync to internal/frontend/dist (no-op if up-to-date)
 make frontend-install   # pnpm install in web/
 make clean              # remove build artefacts (keeps internal/frontend/dist/.keep)
 make docker             # build distroless image
 ```
 
-`make build` does **not** chain `make frontend`. Run `make frontend` first
-when frontend sources changed; otherwise the embedded site is stale.
+`make build` declares the embedded frontend bundle as a Make prerequisite
+(`internal/frontend/dist/index.html`), with source dependencies on
+`web/src/**`, `web/public/**`, `web/astro.config.mjs`, `web/package.json`,
+`web/pnpm-lock.yaml` and `web/tsconfig.json`. Touching any of these
+triggers a frontend rebuild + rsync; otherwise Make skips it and only
+the Go binary is rebuilt. Requires pnpm/Node only when the bundle is
+actually stale.
 
 Run the binary: `./dist/websec0` (loads `./websec0.yaml` if present, else
 defaults). `--version` prints build identifiers; `--config <path>` overrides.

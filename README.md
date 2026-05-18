@@ -89,13 +89,14 @@ Requires Go 1.26+, Node 22+, pnpm 10+, and rsync.
 
 ```bash
 make frontend-install
-make frontend
 make build
 ./dist/websec0
 ```
 
-`make frontend` builds the Astro bundle and rsyncs it into
-`internal/frontend/dist/` where `//go:embed` picks it up at build time.
+`make build` declares the embedded Astro bundle as a Make prerequisite,
+so it rebuilds the frontend (and rsyncs it into `internal/frontend/dist/`
+where `//go:embed` picks it up) iff a file under `web/` has changed.
+Iterative Go-only builds incur no frontend overhead.
 
 </details>
 

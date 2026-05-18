@@ -9,8 +9,7 @@ common contribution: **adding a new check**.
 
 ```bash
 make frontend-install   # one-time: install the Astro dev deps (pnpm)
-make frontend           # build the Astro bundle into web/dist + sync to internal/frontend/dist
-make build              # produce ./dist/websec0
+make build              # produce ./dist/websec0 (rebuilds the frontend if web/ sources changed)
 ./dist/websec0          # serves on :8080 with the embedded UI
 ```
 
@@ -32,9 +31,10 @@ make lint               # golangci-lint run ./...
 make bundle-size        # only if web/ changed — gzip budget is 80 KB
 ```
 
-If frontend sources changed, also run `make frontend` so the embedded
-bundle in `internal/frontend/dist/` is in sync (the binary embeds at
-build time; a stale bundle ships stale UI).
+`make build` declares the embedded bundle as a Make prerequisite, so a
+touch under `web/` triggers a rebuild + rsync into
+`internal/frontend/dist/` before the Go build. No manual `make frontend`
+step is needed.
 
 The same three gates run in `.github/workflows/ci.yml` and must be
 green for the PR to land.

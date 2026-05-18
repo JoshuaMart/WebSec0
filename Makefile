@@ -14,12 +14,19 @@ PNPM        ?= pnpm
 
 BUNDLE_BUDGET_BYTES ?= 81920  # 80 KB gzip — see SPEC + TODO Phase 11
 
+# Frontend sources that, when modified, must trigger a bundle rebuild.
+# FRONTEND_STAMP is the sentinel: Make rebuilds it iff a source is newer.
+FRONTEND_SRCS  := $(shell find web/src web/public -type f 2>/dev/null) \
+                  web/astro.config.mjs web/package.json web/pnpm-lock.yaml \
+                  web/tsconfig.json
+FRONTEND_STAMP := internal/frontend/dist/index.html
+
 .PHONY: help build test lint frontend frontend-install bundle-size docker release-dry-run clean tidy
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Targets:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-build: ## Build the websec0 binary into dist/
+build: $(FRONTEND_STAMP) ## Build the websec0 binary (rebuilds the frontend if web/ sources changed)
 	@mkdir -p dist
 	CGO_ENABLED=0 $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY) ./cmd/$(BINARY)
 
@@ -35,9 +42,12 @@ tidy: ## go mod tidy
 frontend-install: ## Install frontend dependencies (pnpm)
 	cd web && $(PNPM) install
 
-frontend: ## Build the Astro frontend and sync it into internal/frontend/dist
+frontend: $(FRONTEND_STAMP) ## Build the Astro frontend and sync it into internal/frontend/dist
+
+$(FRONTEND_STAMP): $(FRONTEND_SRCS)
 	cd web && $(PNPM) build
 	rsync -a --delete --exclude='.keep' web/dist/ internal/frontend/dist/
+	@touch $(FRONTEND_STAMP)
 
 bundle-size: ## Assert the Astro JS+CSS bundle stays under BUNDLE_BUDGET_BYTES gzipped
 	@if [ ! -d web/dist/_astro ]; then \
