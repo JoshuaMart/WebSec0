@@ -128,7 +128,7 @@ signs:
     args:
       - sign-blob
       - "--yes"
-      - "--output-signature=${signature}"
+      - "--bundle=${signature}"
       - "${artifact}"
 
 docker_signs:
@@ -160,13 +160,15 @@ release:
     **Docker image** — `ghcr.io/joshuamart/websec0:{{ .Tag }}` (linux/amd64 + linux/arm64).
 
     **Verifying release artefacts** — the `checksums.txt` file and the
-    Docker manifest are signed with cosign keyless via Sigstore. To
-    verify the checksum signature:
+    Docker manifest are signed with cosign keyless via Sigstore. The
+    checksum signature is published in the new self-contained Sigstore
+    bundle format (signature + certificate + transparency log entry in
+    one file). Verify with cosign >= 2.5:
 
     ```bash
     cosign verify-blob \
       --certificate-identity-regexp 'https://github.com/JoshuaMart/WebSec0/.github/workflows/release.yml@refs/tags/' \
       --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-      --signature checksums.txt.sig \
+      --bundle checksums.txt.sig \
       checksums.txt
     ```
