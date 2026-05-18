@@ -88,15 +88,20 @@ violating any of them will cause regressions.
    Adding new SPA roots needs a new branch in `internal/frontend/embed.go`.
 6. **The report island is `client:only="preact"`**, never `client:load`.
    It reads `location.pathname` which doesn't exist during SSR.
-7. **DeriveWeaknesses runs in the orchestrator, not in `tls.Probe`**.
-   Heartbleed and Ticketbleed need the HTTP `Server:` header — only the
-   orchestrator has both reports in scope.
+7. **`tls.DeriveWeaknesses` is called from the orchestrator, not from
+   `tls.Probe`**. It takes a `tls.WeaknessInput` whose `ServerHeader`
+   field comes from the headers probe — Heartbleed and Ticketbleed
+   fingerprint the running software from the HTTP `Server:` header,
+   and only the orchestrator has both reports in scope. Calling it
+   from inside `tls.Probe` would necessarily pass an empty header and
+   silently misclassify those two findings.
 8. **`Loopback`, link-local, multicast and unspecified are ALWAYS blocked**
    in `safehttp.Policy.IsBlocked`, even with `AllowPrivate: true`. This
    is intentional — do not relax without a config change.
-9. **Catalog IDs and runtime IDs are currently misaligned**. Catalog uses
-   `vuln.poodle`; runtime weakness findings emit `"POODLE"`. A future
-   refactor will reconcile; do not "fix" one without the other.
+9. **TLS weakness findings use the `vuln.*` catalog namespace** at runtime
+   (e.g. `vuln.poodle`), with the human-readable label carried separately
+   in `VulnerabilityFinding.Title`. `TestDeriveWeaknesses_IDsAlignedWithCatalog`
+   enforces that every emitted ID exists in `catalog/checks.json`.
 10. **TODO items marked `*deferred to v1.x*` are intentional**. Don't
     implement them as a side effect of an unrelated change.
 

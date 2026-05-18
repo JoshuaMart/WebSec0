@@ -7,28 +7,54 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
+// WeaknessInput bundles the cross-probe observations required to derive
+// the TLS weakness findings. Wrapping the inputs in a single struct
+// forces every caller to gather all three sources before invoking
+// DeriveWeaknesses — a positional signature made it easy to forget the
+// Server header and silently mark Heartbleed/Ticketbleed as
+// "Not vulnerable" even when the header was simply never observed.
+//
+// Field provenance:
+//
+//   - Protocols, Ciphers — produced by tls.Probe (this package).
+//   - ServerHeader        — produced by headers.Probe; populated from the
+//     HTTP `Server:` response header. Empty string is a valid input but
+//     means Heartbleed/Ticketbleed cannot be fingerprinted and will
+//     report "Not vulnerable" by default.
+type WeaknessInput struct {
+	Protocols    []scan.ProtocolSupport
+	Ciphers      []scan.Cipher
+	ServerHeader string
+}
+
 // DeriveWeaknesses turns the observed TLS protocols + ciphers and the
 // HTTP Server header into a list of presence-based vulnerability findings.
 // Active-probing-only weaknesses are emitted as info-level placeholders so
 // the report stays exhaustive.
 //
-// The function is called by the scan orchestrator after both the TLS and
-// headers probes complete, because Heartbleed and Ticketbleed need the
-// HTTP Server header to fingerprint the running software.
+// Where this lives and why:
+//   - The function is owned by package tls because it consumes TLS
+//     observations and the rest of the TLS report types live here.
+//   - It is *called* by the scan orchestrator, not by tls.Probe, because
+//     two weaknesses (Heartbleed, Ticketbleed) are fingerprinted from
+//     the HTTP `Server:` header which is observed by headers.Probe.
+//     Only the orchestrator has both reports in scope; calling this from
+//     inside tls.Probe would necessarily pass an empty ServerHeader and
+//     silently mis-classify those two findings.
 //
 // Each emitted finding's ID matches a catalog entry in
 // catalog/checks.json (e.g. "vuln.poodle"); Title carries the
 // human-readable label.
-func DeriveWeaknesses(protocols []scan.ProtocolSupport, ciphers []scan.Cipher, serverHeader string) []scan.VulnerabilityFinding {
+func DeriveWeaknesses(in WeaknessInput) []scan.VulnerabilityFinding {
 	has := map[string]bool{}
-	for _, p := range protocols {
+	for _, p := range in.Protocols {
 		if p.Offered {
 			has[p.Name] = true
 		}
 	}
 
 	var has3DES, hasRC4, hasLegacyCBC bool
-	for _, c := range ciphers {
+	for _, c := range in.Ciphers {
 		name := c.Name
 		if strings.Contains(name, "3DES") || strings.Contains(name, "_DES_") {
 			has3DES = true
@@ -41,8 +67,8 @@ func DeriveWeaknesses(protocols []scan.ProtocolSupport, ciphers []scan.Cipher, s
 		}
 	}
 
-	heartbleed := isHeartbleedVulnerable(serverHeader)
-	ticketbleed := isF5BigIP(serverHeader)
+	heartbleed := isHeartbleedVulnerable(in.ServerHeader)
+	ticketbleed := isF5BigIP(in.ServerHeader)
 
 	return []scan.VulnerabilityFinding{
 		// Actively detected.

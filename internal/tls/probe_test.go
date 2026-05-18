@@ -119,7 +119,7 @@ func TestDeriveWeaknesses_FlagsObservedBadness(t *testing.T) {
 		{Protocol: "TLS 1.0", Name: "TLS_RSA_WITH_3DES_EDE_CBC_SHA"},
 		{Protocol: "TLS 1.0", Name: "TLS_RSA_WITH_RC4_128_SHA"},
 	}
-	vulns := DeriveWeaknesses(protocols, ciphers, "")
+	vulns := DeriveWeaknesses(WeaknessInput{Protocols: protocols, Ciphers: ciphers})
 
 	byID := map[string]scan.VulnerabilityFinding{}
 	for _, v := range vulns {
@@ -171,13 +171,13 @@ func TestIsHeartbleedVulnerable(t *testing.T) {
 }
 
 func TestDeriveWeaknesses_HeartbleedFromServerHeader(t *testing.T) {
-	vulns := DeriveWeaknesses(nil, nil, "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1f")
+	vulns := DeriveWeaknesses(WeaknessInput{ServerHeader: "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1f"})
 	h := findVulnByID(vulns, "vuln.heartbleed")
 	if h == nil || h.State != "Vulnerable" {
 		t.Errorf("Heartbleed: expected Vulnerable for OpenSSL 1.0.1f, got %+v", h)
 	}
 
-	vulns = DeriveWeaknesses(nil, nil, "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1g")
+	vulns = DeriveWeaknesses(WeaknessInput{ServerHeader: "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1g"})
 	h = findVulnByID(vulns, "vuln.heartbleed")
 	if h == nil || h.State != "Not vulnerable" {
 		t.Errorf("Heartbleed: 1.0.1g is patched, got %+v", h)
@@ -188,7 +188,7 @@ func TestDeriveWeaknesses_Lucky13(t *testing.T) {
 	// TLS 1.0 + CBC cipher on TLS 1.0 → Vulnerable.
 	protocols := []scan.ProtocolSupport{{Name: "TLS 1.0", Offered: true}}
 	ciphers := []scan.Cipher{{Protocol: "TLS 1.0", Name: "TLS_RSA_WITH_AES_256_CBC_SHA", AEAD: false}}
-	vulns := DeriveWeaknesses(protocols, ciphers, "")
+	vulns := DeriveWeaknesses(WeaknessInput{Protocols: protocols, Ciphers: ciphers})
 	l := findVulnByID(vulns, "vuln.lucky13")
 	if l == nil || l.State != "Vulnerable" {
 		t.Errorf("Lucky13: expected Vulnerable, got %+v", l)
@@ -197,7 +197,7 @@ func TestDeriveWeaknesses_Lucky13(t *testing.T) {
 	// TLS 1.2 + CBC → not Lucky13 (mitigations are in TLS 1.2 server impls).
 	protocols = []scan.ProtocolSupport{{Name: "TLS 1.2", Offered: true}}
 	ciphers = []scan.Cipher{{Protocol: "TLS 1.2", Name: "TLS_RSA_WITH_AES_256_CBC_SHA", AEAD: false}}
-	vulns = DeriveWeaknesses(protocols, ciphers, "")
+	vulns = DeriveWeaknesses(WeaknessInput{Protocols: protocols, Ciphers: ciphers})
 	l = findVulnByID(vulns, "vuln.lucky13")
 	if l == nil || l.State != "Not vulnerable" {
 		t.Errorf("Lucky13: TLS 1.2 + CBC should not trigger, got %+v", l)
@@ -205,13 +205,13 @@ func TestDeriveWeaknesses_Lucky13(t *testing.T) {
 }
 
 func TestDeriveWeaknesses_Ticketbleed(t *testing.T) {
-	vulns := DeriveWeaknesses(nil, nil, "BIG-IP")
+	vulns := DeriveWeaknesses(WeaknessInput{ServerHeader: "BIG-IP"})
 	tb := findVulnByID(vulns, "vuln.ticketbleed")
 	if tb == nil || tb.State != "Potentially vulnerable" || tb.Level != scan.SeverityWarn {
 		t.Errorf("Ticketbleed: expected Potentially vulnerable + warn, got %+v", tb)
 	}
 
-	vulns = DeriveWeaknesses(nil, nil, "nginx/1.27.1")
+	vulns = DeriveWeaknesses(WeaknessInput{ServerHeader: "nginx/1.27.1"})
 	tb = findVulnByID(vulns, "vuln.ticketbleed")
 	if tb == nil || tb.State != "Not vulnerable" {
 		t.Errorf("Ticketbleed: nginx server should not trigger, got %+v", tb)
@@ -227,7 +227,7 @@ func TestDeriveWeaknesses_IDsAlignedWithCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("catalog.Load: %v", err)
 	}
-	vulns := DeriveWeaknesses(nil, nil, "")
+	vulns := DeriveWeaknesses(WeaknessInput{})
 	for _, v := range vulns {
 		if !strings.HasPrefix(v.ID, "vuln.") {
 			t.Errorf("finding ID %q must use the vuln.* namespace", v.ID)

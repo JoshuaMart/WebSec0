@@ -42,9 +42,11 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 		}
 	}
 
-	// Vulnerabilities are filled in by the orchestrator after both the TLS
-	// and headers probes complete — Heartbleed and Ticketbleed depend on
-	// the HTTP Server header that this package does not observe.
+	// Vulnerabilities are intentionally left nil here. The orchestrator
+	// calls DeriveWeaknesses once both TLS and headers probes have
+	// completed, because Heartbleed and Ticketbleed are fingerprinted
+	// from the HTTP `Server:` header that this package does not observe.
+	// See WeaknessInput's godoc for the full input contract.
 	return &scan.TLSReport{
 		Protocols:         protocols,
 		Ciphers:           ciphers,
