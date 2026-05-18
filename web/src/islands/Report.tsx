@@ -43,6 +43,7 @@ type Certificate = {
 };
 type Vuln = {
   id: string;
+  title: string;
   cve?: string;
   state: string;
   level: Severity;
@@ -754,14 +755,14 @@ function vulnHighlights(tls?: TLSReport): Highlight[] {
   if (bad.length) {
     out.push({
       title: `${bad.length} active vulnerability ${bad.length > 1 ? 'findings' : 'finding'}`,
-      body: bad.map((v) => v.id).join(', '),
+      body: bad.map((v) => v.title || v.id).join(', '),
       level: 'bad',
     });
   }
   if (warn.length) {
     out.push({
       title: `${warn.length} vulnerability caveat${warn.length > 1 ? 's' : ''}`,
-      body: warn.map((v) => v.id).join(', '),
+      body: warn.map((v) => v.title || v.id).join(', '),
       level: 'warn',
     });
   }
@@ -1449,7 +1450,7 @@ function VulnsTab({ vulns }: { vulns: Vuln[] }) {
               <span class={`sev ${v.level}`} />
             </div>
             <div>
-              <h4>{v.id}</h4>
+              <h4>{v.title || v.id}</h4>
               <p>{v.body}</p>
               {v.cve && <div class="cve">{v.cve}</div>}
             </div>

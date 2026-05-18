@@ -8,8 +8,10 @@ import (
 	"net/netip"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/JoshuaMart/websec0/catalog"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
@@ -123,23 +125,26 @@ func TestDeriveWeaknesses_FlagsObservedBadness(t *testing.T) {
 	for _, v := range vulns {
 		byID[v.ID] = v
 	}
-	if byID["POODLE"].State != "Vulnerable" {
-		t.Error("POODLE: SSLv3 offered → Vulnerable")
+	if byID["vuln.poodle"].State != "Vulnerable" {
+		t.Error("vuln.poodle: SSLv3 offered → Vulnerable")
 	}
-	if byID["BEAST"].State != "Vulnerable" {
-		t.Error("BEAST: TLS 1.0 offered → Vulnerable")
+	if byID["vuln.poodle"].Title != "POODLE" {
+		t.Errorf("vuln.poodle: expected Title=POODLE, got %q", byID["vuln.poodle"].Title)
 	}
-	if byID["Sweet32"].State != "Vulnerable" {
-		t.Error("Sweet32: 3DES offered → Vulnerable")
+	if byID["vuln.beast"].State != "Vulnerable" {
+		t.Error("vuln.beast: TLS 1.0 offered → Vulnerable")
 	}
-	if byID["RC4 weakness"].State != "Vulnerable" {
-		t.Error("RC4 weakness: RC4 offered → Vulnerable")
+	if byID["vuln.sweet32"].State != "Vulnerable" {
+		t.Error("vuln.sweet32: 3DES offered → Vulnerable")
 	}
-	if byID["DROWN"].State != "Not vulnerable" {
-		t.Error("DROWN: SSLv2 not in protocols → Not vulnerable")
+	if byID["vuln.rc4"].State != "Vulnerable" {
+		t.Error("vuln.rc4: RC4 offered → Vulnerable")
 	}
-	if _, ok := byID["ROBOT"]; ok {
-		t.Error("ROBOT should no longer be emitted")
+	if byID["vuln.drown"].State != "Not vulnerable" {
+		t.Error("vuln.drown: SSLv2 not in protocols → Not vulnerable")
+	}
+	if _, ok := byID["vuln.robot"]; ok {
+		t.Error("vuln.robot should no longer be emitted")
 	}
 }
 
@@ -167,13 +172,13 @@ func TestIsHeartbleedVulnerable(t *testing.T) {
 
 func TestDeriveWeaknesses_HeartbleedFromServerHeader(t *testing.T) {
 	vulns := DeriveWeaknesses(nil, nil, "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1f")
-	h := findVulnByID(vulns, "Heartbleed")
+	h := findVulnByID(vulns, "vuln.heartbleed")
 	if h == nil || h.State != "Vulnerable" {
 		t.Errorf("Heartbleed: expected Vulnerable for OpenSSL 1.0.1f, got %+v", h)
 	}
 
 	vulns = DeriveWeaknesses(nil, nil, "Apache/2.4.7 (Ubuntu) OpenSSL/1.0.1g")
-	h = findVulnByID(vulns, "Heartbleed")
+	h = findVulnByID(vulns, "vuln.heartbleed")
 	if h == nil || h.State != "Not vulnerable" {
 		t.Errorf("Heartbleed: 1.0.1g is patched, got %+v", h)
 	}
@@ -184,7 +189,7 @@ func TestDeriveWeaknesses_Lucky13(t *testing.T) {
 	protocols := []scan.ProtocolSupport{{Name: "TLS 1.0", Offered: true}}
 	ciphers := []scan.Cipher{{Protocol: "TLS 1.0", Name: "TLS_RSA_WITH_AES_256_CBC_SHA", AEAD: false}}
 	vulns := DeriveWeaknesses(protocols, ciphers, "")
-	l := findVulnByID(vulns, "Lucky13")
+	l := findVulnByID(vulns, "vuln.lucky13")
 	if l == nil || l.State != "Vulnerable" {
 		t.Errorf("Lucky13: expected Vulnerable, got %+v", l)
 	}
@@ -193,7 +198,7 @@ func TestDeriveWeaknesses_Lucky13(t *testing.T) {
 	protocols = []scan.ProtocolSupport{{Name: "TLS 1.2", Offered: true}}
 	ciphers = []scan.Cipher{{Protocol: "TLS 1.2", Name: "TLS_RSA_WITH_AES_256_CBC_SHA", AEAD: false}}
 	vulns = DeriveWeaknesses(protocols, ciphers, "")
-	l = findVulnByID(vulns, "Lucky13")
+	l = findVulnByID(vulns, "vuln.lucky13")
 	if l == nil || l.State != "Not vulnerable" {
 		t.Errorf("Lucky13: TLS 1.2 + CBC should not trigger, got %+v", l)
 	}
@@ -201,15 +206,38 @@ func TestDeriveWeaknesses_Lucky13(t *testing.T) {
 
 func TestDeriveWeaknesses_Ticketbleed(t *testing.T) {
 	vulns := DeriveWeaknesses(nil, nil, "BIG-IP")
-	tb := findVulnByID(vulns, "Ticketbleed")
+	tb := findVulnByID(vulns, "vuln.ticketbleed")
 	if tb == nil || tb.State != "Potentially vulnerable" || tb.Level != scan.SeverityWarn {
 		t.Errorf("Ticketbleed: expected Potentially vulnerable + warn, got %+v", tb)
 	}
 
 	vulns = DeriveWeaknesses(nil, nil, "nginx/1.27.1")
-	tb = findVulnByID(vulns, "Ticketbleed")
+	tb = findVulnByID(vulns, "vuln.ticketbleed")
 	if tb == nil || tb.State != "Not vulnerable" {
 		t.Errorf("Ticketbleed: nginx server should not trigger, got %+v", tb)
+	}
+}
+
+// TestDeriveWeaknesses_IDsAlignedWithCatalog asserts that every weakness
+// finding emitted at runtime has a matching entry in catalog/checks.json.
+// This is the invariant that lets agents and the frontend join
+// finding.ID against /api/v1/checks without any string normalisation.
+func TestDeriveWeaknesses_IDsAlignedWithCatalog(t *testing.T) {
+	cat, err := catalog.Load()
+	if err != nil {
+		t.Fatalf("catalog.Load: %v", err)
+	}
+	vulns := DeriveWeaknesses(nil, nil, "")
+	for _, v := range vulns {
+		if !strings.HasPrefix(v.ID, "vuln.") {
+			t.Errorf("finding ID %q must use the vuln.* namespace", v.ID)
+		}
+		if v.Title == "" {
+			t.Errorf("finding %q: Title is empty", v.ID)
+		}
+		if cat.ByID(v.ID) == nil {
+			t.Errorf("finding %q has no matching entry in catalog/checks.json", v.ID)
+		}
 	}
 }
 

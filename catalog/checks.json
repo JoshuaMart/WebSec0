@@ -278,6 +278,54 @@
       }
     },
     {
+      "id": "vuln.crime",
+      "category": "tls.vulnerability",
+      "title": "CRIME (CVE-2012-4929)",
+      "severity_when_fail": "info",
+      "score_impact": "Not assessed in v1 — TLS-compression detection needs raw probing, not exposed by the stdlib.",
+      "remediation": {
+        "summary": "Disable TLS-level compression on the server. Modern stacks (nginx, Apache 2.4+, OpenSSL 1.0.0+) already have it off by default.",
+        "example_stack": "nginx",
+        "example_snippet": "# nginx disables TLS compression by default — no directive needed.\n# For older OpenSSL builds, set the SSL_OP_NO_COMPRESSION option in your TLS library config."
+      }
+    },
+    {
+      "id": "vuln.freak",
+      "category": "tls.vulnerability",
+      "title": "FREAK (CVE-2015-0204)",
+      "severity_when_fail": "info",
+      "score_impact": "Not assessed in v1 — export-grade cipher detection needs a raw ClientHello; the stdlib does not enumerate export suites.",
+      "remediation": {
+        "summary": "Remove all EXPORT cipher suites from the server's cipher list. Use a modern, restrictive cipher policy (Mozilla 'intermediate' or stricter).",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!EXPORT:!aNULL:!MD5;"
+      }
+    },
+    {
+      "id": "vuln.logjam",
+      "category": "tls.vulnerability",
+      "title": "Logjam (CVE-2015-4000)",
+      "severity_when_fail": "info",
+      "score_impact": "Not assessed in v1 — parsing the ServerKeyExchange DH group requires raw probing.",
+      "remediation": {
+        "summary": "Disable DHE cipher suites with weak (<2048-bit) parameters. Prefer ECDHE; if DHE is required, generate a fresh 2048-bit or stronger group.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_dhparam /etc/nginx/dhparams-2048.pem;\nssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!kDHE;"
+      }
+    },
+    {
+      "id": "vuln.raccoon",
+      "category": "tls.vulnerability",
+      "title": "Raccoon Attack (CVE-2020-1968)",
+      "severity_when_fail": "info",
+      "score_impact": "Not assessed in v1 — DH-share comparison across multiple handshakes is not implemented.",
+      "remediation": {
+        "summary": "Disable static DH key reuse. Use ECDHE cipher suites exclusively (no kDHE), which mitigates Raccoon by design.",
+        "example_stack": "nginx",
+        "example_snippet": "ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!kDHE;"
+      }
+    },
+    {
       "id": "headers.strict_transport_security",
       "category": "headers.core",
       "title": "Strict-Transport-Security",

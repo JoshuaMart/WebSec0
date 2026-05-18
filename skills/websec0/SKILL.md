@@ -268,7 +268,9 @@ does not invalidate the others.
 - `tls.ocsp_stapling` (bool) and `tls.ocsp_status` (`good` | `revoked`
   | `unknown` | `""`).
 - `tls.session_resumption`: `supported` | `not_supported` | `""`.
-- `tls.vulnerabilities`: each `{id, cve, state, level, body}`.
+- `tls.vulnerabilities`: each `{id, title, cve, state, level, body}`.
+  `id` is the catalog identifier (e.g. `vuln.poodle`); `title` is the
+  human-readable label (`POODLE`).
 
 ### 5.3 Headers findings
 
@@ -297,26 +299,13 @@ does not invalidate the others.
 no Expires field was present in the file — treat that value as "no
 expiry set".
 
-### 5.5 Catalog ID mapping (important)
+### 5.5 Catalog IDs
 
-Vulnerability findings emitted by the scanner at runtime use bare
-short names; the catalog uses dotted IDs. To resolve a runtime finding
-to a catalog entry (and hence to a remediation snippet), lowercase the
-runtime id and prefix it with `vuln.`:
-
-| Runtime `id` | Catalog `id`        |
-|--------------|---------------------|
-| `POODLE`     | `vuln.poodle`       |
-| `BEAST`      | `vuln.beast`        |
-| `DROWN`      | `vuln.drown`        |
-| `Sweet32`    | `vuln.sweet32`      |
-| `RC4`        | `vuln.rc4`          |
-| `Heartbleed` | `vuln.heartbleed`   |
-| `Lucky13`    | `vuln.lucky13`      |
-| `Ticketbleed`| `vuln.ticketbleed`  |
-
-Header, cipher, protocol and custom findings already share a single
-dotted-ID space and need no translation.
+Every finding — TLS protocols, chain, ciphers, vulnerabilities,
+headers, custom — uses a single dotted-ID namespace that matches
+`catalog.id` exactly. To resolve any finding to its remediation
+snippet: `GET /api/v1/checks` and look up `finding.id` directly.
+No string normalisation is required.
 
 ## 6. Worked example — `cloudflare.com`
 
@@ -349,11 +338,11 @@ Response (excerpt, fields trimmed for clarity):
       {"name":"SSL 2.0","offered":false,"probe":"raw_clienthello"}
     ],
     "vulnerabilities": [
-      {"id":"BEAST",  "cve":"CVE-2011-3389","state":"vulnerable","level":"bad",
+      {"id":"vuln.beast",  "title":"BEAST",  "cve":"CVE-2011-3389","state":"vulnerable","level":"bad",
        "body":"TLS 1.0 is enabled — CBC paths are exploitable."},
-      {"id":"Lucky13","cve":"CVE-2013-0169","state":"vulnerable","level":"bad",
+      {"id":"vuln.lucky13","title":"Lucky13","cve":"CVE-2013-0169","state":"vulnerable","level":"bad",
        "body":"TLS 1.0/1.1 with a CBC cipher is offered."},
-      {"id":"Sweet32","cve":"CVE-2016-2183","state":"vulnerable","level":"bad",
+      {"id":"vuln.sweet32","title":"Sweet32","cve":"CVE-2016-2183","state":"vulnerable","level":"bad",
        "body":"A 3DES cipher is offered (64-bit block)."}
     ],
     "chain_trust": "trusted",
@@ -399,10 +388,10 @@ How to read it:
    the apex→www sibling and the headers in the report are the ones
    served at `www.cloudflare.com`. Surface this when reporting to a
    human user so they understand which surface was inspected.
-6. **To produce a fix list**: for each vulnerability `id`, map to its
-   catalog id per §5.5 (`Sweet32 → vuln.sweet32`), `GET
-   /api/v1/checks` once, and read `remediation.example_snippet` for a
-   copy-paste line.
+6. **To produce a fix list**: `GET /api/v1/checks` once, index by `id`,
+   then for each vulnerability look up `finding.id` directly (it is
+   already the catalog id, e.g. `vuln.sweet32`) and read
+   `remediation.example_snippet` for a copy-paste line.
 
 ## 7. Decision recipes
 
@@ -437,8 +426,9 @@ TLS 1.0 kills BEAST and Lucky13 in one move), report it once.
 
 For any finding `id` from a scan response:
 
-1. Translate to a catalog id (§5.5 for runtime vuln IDs; otherwise the
-   finding `id` is already a catalog id).
+1. Use `finding.id` directly — it is always a catalog id (`vuln.*`,
+   `headers.*`, `tls.protocol.*`, `tls.chain.*`, `tls.cipher.*`,
+   `custom.*`).
 2. Fetch `/api/v1/checks` once per session (it is immutable per build,
    `Cache-Control: max-age=3600`) and index by `id`.
 3. Present `remediation.summary` as the explanation and

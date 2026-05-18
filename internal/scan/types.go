@@ -164,8 +164,11 @@ type Certificate struct {
 }
 
 // VulnerabilityFinding records a presence-based check for a named TLS weakness.
+// ID matches the corresponding catalog entry (e.g. "vuln.poodle"); Title is
+// the human-readable label shown in reports.
 type VulnerabilityFinding struct {
 	ID    string   `json:"id"`
+	Title string   `json:"title"`
 	CVE   string   `json:"cve,omitempty"`
 	State string   `json:"state"`
 	Level Severity `json:"level"`
