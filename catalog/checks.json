@@ -326,6 +326,18 @@
       }
     },
     {
+      "id": "vuln.scan_blocked",
+      "category": "tls.scan",
+      "title": "Partial scan — target blocked the scanner",
+      "severity_when_fail": "info",
+      "score_impact": "None — informational. Protocol rows with probe=\"aborted\" could not be tested; the report below is partial.",
+      "remediation": {
+        "summary": "A WAF or IDS on the target blackholed the scanner IP after a legacy-TLS ClientHello (typically TLS 1.0/1.1 fingerprinting). Every observation made before the block is preserved; rows marked aborted need to be confirmed from another egress IP, or the scanner has to be whitelisted on the target.",
+        "example_stack": "n/a",
+        "example_snippet": ""
+      }
+    },
+    {
       "id": "headers.strict_transport_security",
       "category": "headers.core",
       "title": "Strict-Transport-Security",

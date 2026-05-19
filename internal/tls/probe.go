@@ -7,7 +7,6 @@ package tls
 
 import (
 	"context"
-	stdtls "crypto/tls"
 
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 	"github.com/JoshuaMart/websec0/internal/scan"
@@ -16,30 +15,54 @@ import (
 // Probe runs the full modern-TLS probe against target and returns a
 // partially-populated TLSReport. The Grade and Scores fields are left
 // zero — they are filled in by the scoring engine in Phase 6.
+//
+// The protocols are walked in best-to-worst order, interleaving protocol
+// detection with cipher enumeration per version. A shared banDetector
+// flips as soon as a handshake silently times out after a prior success
+// (the my.foresters.com WAF pattern); remaining legacy versions are then
+// marked ProbeAborted instead of being falsely reported as "not offered".
+// CipherPreference and SessionResumption — both TLS 1.2+ features — are
+// skipped once the detector trips, because each adds an extra handshake on
+// what we already know to be a dead path.
 func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
-	// Extract the chain first — the certificate is single-handshake and
-	// always informative, so we want it even when a downstream cipher
-	// enumeration runs into the scan timeout.
+	// extractChain runs first because the certificate is informative even
+	// when downstream enumeration ends up partial.
 	chain, trust, stapled, ocspStatus := extractChain(ctx, target)
 
-	protocols := enumerateProtocols(ctx, target)
-	cipherPref := detectCipherPreference(ctx, target)
-	resumption := detectSessionResumption(ctx, target)
+	bd := newBanDetector()
+	// extractChain just completed a handshake against the same host. If it
+	// succeeded we seed the detector so a single subsequent timeout is
+	// enough to short-circuit the rest.
+	if len(chain) > 0 {
+		bd.Record(nil)
+	}
 
-	ciphers := make([]scan.Cipher, 0)
-	for _, p := range protocols {
-		if !p.Offered {
+	protocols := make([]scan.ProtocolSupport, 0, len(modernProtocols))
+	var ciphers []scan.Cipher
+	for _, p := range modernProtocols {
+		if bd.Triggered() {
+			protocols = append(protocols, scan.ProtocolSupport{
+				Name:    p.Name,
+				Offered: false,
+				Probe:   scan.ProbeAborted,
+			})
 			continue
 		}
-		v, ok := versionFromName(p.Name)
-		if !ok {
-			continue
-		}
-		if v == stdtls.VersionTLS13 {
-			ciphers = append(ciphers, captureTLS13Cipher(ctx, target)...)
-		} else {
-			ciphers = append(ciphers, enumerateLegacyCiphers(ctx, target, v, p.Name)...)
-		}
+		support, vCiphers := probeVersion(ctx, target, p.Name, p.Version, bd)
+		protocols = append(protocols, support)
+		ciphers = append(ciphers, vCiphers...)
+	}
+
+	var cipherPref scan.CipherPreference
+	var resumption scan.SessionResumption
+	if !bd.Triggered() {
+		cipherPref = detectCipherPreference(ctx, target)
+		resumption = detectSessionResumption(ctx, target)
+	}
+
+	status := scan.TLSScanStatusComplete
+	if bd.Triggered() {
+		status = scan.TLSScanStatusPartialBlocked
 	}
 
 	// Vulnerabilities are intentionally left nil here. The orchestrator
@@ -56,5 +79,6 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 		OCSPStapling:      stapled,
 		OCSPStatus:        ocspStatus,
 		SessionResumption: resumption,
+		ScanStatus:        status,
 	}
 }

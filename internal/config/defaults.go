@@ -41,5 +41,8 @@ func Defaults() *Config {
 		Telemetry: Telemetry{
 			AnonymousStats: false,
 		},
+		Log: Log{
+			DebugHandshakes: false,
+		},
 	}
 }

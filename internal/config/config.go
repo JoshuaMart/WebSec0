@@ -13,6 +13,7 @@ type Config struct {
 	History   History   `yaml:"history"`
 	Frontend  Frontend  `yaml:"frontend"`
 	Telemetry Telemetry `yaml:"telemetry"`
+	Log       Log       `yaml:"log"`
 }
 
 // Server holds HTTP listener options.
@@ -84,4 +85,15 @@ type Frontend struct {
 // Telemetry holds optional anonymous-stats reporting flags.
 type Telemetry struct {
 	AnonymousStats bool `yaml:"anonymous_stats"`
+}
+
+// Log holds runtime logging knobs.
+type Log struct {
+	// DebugHandshakes raises the slog level to Debug, which makes the
+	// per-handshake diagnostic line (`msg=handshake seq=… err_kind=…`)
+	// emitted by internal/tls.attemptHandshake visible on stderr. Useful
+	// when a target stops responding mid-scan and we need to correlate the
+	// bascule with a specific protocol/cipher pair. Off by default —
+	// the volume is ~450 lines per scan worst case.
+	DebugHandshakes bool `yaml:"debug_handshakes"`
 }

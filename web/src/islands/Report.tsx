@@ -17,6 +17,7 @@ type Status = 'pass' | 'fail' | 'warn' | 'info' | '';
 type Severity = 'good' | 'warn' | 'bad' | 'info';
 
 type ProtocolSupport = { name: string; offered: boolean; probe: string };
+type TLSScanStatus = '' | 'complete' | 'partial_blocked';
 type Cipher = {
   protocol: string;
   name: string;
@@ -75,6 +76,7 @@ type TLSReport = {
   ocsp_status?: string;
   session_resumption?: string;
   vulnerabilities: Vuln[];
+  scan_status?: TLSScanStatus;
 };
 type HeadersReport = {
   grade: Grade;
@@ -196,6 +198,46 @@ export default function Report() {
   );
 }
 
+// PartialScanNotice is the right-side slot inside the header. Rendered only
+// when the TLS probe stopped early (typically a WAF blackholing the scanner
+// after a legacy ClientHello). Sized to align with the host/IP block on
+// its left so the header row balances visually.
+function PartialScanNotice({ tls }: { tls?: TLSReport }) {
+  if (!tls || tls.scan_status !== 'partial_blocked') return null;
+  // flex: '1 1 auto' lets the box grow to fill the right side on desktop
+  // (row flex) while sizing to content on mobile (column flex) — using a
+  // pixel flex-basis here would make the box demand that many pixels of
+  // height once .header switches to flex-direction: column.
+  return (
+    <div
+      style={{
+        flex: '1 1 auto',
+        minWidth: 0,
+        maxWidth: 520,
+        alignSelf: 'stretch',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 6,
+        padding: '10px 14px',
+        border: '1px solid var(--info-line)',
+        borderRadius: 8,
+        background: 'var(--info-bg)',
+      }}
+    >
+      <span class="pill info" style={{ alignSelf: 'flex-start' }}>
+        <span class="dot" />
+        Partial scan
+      </span>
+      <div style={{ color: 'var(--ink-2)', fontSize: 12.5, lineHeight: 1.45 }}>
+        The target stopped responding to TLS handshakes mid-probe. Protocol rows
+        marked <b>Indeterminate</b> could not be tested; the grades reflect only
+        what was observed before the block.
+      </div>
+    </div>
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Header + grade panel
 
@@ -239,6 +281,7 @@ function Header({ data }: { data: ScanResult }) {
           </div>
         </div>
       </div>
+      <PartialScanNotice tls={data.tls} />
     </div>
   );
 }
@@ -1066,12 +1109,17 @@ function CertificateTab({ chain }: { chain: Certificate[] }) {
 function ProtocolsTab({ protocols }: { protocols: ProtocolSupport[] }) {
   if (!protocols.length) return <EmptyCard message="No protocols enumerated." />;
   const offered = protocols.filter((p) => p.offered).length;
+  const indeterminate = protocols.filter((p) => p.probe === 'aborted').length;
+  const disabled = protocols.length - offered - indeterminate;
   return (
     <div class="card">
       <div class="card-head">
         <h3>Protocol support</h3>
         <span class="sub">
-          {offered} offered · {protocols.length - offered} disabled
+          {offered} offered
+          {indeterminate > 0 ? ` · ${indeterminate} indeterminate` : ''}
+          {' · '}
+          {disabled} disabled
         </span>
       </div>
       <div class="card-body flush">
@@ -1082,7 +1130,12 @@ function ProtocolsTab({ protocols }: { protocols: ProtocolSupport[] }) {
                 <b>{p.name}</b>
                 <span>via {p.probe}</span>
               </div>
-              {p.offered ? (
+              {p.probe === 'aborted' ? (
+                <span class="pill info" style={{ borderStyle: 'dashed' }}>
+                  <span class="dot" />
+                  Indeterminate
+                </span>
+              ) : p.offered ? (
                 <span class="pill good">
                   <span class="dot" />
                   Offered

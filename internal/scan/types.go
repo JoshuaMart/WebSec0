@@ -38,6 +38,22 @@ type Probe string
 const (
 	ProbeStdlib         Probe = "stdlib"
 	ProbeRawClientHello Probe = "raw_clienthello"
+	// ProbeAborted marks a protocol row whose handshake was never attempted
+	// because the scanner detected a mid-scan ban from the target and
+	// stopped probing legacy versions to preserve what was already
+	// observed. Offered is always false on aborted rows; the absence of
+	// data is itself the signal — distinct from a measured "not offered".
+	ProbeAborted Probe = "aborted"
+)
+
+// TLSScanStatus describes whether the TLS probe ran to completion.
+type TLSScanStatus string
+
+// TLSScanStatus values.
+const (
+	TLSScanStatusUnknown        TLSScanStatus = ""
+	TLSScanStatusComplete       TLSScanStatus = "complete"
+	TLSScanStatusPartialBlocked TLSScanStatus = "partial_blocked"
 )
 
 // Result is the top-level scan response.
@@ -70,6 +86,13 @@ type TLSReport struct {
 	OCSPStatus        OCSPStatus             `json:"ocsp_status,omitempty"`
 	SessionResumption SessionResumption      `json:"session_resumption,omitempty"`
 	Vulnerabilities   []VulnerabilityFinding `json:"vulnerabilities"`
+	// ScanStatus signals whether the TLS probe ran to completion. Empty
+	// (omitempty) preserves the legacy payload shape for healthy scans;
+	// "partial_blocked" tells consumers that the target stopped responding
+	// mid-probe (typically a WAF fingerprinting a legacy ClientHello), so
+	// any ProtocolSupport row with Probe == ProbeAborted should be read as
+	// "could not be tested" rather than "not offered".
+	ScanStatus TLSScanStatus `json:"scan_status,omitempty"`
 }
 
 // CipherPreference reports whose preference drives the negotiated cipher.

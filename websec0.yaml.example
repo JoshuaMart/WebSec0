@@ -61,3 +61,16 @@ frontend:
 
 telemetry:
   anonymous_stats: false        # if true, send scan counts (no hostnames) to a stats endpoint
+
+log:
+  # When true, surfaces a per-handshake diagnostic line on stderr:
+  #
+  #   level=DEBUG msg=handshake seq=42 host=example.com port=443
+  #     min_version="TLS 1.1" max_version="TLS 1.1" cipher_pinned=false
+  #     duration_ms=3001 err_kind=timeout err_msg="i/o timeout"
+  #
+  # Useful when a target stops responding mid-scan (typically a WAF
+  # blackholing the scanner after a legacy ClientHello) and you need to
+  # correlate the bascule with a specific protocol/cipher pair. The volume
+  # is ~450 lines per scan worst case, so keep this off in production.
+  debug_handshakes: false

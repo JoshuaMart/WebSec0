@@ -169,32 +169,50 @@ func highestOfferedProtocol(protocols []scan.ProtocolSupport) string {
 	return ""
 }
 
-// runProbes fans out the probes against a resolved Target. Each probe runs
-// in its own goroutine and writes to a dedicated local — there is no
-// concurrent write to a shared struct. The scoring step happens after the
-// wait, when all observations are merged.
+// runProbes fans out the probes against a resolved Target. Three goroutines
+// run in parallel: the SSL/TLS pipeline, the headers probe and the custom
+// checks. Within the SSL/TLS pipeline everything is sequential — modern
+// versions first (best-to-worst), then SSLv3, then SSLv2. This serialization
+// is deliberate: some WAFs blackhole the scanner IP as soon as they observe
+// a legacy ClientHello, and running the SSLv2/v3 raw probes in parallel
+// with the modern probe used to trigger that ban before the modern data
+// was collected. Headers and custom remain parallel because they're
+// HTTP-level and never trip the WAF on their own (and we want them to
+// complete before any legacy hello goes out).
 func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.Result {
 	var (
 		tlsReport     *scan.TLSReport
-		ssl2Offered   bool
-		ssl3Offered   bool
 		headersReport *scan.HeadersReport
 		customFinds   []scan.CustomFinding
 	)
 
 	var wg sync.WaitGroup
-	wg.Add(5)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		tlsReport = tlsprobe.Probe(ctx, target)
-	}()
-	go func() {
-		defer wg.Done()
-		ssl2Offered = sslv2.Probe(ctx, target, rawProbeTimeout)
-	}()
-	go func() {
-		defer wg.Done()
-		ssl3Offered = sslv3.Probe(ctx, target, rawProbeTimeout)
+		if tlsReport == nil {
+			return
+		}
+		// SSLv3 then SSLv2 — the worst-last extension of the modern probe's
+		// best-to-worst order. If the modern probe already detected a ban,
+		// don't even attempt the raw hellos: surface aborted rows so the
+		// report stays honest.
+		if tlsReport.ScanStatus == scan.TLSScanStatusPartialBlocked {
+			tlsReport.Protocols = append(
+				tlsReport.Protocols,
+				scan.ProtocolSupport{Name: "SSL 3.0", Offered: false, Probe: scan.ProbeAborted},
+				scan.ProtocolSupport{Name: "SSL 2.0", Offered: false, Probe: scan.ProbeAborted},
+			)
+			return
+		}
+		ssl3Offered := sslv3.Probe(ctx, target, rawProbeTimeout)
+		ssl2Offered := sslv2.Probe(ctx, target, rawProbeTimeout)
+		tlsReport.Protocols = append(
+			tlsReport.Protocols,
+			scan.ProtocolSupport{Name: "SSL 3.0", Offered: ssl3Offered, Probe: scan.ProbeRawClientHello},
+			scan.ProtocolSupport{Name: "SSL 2.0", Offered: ssl2Offered, Probe: scan.ProbeRawClientHello},
+		)
 	}()
 	go func() {
 		defer wg.Done()
@@ -234,19 +252,13 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 	}()
 	wg.Wait()
 
-	// Merge SSLv2/v3 results into the TLS protocols list so consumers see
-	// one consolidated protocol matrix.
+	// Weakness derivation is owned by the tls package but called here
+	// because it joins observations from two probes: protocols+ciphers
+	// from tls.Probe and the HTTP Server header from headers.Probe
+	// (needed to fingerprint Heartbleed and Ticketbleed). The orchestrator
+	// is the only layer that has both reports in scope. SSLv2/v3 rows are
+	// already merged into tlsReport.Protocols by the TLS goroutine.
 	if tlsReport != nil {
-		tlsReport.Protocols = append(
-			tlsReport.Protocols,
-			scan.ProtocolSupport{Name: "SSL 3.0", Offered: ssl3Offered, Probe: scan.ProbeRawClientHello},
-			scan.ProtocolSupport{Name: "SSL 2.0", Offered: ssl2Offered, Probe: scan.ProbeRawClientHello},
-		)
-		// Weakness derivation is owned by the tls package but called here
-		// because it joins observations from two probes: protocols+ciphers
-		// from tls.Probe and the HTTP Server header from headers.Probe
-		// (needed to fingerprint Heartbleed and Ticketbleed). The orchestrator
-		// is the only layer that has both reports in scope.
 		var serverHeader string
 		if headersReport != nil && headersReport.Additional.Server != nil {
 			serverHeader = headersReport.Additional.Server.Value
@@ -255,6 +267,7 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 			Protocols:    tlsReport.Protocols,
 			Ciphers:      tlsReport.Ciphers,
 			ServerHeader: serverHeader,
+			ScanStatus:   tlsReport.ScanStatus,
 		})
 	}
 

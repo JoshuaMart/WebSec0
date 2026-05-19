@@ -21,10 +21,15 @@ import (
 //     HTTP `Server:` response header. Empty string is a valid input but
 //     means Heartbleed/Ticketbleed cannot be fingerprinted and will
 //     report "Not vulnerable" by default.
+//   - ScanStatus          — copied from TLSReport.ScanStatus. When
+//     "partial_blocked", DeriveWeaknesses emits an info-level
+//     vuln.scan_blocked finding so the consumer can distinguish a
+//     coverage gap from a clean run.
 type WeaknessInput struct {
 	Protocols    []scan.ProtocolSupport
 	Ciphers      []scan.Cipher
 	ServerHeader string
+	ScanStatus   scan.TLSScanStatus
 }
 
 // DeriveWeaknesses turns the observed TLS protocols + ciphers and the
@@ -45,7 +50,7 @@ type WeaknessInput struct {
 // Each emitted finding's ID matches a catalog entry in
 // catalog/checks.json (e.g. "vuln.poodle"); Title carries the
 // human-readable label.
-func DeriveWeaknesses(in WeaknessInput) []scan.VulnerabilityFinding {
+func DeriveWeaknesses(in WeaknessInput) []scan.VulnerabilityFinding { //nolint:gocritic // value semantics keep the input immutable across orchestrator and tests; called once per scan, no hot path
 	has := map[string]bool{}
 	for _, p := range in.Protocols {
 		if p.Offered {
@@ -69,6 +74,7 @@ func DeriveWeaknesses(in WeaknessInput) []scan.VulnerabilityFinding {
 
 	heartbleed := isHeartbleedVulnerable(in.ServerHeader)
 	ticketbleed := isF5BigIP(in.ServerHeader)
+	scanBlocked := in.ScanStatus == scan.TLSScanStatusPartialBlocked
 
 	return []scan.VulnerabilityFinding{
 		// Actively detected.
@@ -96,6 +102,12 @@ func DeriveWeaknesses(in WeaknessInput) []scan.VulnerabilityFinding {
 		suspectFinding("vuln.ticketbleed", "Ticketbleed", "CVE-2016-9244", ticketbleed,
 			"F5 BIG-IP detected via Server header. Confirm the running version is patched (>= 12.0.0 HF2 / >= 11.6.1 HF1).",
 			"Server header does not advertise F5 BIG-IP."),
+
+		// Scan-meta finding — info-level signal that the report below is
+		// partial because the target stopped responding mid-probe.
+		scanStatusFinding("vuln.scan_blocked", "Partial scan", scanBlocked,
+			"The target stopped responding to TLS handshakes mid-probe (typically a WAF fingerprinting a legacy ClientHello). Rows with probe=\"aborted\" could not be tested — re-run from a different egress IP to confirm.",
+			"Scan completed without interruption."),
 
 		// Still placeholders — see TODO.md Phase 4 for the breakdown of why.
 		infoFinding("vuln.crime", "CRIME", "CVE-2012-4929",
@@ -159,5 +171,22 @@ func infoFinding(id, title, cve, body string) scan.VulnerabilityFinding {
 	return scan.VulnerabilityFinding{
 		ID: id, Title: title, CVE: cve, State: "Not assessed",
 		Level: scan.SeverityInfo, Body: body,
+	}
+}
+
+// scanStatusFinding emits an info-level meta-finding describing whether the
+// scan ran to completion. No CVE applies (this is a scanner-side condition,
+// not a target weakness), but it shares the same shape as the other findings
+// so consumers can render it from the standard vulnerabilities list.
+func scanStatusFinding(id, title string, blocked bool, blockedBody, completeBody string) scan.VulnerabilityFinding {
+	if blocked {
+		return scan.VulnerabilityFinding{
+			ID: id, Title: title, State: "Partial",
+			Level: scan.SeverityInfo, Body: blockedBody,
+		}
+	}
+	return scan.VulnerabilityFinding{
+		ID: id, Title: title, State: "Complete",
+		Level: scan.SeverityInfo, Body: completeBody,
 	}
 }

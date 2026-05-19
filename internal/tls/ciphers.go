@@ -23,9 +23,16 @@ func allKnownSuites() []*stdtls.CipherSuite {
 // records the ones the server accepts. Only applicable to TLS 1.0–1.2;
 // TLS 1.3 cipher suites are not configurable via crypto/tls and are
 // captured by captureTLS13Cipher.
-func enumerateLegacyCiphers(ctx context.Context, target *safehttp.Target, version uint16, protoName string) []scan.Cipher {
+//
+// Every handshake outcome is fed to bd; the loop aborts as soon as the
+// detector flips, so a ban that hits mid-enumeration returns whatever was
+// already accepted instead of burning 3s per remaining cipher.
+func enumerateLegacyCiphers(ctx context.Context, target *safehttp.Target, version uint16, protoName string, bd *banDetector) []scan.Cipher {
 	var offered []scan.Cipher
 	for _, suite := range allKnownSuites() {
+		if bd.Triggered() {
+			break
+		}
 		if !slices.Contains(suite.SupportedVersions, version) {
 			continue
 		}
@@ -34,6 +41,7 @@ func enumerateLegacyCiphers(ctx context.Context, target *safehttp.Target, versio
 			MaxVersion:   version,
 			CipherSuites: []uint16{suite.ID},
 		})
+		bd.Record(err)
 		if err != nil {
 			continue
 		}
@@ -47,12 +55,15 @@ func enumerateLegacyCiphers(ctx context.Context, target *safehttp.Target, versio
 
 // captureTLS13Cipher records the single cipher the server negotiates when
 // only TLS 1.3 is offered. Full TLS 1.3 cipher enumeration would require
-// forging raw ClientHellos and is deferred to a future iteration.
-func captureTLS13Cipher(ctx context.Context, target *safehttp.Target) []scan.Cipher {
+// forging raw ClientHellos and is deferred to a future iteration. The
+// handshake outcome is fed to bd so a TLS 1.3 attempt that times out can
+// arm the ban detector for downstream versions.
+func captureTLS13Cipher(ctx context.Context, target *safehttp.Target, bd *banDetector) []scan.Cipher {
 	state, err := attemptHandshake(ctx, target, handshakeOpts{
 		MinVersion: stdtls.VersionTLS13,
 		MaxVersion: stdtls.VersionTLS13,
 	})
+	bd.Record(err)
 	if err != nil {
 		return nil
 	}

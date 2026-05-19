@@ -41,13 +41,22 @@ func run() error {
 		return nil
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	slog.SetDefault(logger)
-
 	cfg, source, err := loadConfig(cfgPath)
 	if err != nil {
 		return err
 	}
+
+	level := slog.LevelInfo
+	if cfg.Log.DebugHandshakes {
+		// Surfaces the per-handshake diagnostic log emitted by
+		// internal/tls.attemptHandshake. Useful when a target stops
+		// responding mid-scan and we want to correlate the bascule with a
+		// specific protocol/cipher pair.
+		level = slog.LevelDebug
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	slog.SetDefault(logger)
+
 	if source == "" {
 		source = "<defaults>"
 	}
