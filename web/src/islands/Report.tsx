@@ -445,23 +445,23 @@ function Tabs({
     {
       id: 'certificate',
       label: 'Certificate',
-      count: data.tls?.certificate_chain.length,
+      count: data.tls?.certificate_chain?.length,
     },
     {
       id: 'protocols',
       label: 'Protocols',
-      count: data.tls?.protocols.filter((p) => p.offered).length,
+      count: data.tls?.protocols?.filter((p) => p.offered).length,
     },
     {
       id: 'ciphers',
       label: 'Ciphers',
-      count: data.tls?.ciphers.length,
+      count: data.tls?.ciphers?.length,
     },
     { id: 'headers', label: 'Headers' },
     {
       id: 'vulns',
       label: 'Vulnerabilities',
-      count: data.tls?.vulnerabilities.length,
+      count: data.tls?.vulnerabilities?.length,
     },
     { id: 'custom', label: 'Custom', count: data.custom?.length },
   ];
@@ -507,7 +507,7 @@ function Overview({ data }: { data: ScanResult }) {
   const tls = data.tls;
   const headers = data.headers;
   const offeredProtos = (tls?.protocols ?? []).filter((p) => p.offered).map((p) => p.name);
-  const leaf = tls?.certificate_chain[0];
+  const leaf = tls?.certificate_chain?.[0];
   const highlights = deriveHighlights(data);
   return (
     <div class="section">
@@ -554,7 +554,7 @@ function Overview({ data }: { data: ScanResult }) {
               <div class="k">TLS versions</div>
               <div class="v">{offeredProtos.join(', ') || '—'}</div>
               <div class="k">Cipher count</div>
-              <div class="v">{tls?.ciphers.length ?? 0} offered</div>
+              <div class="v">{tls?.ciphers?.length ?? 0} offered</div>
               <div class="k">Cipher preference</div>
               <div class="v">{tls?.cipher_preference || '—'}</div>
               <div class="k">OCSP stapling</div>
@@ -600,7 +600,7 @@ function parseMaxAge(value: string): number | null {
 
 function protocolHighlights(tls?: TLSReport): Highlight[] {
   if (!tls) return [];
-  const offered = new Set(tls.protocols.filter((p) => p.offered).map((p) => p.name));
+  const offered = new Set((tls.protocols ?? []).filter((p) => p.offered).map((p) => p.name));
   const out: Highlight[] = [];
   if (offered.has('TLS 1.3') && !offered.has('TLS 1.0') && !offered.has('TLS 1.1')) {
     out.push({
@@ -627,7 +627,7 @@ function protocolHighlights(tls?: TLSReport): Highlight[] {
 }
 
 function cipherHighlights(tls?: TLSReport): Highlight[] {
-  if (!tls || !tls.ciphers.length) return [];
+  if (!tls || !tls.ciphers?.length) return [];
   const out: Highlight[] = [];
   const ciphers = tls.ciphers;
 
@@ -677,7 +677,8 @@ function cipherHighlights(tls?: TLSReport): Highlight[] {
 
 function certificateHighlights(tls?: TLSReport): Highlight[] {
   if (!tls) return [];
-  const leaf = tls.certificate_chain.find((c) => c.step === 0) ?? tls.certificate_chain[0];
+  const chain = tls.certificate_chain ?? [];
+  const leaf = chain.find((c) => c.step === 0) ?? chain[0];
   if (!leaf) return [];
   const out: Highlight[] = [];
 
@@ -750,8 +751,9 @@ function trustAndOcspHighlights(tls?: TLSReport): Highlight[] {
 function vulnHighlights(tls?: TLSReport): Highlight[] {
   if (!tls) return [];
   const out: Highlight[] = [];
-  const bad = tls.vulnerabilities.filter((v) => v.level === 'bad');
-  const warn = tls.vulnerabilities.filter((v) => v.level === 'warn');
+  const vulns = tls.vulnerabilities ?? [];
+  const bad = vulns.filter((v) => v.level === 'bad');
+  const warn = vulns.filter((v) => v.level === 'warn');
   if (bad.length) {
     out.push({
       title: `${bad.length} active vulnerability ${bad.length > 1 ? 'findings' : 'finding'}`,

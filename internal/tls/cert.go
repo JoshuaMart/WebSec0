@@ -25,7 +25,7 @@ func extractChain(ctx context.Context, target *safehttp.Target) ([]scan.Certific
 		MaxVersion: stdtls.VersionTLS13,
 	})
 	if err != nil {
-		return nil, scan.ChainTrustUnknown, false, scan.OCSPStatusUnknown
+		return []scan.Certificate{}, scan.ChainTrustUnknown, false, scan.OCSPStatusUnknown
 	}
 	chain := mapChain(state.PeerCertificates)
 	trust := validateChain(state.PeerCertificates, target.Host)

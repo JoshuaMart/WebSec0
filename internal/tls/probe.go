@@ -26,7 +26,7 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 	cipherPref := detectCipherPreference(ctx, target)
 	resumption := detectSessionResumption(ctx, target)
 
-	var ciphers []scan.Cipher
+	ciphers := make([]scan.Cipher, 0)
 	for _, p := range protocols {
 		if !p.Offered {
 			continue
