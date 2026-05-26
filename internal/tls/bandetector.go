@@ -5,10 +5,10 @@ package tls
 // connection-level silent drop (timeout / dial cancellation) observed AFTER
 // at least one prior successful handshake.
 //
-// Why one is enough: the my.foresters.com case demonstrated that some WAFs
-// react to a single legacy ClientHello (TLS 1.0/1.1) by IP-banning the
-// caller — every subsequent dial then times out at 3s, and burning 3s × N
-// versions × ~150 ciphers on a known-dead path adds nothing to the report.
+// Why one is enough: some WAFs react to a single legacy ClientHello
+// (TLS 1.0/1.1) by IP-banning the caller — every subsequent dial then
+// times out at 3s, and burning 3s × N versions × ~150 ciphers on a
+// known-dead path adds nothing to the report.
 //
 // Why TLS alerts and RSTs do not trip the detector: both prove the server
 // is still on the wire (it replied, just refusing this particular

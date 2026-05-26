@@ -19,7 +19,7 @@ import (
 // The protocols are walked in best-to-worst order, interleaving protocol
 // detection with cipher enumeration per version. A shared banDetector
 // flips as soon as a handshake silently times out after a prior success
-// (the my.foresters.com WAF pattern); remaining legacy versions are then
+// (a common WAF IP-ban pattern); remaining legacy versions are then
 // marked ProbeAborted instead of being falsely reported as "not offered".
 // CipherPreference and SessionResumption — both TLS 1.2+ features — are
 // skipped once the detector trips, because each adds an extra handshake on

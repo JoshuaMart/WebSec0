@@ -24,8 +24,8 @@ import (
 // performs a real handshake for the first goodAccepts connections, then
 // silently holds subsequent connections so the client's handshake deadline
 // fires (classified as "timeout" by the detector). This reproduces the
-// my.foresters.com pattern: the target accepts the TCP connection but
-// stops replying once a legacy ClientHello has been fingerprinted.
+// WAF IP-ban pattern: the target accepts the TCP connection but stops
+// replying once a legacy ClientHello has been fingerprinted.
 func newTLS13ListenerWithBlackhole(t *testing.T, goodAccepts int) (net.Listener, *atomic.Int64) {
 	t.Helper()
 
