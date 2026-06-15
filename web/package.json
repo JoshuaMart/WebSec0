@@ -12,5 +12,10 @@
     "@astrojs/preact": "^5.1.5",
     "astro": "^6.4.6",
     "preact": "^10.29.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": ">=0.28.1"
+    }
   }
 }
