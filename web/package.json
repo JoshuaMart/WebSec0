@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@astrojs/preact": "^5.1.5",
-    "astro": "^6.4.6",
+    "astro": "^6.4.8",
     "preact": "^10.29.2"
   },
   "pnpm": {
