@@ -3,7 +3,7 @@ module github.com/JoshuaMart/websec0
 go 1.26.0
 
 require (
-	github.com/go-chi/chi/v5 v5.3.1
+	github.com/go-chi/chi/v5 v5.3.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	golang.org/x/crypto v0.55.0
 	golang.org/x/time v0.15.0
