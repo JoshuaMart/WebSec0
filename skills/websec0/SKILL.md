@@ -268,6 +268,15 @@ does not invalidate the others.
 - `tls.ocsp_stapling` (bool) and `tls.ocsp_status` (`good` | `revoked`
   | `unknown` | `""`).
 - `tls.session_resumption`: `supported` | `not_supported` | `""`.
+- `tls.handshake_scts`: `{count, log_ids, unparsed_count}`, from the TLS
+  extension only. Omitted if the certificate handshake was unavailable (or
+  in older reports); `count: 0` means no SCTs were observed via that extension.
+  `count` includes duplicates and unparsed entries. `log_ids` contains unique
+  lowercase hex IDs from structurally decoded v1 SCTs, in first-seen order;
+  `unparsed_count` counts malformed entries and unsupported versions.
+  Informational only: no scoring impact, signature verification, log trust
+  assessment or inclusion proof. Certificate and OCSP SCT extensions are
+  not inspected; absence here does not establish absence of CT.
 - `tls.vulnerabilities`: each `{id, title, cve, state, level, body}`.
   `id` is the catalog identifier (e.g. `vuln.poodle`); `title` is the
   human-readable label (`POODLE`).

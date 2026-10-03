@@ -10,7 +10,7 @@
 ### Modern (`internal/tls`)
 
 - [ ] Bundle a CCADB Mozilla root fallback so the binary validates chains identically across host OSes — **moderate / passive** (embed a curated PEM, fall back when system pool is empty)
-- [ ] SCT extraction from `state.SignedCertificateTimestamps` (count + log IDs) — **moderate / passive**
+- [x] SCT extraction from `state.SignedCertificateTimestamps` (count + unique log IDs, unparsed count, API + certificate tab) — informational; signatures and inclusion not verified
 - [ ] SCT extraction from the leaf cert's X.509 extension (OID 1.3.6.1.4.1.11129.2.4.2) — **complex / passive** (ASN.1 OctetString of SignedCertificateTimestampList)
 - [ ] 0-RTT (early data) detection on TLS 1.3 — **complex / passive** (requires real early-data send, not directly exposed)
 
