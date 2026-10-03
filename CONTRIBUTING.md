@@ -1,192 +1,102 @@
 # Contributing to WebSec0
 
-Thanks for taking the time to look at this. WebSec0 is small and
-opinionated on purpose, so the bar for new code is "does it earn its
-weight in the v1 scope?". This guide is a stub focused on the most
-common contribution: **adding a new check**.
+Keep changes focused and check [TODO.md](TODO.md) for planned work.
 
-## Quick start
+## Getting started
 
-```bash
-make frontend-install   # one-time: install the Astro dev deps (pnpm)
-make build              # produce ./dist/websec0 (rebuilds the frontend if web/ sources changed)
-./dist/websec0          # serves on :8080 with the embedded UI
+Requires Go 1.26+, Node 22.18+, pnpm 10+, rsync, and golangci-lint for linting.
+
+```sh
+make frontend-install
+make build
+./dist/websec0          # http://localhost:8080
 ```
 
-Run a scan against the local instance:
+`make build` rebuilds and embeds the frontend when its sources change.
+See [README.md](README.md) for usage and deployment.
 
-```bash
-curl -sS -X POST http://localhost:8080/api/v1/scan \
-  -H 'Content-Type: application/json' \
-  -d '{"host":"example.com"}' | jq .
+## Before opening a PR
+
+```sh
+make test              # Go tests with the race detector
+make lint
+make build
 ```
 
-## Development workflow
+For changes under `web/`, also run:
 
-Before opening a PR, every change must pass:
-
-```bash
-make test               # go test -race -count=1 ./...
-make lint               # golangci-lint run ./...
-make bundle-size        # only if web/ changed — gzip budget is 80 KB
+```sh
+make frontend-test
+make bundle-size       # after make build; maximum 80 KB gzip
 ```
 
-`make build` declares the embedded bundle as a Make prerequisite, so a
-touch under `web/` triggers a rebuild + rsync into
-`internal/frontend/dist/` before the Go build. No manual `make frontend`
-step is needed.
+[CI](.github/workflows/ci.yml) runs Go tests and vet, lint, frontend tests,
+and the frontend build and bundle-size check.
 
-The same three gates run in `.github/workflows/ci.yml` and must be
-green for the PR to land.
+Use Conventional Commits for commit subjects and PR titles (`feat(web): …`,
+`fix(scanner): …`, `docs: …`). Keep subjects under about 72 characters and
+separate unrelated changes.
+The PR description should explain the behavior change, relevant decisions
+and how it was tested, especially for scoring, SSRF protection or API changes.
 
-## Commit and PR conventions
+## Common changes
 
-- Commit messages follow Conventional Commits with a scope:
-  `feat(web): …`, `fix(scanner): …`, `docs(skills): …`, `ci: …`. Keep
-  the subject under ~72 chars and lead with the *why* in the body
-  when the change is non-trivial.
-- One logical change per commit. If a refactor and a feature land in
-  the same PR, split them.
-- PR title mirrors the commit style. The description should call out
-  any non-obvious decision, especially when the change touches
-  scoring, the SSRF gate or the API contract.
+### Custom check
 
-## Adding a new custom check
+Custom findings are informational and do not affect grades.
 
-Custom checks are the easiest kind to add. They never contribute to a
-grade — they surface as a separate list in the scan response,
-alongside the TLS and Headers reports.
+1. Implement `custom.Check` in `internal/custom/<name>.go`. Use
+   [securitytxt.go](internal/custom/securitytxt.go) or
+   [robotstxt.go](internal/custom/robotstxt.go) as a reference.
+2. Append the check to `All()` in [registry.go](internal/custom/registry.go);
+   registration order determines API output order.
+3. Add an entry with the same ID to [catalog/checks.json](catalog/checks.json).
+4. Test success, missing resources and malformed input with an `httptest.Server`.
+5. Document new `details` fields in [the API guide](skills/websec0/SKILL.md).
 
-1. **Implement the interface** in `internal/custom/<name>.go`:
+### TLS weakness heuristic
 
-   ```go
-   type MyCheck struct{}
+1. Update `DeriveWeaknesses` in [weakness.go](internal/tls/weakness.go).
+2. Add a `vuln.<name>` catalog entry under `tls.vulnerability`. Runtime IDs
+   must match the catalog; the display name belongs in `Title`.
+3. Test positive, negative and unknown outcomes, and update [TODO.md](TODO.md).
 
-   func (MyCheck) ID() string { return "custom.my_check" }
+### Configuration field
 
-   func (MyCheck) Run(ctx context.Context, target *safehttp.Target) scan.CustomFinding {
-       // Use safehttp (NEVER net.Dial or http.Get directly) — SSRF policy,
-       // IP pinning and per-host rate limit live there.
-       // Return a scan.CustomFinding with ID, Title, Status (pass/warn/fail/info)
-       // and a json.RawMessage of structured details.
-   }
-   ```
+Add the field, default and validation in `internal/config/`, then document
+it in [websec0.yaml.example](websec0.yaml.example).
 
-   See `internal/custom/securitytxt.go` and `robotstxt.go` for two
-   contrasting examples — one that parses a file with rules, one that
-   inspects a list for suspicious entries.
+## Code conventions
 
-2. **Register it** in `internal/custom/registry.go` by appending
-   `MyCheck{}` to `All()`. Order is preserved in the API output, so
-   keep new checks at the end unless you have a reason to reorder.
+- Route all outbound traffic through `safehttp` for IP pinning, address
+  filtering and rate limiting. Loopback, link-local, multicast and unspecified
+  addresses remain blocked even with `AllowPrivate: true`; see
+  [policy.go](internal/safehttp/policy.go).
+- Probes return `scan.*` types; `scan` must not import probes. The orchestrator
+  in `internal/scanner` combines their results.
+- Embed the frontend by copy, not symlink. Keep `internal/frontend/dist/.keep`
+  so fresh clones can build Go packages before generating the frontend.
+- Give every `//nolint` directive a reason on the same line.
+- Register embedded certificate roots only in `cmd/websec0`. Keep the fallback
+  module current through Dependabot and check updates with `govulncheck`;
+  preserve its trust constraints rather than replacing it with a PEM export.
 
-3. **Add a catalog entry** in `catalog/checks.json` with the same ID:
+## Test references
 
-   ```json
-   {
-     "id": "custom.my_check",
-     "category": "custom",
-     "title": "Short human-readable title",
-     "severity_when_fail": "warn",
-     "score_impact": "Informational only — does not affect grade.",
-     "remediation": {
-       "summary": "What the operator should do, in one sentence.",
-       "example_stack": "nginx",
-       "example_snippet": "# canonical config snippet here"
-     }
-   }
-   ```
+- [TLS scoring fixtures](internal/scoring/testdata/tls/README.md): expected
+  calculations and update policy; included in `make test`.
+- [SCT certificate fixture](internal/tls/testdata/scts/README.md): provenance
+  and independent decoding reference.
+- [Certificate-tab tests](web/tests/report-certificate.test.tsx): Preact HTML
+  rendering; included in `make frontend-test`, with no browser required.
+- Root selection: [validation tests](internal/tls/roots_test.go) and
+  [binary registration tests](cmd/websec0/roots_test.go).
 
-   `severity_when_fail` is one of `critical | warn | info`. Custom
-   checks almost always sit at `warn` or `info` — they are signal,
-   not scoring.
-
-4. **Write a test** in `internal/custom/<name>_test.go` against an
-   `httptest.Server`. Cover the happy path, the missing-file path and
-   one malformed-input path. The repo runs with `go test -race`, so
-   make sure no shared state leaks between iterations.
-
-5. **Update the SKILL.md mapping** in `skills/websec0/SKILL.md` §5.4
-   if your check exposes new `details` keys an agent should
-   understand.
-
-## Adding a TLS weakness heuristic
-
-1. Update `internal/tls/weakness.go` in `DeriveWeaknesses(...)`. Use
-   the existing `finding(...)` helper — keep the condition explicit
-   and put any cipher/protocol gate next to the others.
-2. Add a `vuln.<name>` entry to `catalog/checks.json` under the
-   `tls.vulnerability` category. The catalog ID stays lowercase
-   dotted; the runtime emits the bare short name (e.g. `BEAST`) — that
-   mismatch is documented in `skills/websec0/SKILL.md` §5.5 and in
-   `CLAUDE.md` rule 9.
-3. Update `TODO.md` Phase 4 weakness list if you flip a `*deferred*`
-   item to implemented.
-4. Add a table test covering "vulnerable", "not vulnerable" and
-   "unknown" branches.
-
-## Adding a configuration field
-
-1. Add the field to the relevant struct in `internal/config/config.go`.
-2. Set its default in `internal/config/defaults.go`.
-3. Validate bounds in `internal/config/validate.go` if it has them.
-4. Mirror the field in `websec0.yaml.example` with a short comment.
-
-## Things to watch out for
-
-- **All outbound traffic goes through `safehttp`.** Never `net.Dial`
-  or `http.Get` directly. The package enforces IP pinning, blocked
-  ranges (loopback/private/link-local are always blocked, even when
-  `AllowPrivate: true`) and the per-host rate limit. Tests rely on
-  these defences holding.
-- **The frontend is embedded via copy, not symlink.** `make frontend`
-  rsyncs `web/dist/` into `internal/frontend/dist/`. The committed
-  `internal/frontend/dist/.keep` keeps `//go:embed all:dist` happy on
-  a fresh clone — do not delete it.
-- **`scan` never imports probes.** Probes return `scan.*` types but
-  the orchestrator (`internal/scanner`) wires them together so the
-  type package stays leaf.
-- **Lint exceptions are tracked, not handed out.** Any in-tree
-  `//nolint` directive must end with the reason on the same line.
-  Existing examples live in `safehttp` and `tls`.
-
-Report presentation regression tests run with `make frontend-test` (Node 22.18+).
-They include certificate-tab HTML rendering with Preact, checking SCT source
-wiring and unavailable/absent/malformed states. TSX is loaded with `tsx`;
-these tests do not require a browser.
-The independent SCT certificate fixture and its provenance are documented in
-[`internal/tls/testdata/scts/README.md`](internal/tls/testdata/scts/README.md).
-TLS scoring reference profiles run with
-`go test ./internal/scoring -run '^TestTLSReferenceFixtures$' -v` and are
-included in `make test`. See [the fixture guide](internal/scoring/testdata/tls/README.md)
-for the expected calculations and how to update them after a scoring policy change.
-History purge benchmarks run with
+History benchmarks:
 `go test ./internal/history -run '^$' -bench BenchmarkHistoryPurge -benchmem`.
 
-## Embedded certificate roots
+## Issues and license
 
-`cmd/websec0` registers `golang.org/x/crypto/x509roots/fallback`; reusable
-packages leave root selection to `crypto/x509`. Keep this module current via
-the existing Go Dependabot updates and check it with `govulncheck` when updating
-dependencies. Its Mozilla/NSS bundle includes trust constraints, so do not
-replace it with an unconstrained PEM export.
-
-The root-selection tests run in subprocesses because Go caches system roots
-and permits fallback registration only once. Linux CI covers missing and empty
-system stores, system-root priority, and certificate rejection cases without
-network access. Forced fallback and production bundle registration are also
-tested on other platforms. File-based system-root overrides require Go 1.27
-on macOS/Windows; those cases are skipped there with older toolchains.
-
-## Reporting issues
-
-- Functional bugs and feature requests:
-  <https://github.com/JoshuaMart/WebSec0/issues>.
-- Security issues: please follow
-  [`SECURITY.md`](./SECURITY.md) and report privately via the GitHub
-  Security Advisory workflow.
-
-## License
-
-By contributing, you agree your contributions are licensed under the
-MIT License (see [`LICENSE`](./LICENSE)).
+Report bugs and feature requests in [GitHub Issues](https://github.com/JoshuaMart/WebSec0/issues).
+For security reports, follow the private disclosure process in [SECURITY.md](SECURITY.md).
+Contributions are licensed under the [MIT License](LICENSE).
