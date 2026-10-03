@@ -46,10 +46,14 @@ export type CookieResult = {
   samesite: string | null;
   status: Status;
 };
-export type HandshakeSCTs = {
+export type SCTSummary = {
   count: number;
   log_ids: string[];
   unparsed_count: number;
+};
+export type CertificateSCTs = SCTSummary & {
+  present: boolean;
+  parse_error: boolean;
 };
 export type TLSReport = {
   grade: Grade;
@@ -67,7 +71,8 @@ export type TLSReport = {
   chain_trust: string;
   ocsp_stapling: boolean;
   ocsp_status?: string;
-  handshake_scts?: HandshakeSCTs;
+  handshake_scts?: SCTSummary;
+  certificate_scts?: CertificateSCTs;
   session_resumption?: string;
   vulnerabilities: Vuln[];
   scan_status?: TLSScanStatus;

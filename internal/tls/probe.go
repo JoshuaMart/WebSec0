@@ -79,6 +79,7 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 		OCSPStapling:      cert.stapled,
 		OCSPStatus:        cert.ocspStatus,
 		HandshakeSCTs:     cert.handshakeSCTs,
+		CertificateSCTs:   cert.certificateSCTs,
 		SessionResumption: resumption,
 		ScanStatus:        status,
 	}

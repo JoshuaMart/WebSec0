@@ -84,7 +84,8 @@ type TLSReport struct {
 	ChainTrust        ChainTrust             `json:"chain_trust"`
 	OCSPStapling      bool                   `json:"ocsp_stapling"`
 	OCSPStatus        OCSPStatus             `json:"ocsp_status,omitempty"`
-	HandshakeSCTs     *HandshakeSCTs         `json:"handshake_scts,omitempty"`
+	HandshakeSCTs     *SCTSummary            `json:"handshake_scts,omitempty"`
+	CertificateSCTs   *CertificateSCTs       `json:"certificate_scts,omitempty"`
 	SessionResumption SessionResumption      `json:"session_resumption,omitempty"`
 	Vulnerabilities   []VulnerabilityFinding `json:"vulnerabilities"`
 	// ScanStatus signals whether the TLS probe ran to completion. Empty
@@ -96,12 +97,19 @@ type TLSReport struct {
 	ScanStatus TLSScanStatus `json:"scan_status,omitempty"`
 }
 
-// HandshakeSCTs describes SCTs received via the TLS extension, without signature verification.
-// Nil on TLSReport means the certificate handshake was unavailable.
-type HandshakeSCTs struct {
+// SCTSummary describes observed SCTs without signature verification.
+type SCTSummary struct {
 	Count         int      `json:"count"`          // All received entries, including duplicates and unparsed entries.
 	LogIDs        []string `json:"log_ids"`        // Unique lowercase hex IDs from structurally decoded v1 SCTs.
 	UnparsedCount int      `json:"unparsed_count"` // Malformed entries or unsupported SCT versions.
+}
+
+// CertificateSCTs describes the leaf certificate's SCT extension.
+// Nil on TLSReport means no leaf certificate was available.
+type CertificateSCTs struct {
+	SCTSummary
+	Present    bool `json:"present"`
+	ParseError bool `json:"parse_error"` // Count and IDs are unavailable when the extension framing is malformed.
 }
 
 // CipherPreference reports whose preference drives the negotiated cipher.

@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { deriveHighlights, statusSev } from './report-highlights.ts';
-import { sctSummary } from './report-scts.ts';
+import { certificateSCTSummary, sctSummary } from './report-scts.ts';
 import type {
   Severity, ProtocolSupport, Cipher, Certificate, Vuln, HeaderResult,
-  TLSReport, HeadersReport, CustomFinding, ScanResult, HandshakeSCTs,
+  TLSReport, HeadersReport, CustomFinding, ScanResult, SCTSummary, CertificateSCTs,
 } from './report-types.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -422,7 +422,7 @@ function TabPanel({ id, data }: { id: TabId; data: ScanResult }) {
     case 'certificate':
       return (
         <div class="section">
-          <HandshakeSCTCard scts={data.tls?.handshake_scts} />
+          <CertificateTransparencyCard handshake={data.tls?.handshake_scts} certificate={data.tls?.certificate_scts} />
           <CertificateTab chain={data.tls?.certificate_chain ?? []} />
         </div>
       );
@@ -623,26 +623,40 @@ function CertificateTab({ chain }: { chain: Certificate[] }) {
   );
 }
 
-function HandshakeSCTCard({ scts }: { scts?: HandshakeSCTs }) {
+function CertificateTransparencyCard({ handshake, certificate }: {
+  handshake?: SCTSummary;
+  certificate?: CertificateSCTs;
+}) {
   return (
     <div class="card">
       <div class="card-head">
-        <h3>Certificate Transparency <span class="sub">· TLS handshake</span></h3>
+        <h3>Certificate Transparency</h3>
         <SevPill level="info" />
       </div>
       <div class="card-body sct-body">
-        <p>{sctSummary(scts)}</p>
-        {!!scts?.log_ids.length && (
-          <>
-            <p class="muted">Log IDs (SHA-256, unique)</p>
-            <ul class="sct-log-ids mono">
-              {scts.log_ids.map((id) => <li key={id}>{id}</li>)}
-            </ul>
-          </>
-        )}
-        <p class="muted">Informational only; no effect on the grade. SCT signatures and log inclusion are not verified. SCTs embedded in the certificate or OCSP response are not assessed.</p>
+        <SCTSource title="Leaf certificate" summary={certificateSCTSummary(certificate)}
+          logIDs={certificate?.present && !certificate.parse_error ? certificate.log_ids : undefined} />
+        <SCTSource title="TLS handshake" summary={sctSummary(handshake)} logIDs={handshake?.log_ids} />
+        <p class="muted">Informational only; no effect on the grade. SCT signatures and log inclusion are not verified. SCTs in OCSP responses are not assessed.</p>
       </div>
     </div>
+  );
+}
+
+function SCTSource({ title, summary, logIDs }: { title: string; summary: string; logIDs?: string[] }) {
+  return (
+    <section class="sct-source" aria-label={title}>
+      <h4>{title}</h4>
+      <p>{summary}</p>
+      {!!logIDs?.length && (
+        <>
+          <p class="muted">Log IDs (SHA-256, unique per source)</p>
+          <ul class="sct-log-ids mono">
+            {logIDs.map((id) => <li key={id}>{id}</li>)}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }
 

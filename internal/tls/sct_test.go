@@ -62,25 +62,25 @@ func TestSCTLogID(t *testing.T) {
 	}
 }
 
-func TestExtractHandshakeSCTs(t *testing.T) {
+func TestSummarizeSCTs(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		entries [][]byte
-		want    scan.HandshakeSCTs
+		want    scan.SCTSummary
 	}{
-		{"absent", nil, scan.HandshakeSCTs{LogIDs: []string{}}},
-		{"multiple_logs", [][]byte{fixtureSCT(0xab), fixtureSCT(0xcd)}, scan.HandshakeSCTs{
+		{"absent", nil, scan.SCTSummary{LogIDs: []string{}}},
+		{"multiple_logs", [][]byte{fixtureSCT(0xab), fixtureSCT(0xcd)}, scan.SCTSummary{
 			Count: 2, LogIDs: []string{strings.Repeat("ab", 32), strings.Repeat("cd", 32)},
 		}},
-		{"mixed_and_duplicates", [][]byte{nil, fixtureSCT(0xab), {1}, fixtureSCT(0xab)}, scan.HandshakeSCTs{
+		{"mixed_and_duplicates", [][]byte{nil, fixtureSCT(0xab), {1}, fixtureSCT(0xab)}, scan.SCTSummary{
 			Count: 4, LogIDs: []string{strings.Repeat("ab", 32)}, UnparsedCount: 2,
 		}},
-		{"all_unparsed", [][]byte{{1}, {0}}, scan.HandshakeSCTs{
+		{"all_unparsed", [][]byte{{1}, {0}}, scan.SCTSummary{
 			Count: 2, LogIDs: []string{}, UnparsedCount: 2,
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := extractHandshakeSCTs(tc.entries); !reflect.DeepEqual(*got, tc.want) {
+			if got := summarizeSCTs(tc.entries); !reflect.DeepEqual(*got, tc.want) {
 				t.Fatalf("got %+v, want %+v", got, tc.want)
 			}
 		})
@@ -96,10 +96,10 @@ func TestProbeHandshakeSCTs(t *testing.T) {
 		for _, present := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/present=%t", versionLabel(version), present), func(t *testing.T) {
 				serverCert := cert
-				want := &scan.HandshakeSCTs{LogIDs: []string{}}
+				want := &scan.SCTSummary{LogIDs: []string{}}
 				if present {
 					serverCert.SignedCertificateTimestamps = [][]byte{fixtureSCT(0xab), {1}}
-					want = &scan.HandshakeSCTs{Count: 2, LogIDs: []string{strings.Repeat("ab", 32)}, UnparsedCount: 1}
+					want = &scan.SCTSummary{Count: 2, LogIDs: []string{strings.Repeat("ab", 32)}, UnparsedCount: 1}
 				}
 				srv := httptest.NewUnstartedServer(http.NotFoundHandler())
 				srv.TLS = &stdtls.Config{Certificates: []stdtls.Certificate{serverCert}, MinVersion: version, MaxVersion: version}
@@ -109,7 +109,7 @@ func TestProbeHandshakeSCTs(t *testing.T) {
 				if !reflect.DeepEqual(report.HandshakeSCTs, want) {
 					t.Fatalf("got %+v, want %+v", report.HandshakeSCTs, want)
 				}
-				assertSCTJSON(t, report, want)
+				assertSCTJSON(t, report, "handshake_scts", want)
 			})
 		}
 	}
@@ -124,10 +124,11 @@ func TestHandshakeSCTsUnavailable(t *testing.T) {
 	if report.HandshakeSCTs != nil {
 		t.Fatalf("failed handshake must not report absent SCTs: %+v", report.HandshakeSCTs)
 	}
-	assertSCTJSON(t, report, nil)
+	assertSCTJSON(t, report, "handshake_scts", nil)
+	assertSCTJSON(t, report, "certificate_scts", nil)
 }
 
-func assertSCTJSON(t *testing.T, report *scan.TLSReport, want *scan.HandshakeSCTs) {
+func assertSCTJSON(t *testing.T, report *scan.TLSReport, field string, want any) {
 	t.Helper()
 	raw, err := json.Marshal(report)
 	if err != nil {
@@ -137,7 +138,7 @@ func assertSCTJSON(t *testing.T, report *scan.TLSReport, want *scan.HandshakeSCT
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		t.Fatal(err)
 	}
-	got, present := payload["handshake_scts"]
+	got, present := payload[field]
 	if want == nil {
 		if present {
 			t.Fatal("unavailable SCT field should be omitted")
@@ -146,7 +147,7 @@ func assertSCTJSON(t *testing.T, report *scan.TLSReport, want *scan.HandshakeSCT
 	}
 	expected, err := json.Marshal(want)
 	if err != nil || !bytes.Equal(got, expected) {
-		t.Fatalf("handshake_scts JSON = %s, want %s (err %v)", got, expected, err)
+		t.Fatalf("%s JSON = %s, want %s (err %v)", field, got, expected, err)
 	}
 }
 

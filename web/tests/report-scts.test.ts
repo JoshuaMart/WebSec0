@@ -1,11 +1,29 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { sctSummary } from '../src/islands/report-scts.ts';
+import { certificateSCTSummary, sctSummary } from '../src/islands/report-scts.ts';
 
 test('unavailable and observed absence have different messages', () => {
   assert.match(sctSummary(), /unavailable/);
   assert.equal(sctSummary({ count: 0, log_ids: [], unparsed_count: 0 }),
     'No SCTs observed via the TLS extension.');
+});
+
+test('certificate SCTs distinguish unavailable data, absent extension and malformed framing', () => {
+  const empty = { count: 0, log_ids: [], unparsed_count: 0 };
+  assert.equal(certificateSCTSummary(), 'Certificate SCT data unavailable in this report.');
+  assert.equal(certificateSCTSummary({ ...empty, present: false, parse_error: false }),
+    'No SCT extension observed in the leaf certificate.');
+  const malformed = certificateSCTSummary({ ...empty, present: true, parse_error: true });
+  assert.match(malformed, /extension is malformed/);
+  assert.match(malformed, /count is unavailable/);
+  assert.doesNotMatch(malformed, /0 SCTs|No SCT/);
+});
+
+test('embedded SCT summaries include undecodable entries and use their own source', () => {
+  assert.equal(certificateSCTSummary({ count: 3, log_ids: ['ab'.repeat(32)], unparsed_count: 1, present: true, parse_error: false }),
+    '3 SCTs embedded in the leaf certificate. 1 could not be decoded (malformed or unsupported version).');
+  assert.equal(certificateSCTSummary({ count: 1, log_ids: [], unparsed_count: 1, present: true, parse_error: false }),
+    '1 SCT embedded in the leaf certificate. 1 could not be decoded (malformed or unsupported version).');
 });
 
 test('SCT count includes multiple entries from the same log', () => {
