@@ -100,13 +100,9 @@ func validateChain(chain []*x509.Certificate, host string) scan.ChainTrust {
 	for _, c := range chain[1:] {
 		intermediates.AddCert(c)
 	}
-	roots, err := x509.SystemCertPool()
-	if err != nil || roots == nil {
-		return scan.ChainTrustUntrusted
-	}
-	_, err = leaf.Verify(x509.VerifyOptions{
+	// Nil Roots lets Go use system trust, or the binary's registered fallback.
+	_, err := leaf.Verify(x509.VerifyOptions{
 		DNSName:       host,
-		Roots:         roots,
 		Intermediates: intermediates,
 	})
 	if err == nil {

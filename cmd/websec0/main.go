@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "golang.org/x/crypto/x509roots/fallback" // Register embedded roots when system trust is unavailable.
+
 	"github.com/JoshuaMart/websec0/internal/api"
 	"github.com/JoshuaMart/websec0/internal/config"
 	"github.com/JoshuaMart/websec0/internal/scanner"
