@@ -415,7 +415,7 @@ function Tabs({
   );
 }
 
-function TabPanel({ id, data }: { id: TabId; data: ScanResult }) {
+export function TabPanel({ id, data }: { id: TabId; data: ScanResult }) {
   switch (id) {
     case 'overview':
       return <Overview data={data} />;
