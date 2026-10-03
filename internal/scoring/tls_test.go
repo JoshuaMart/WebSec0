@@ -44,7 +44,7 @@ func TestTLSFinal_HandshakeSCTsInformational(t *testing.T) {
 	report := strongTLS13()
 	headers := preloadHeaders()
 	wantScores, wantGrade := TLSFinal(report, headers)
-	for name, scts := range map[string]*scan.HandshakeSCTs{
+	for name, scts := range map[string]*scan.SCTSummary{
 		"absent":   {LogIDs: []string{}},
 		"present":  {Count: 1, LogIDs: []string{"abababababababababababababababababababababababababababababababab"}},
 		"unparsed": {Count: 1, LogIDs: []string{}, UnparsedCount: 1},
@@ -54,6 +54,26 @@ func TestTLSFinal_HandshakeSCTsInformational(t *testing.T) {
 			scores, grade := TLSFinal(report, headers)
 			if scores != wantScores || grade != wantGrade {
 				t.Fatalf("SCT observation changed scoring: %+v %s, want %+v %s", scores, grade, wantScores, wantGrade)
+			}
+		})
+	}
+}
+
+func TestTLSFinal_CertificateSCTsInformational(t *testing.T) {
+	report := strongTLS13()
+	headers := preloadHeaders()
+	wantScores, wantGrade := TLSFinal(report, headers)
+	for name, scts := range map[string]*scan.CertificateSCTs{
+		"absent":    {SCTSummary: scan.SCTSummary{LogIDs: []string{}}},
+		"present":   {Present: true, SCTSummary: scan.SCTSummary{Count: 1, LogIDs: []string{"abababababababababababababababababababababababababababababababab"}}},
+		"unparsed":  {Present: true, SCTSummary: scan.SCTSummary{Count: 1, LogIDs: []string{}, UnparsedCount: 1}},
+		"malformed": {Present: true, ParseError: true, SCTSummary: scan.SCTSummary{LogIDs: []string{}}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			report.CertificateSCTs = scts
+			scores, grade := TLSFinal(report, headers)
+			if scores != wantScores || grade != wantGrade {
+				t.Fatalf("certificate SCT observation changed scoring: %+v %s, want %+v %s", scores, grade, wantScores, wantGrade)
 			}
 		})
 	}

@@ -275,8 +275,17 @@ does not invalidate the others.
   lowercase hex IDs from structurally decoded v1 SCTs, in first-seen order;
   `unparsed_count` counts malformed entries and unsupported versions.
   Informational only: no scoring impact, signature verification, log trust
-  assessment or inclusion proof. Certificate and OCSP SCT extensions are
-  not inspected; absence here does not establish absence of CT.
+  assessment or inclusion proof. Absence here does not establish absence of CT.
+- `tls.certificate_scts`: `{count, log_ids, unparsed_count, present, parse_error}`,
+  from the leaf certificate's SCT extension (OID `1.3.6.1.4.1.11129.2.4.2`).
+  Omitted when no leaf certificate is available or in older reports.
+  `present: false` means the extension is absent. `parse_error: true` means
+  the extension's DER or list framing is malformed; the zero counts and empty
+  IDs then mean unavailable, not absent. Otherwise the counts and IDs follow
+  the same rules as `handshake_scts`, independently for this source. A malformed
+  individual SCT increments `unparsed_count` without discarding other entries.
+  Only the leaf is inspected; intermediate certificates and OCSP SCT extensions
+  are not assessed. No signature/inclusion verification or scoring impact.
 - `tls.vulnerabilities`: each `{id, title, cve, state, level, body}`.
   `id` is the catalog identifier (e.g. `vuln.poodle`); `title` is the
   human-readable label (`POODLE`).

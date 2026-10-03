@@ -16,11 +16,12 @@ import (
 )
 
 type certificateInfo struct {
-	chain         []scan.Certificate
-	trust         scan.ChainTrust
-	stapled       bool
-	ocspStatus    scan.OCSPStatus
-	handshakeSCTs *scan.HandshakeSCTs
+	chain           []scan.Certificate
+	trust           scan.ChainTrust
+	stapled         bool
+	ocspStatus      scan.OCSPStatus
+	handshakeSCTs   *scan.SCTSummary
+	certificateSCTs *scan.CertificateSCTs
 }
 
 // extractChain captures certificates, OCSP and SCTs in one permissive handshake.
@@ -33,11 +34,12 @@ func extractChain(ctx context.Context, target *safehttp.Target) certificateInfo 
 		return certificateInfo{chain: []scan.Certificate{}}
 	}
 	return certificateInfo{
-		chain:         mapChain(state.PeerCertificates),
-		trust:         validateChain(state.PeerCertificates, target.Host),
-		stapled:       len(state.OCSPResponse) > 0,
-		ocspStatus:    parseOCSPStatus(state.OCSPResponse, state.PeerCertificates),
-		handshakeSCTs: extractHandshakeSCTs(state.SignedCertificateTimestamps),
+		chain:           mapChain(state.PeerCertificates),
+		trust:           validateChain(state.PeerCertificates, target.Host),
+		stapled:         len(state.OCSPResponse) > 0,
+		ocspStatus:      parseOCSPStatus(state.OCSPResponse, state.PeerCertificates),
+		handshakeSCTs:   summarizeSCTs(state.SignedCertificateTimestamps),
+		certificateSCTs: extractCertificateSCTs(state.PeerCertificates),
 	}
 }
 
