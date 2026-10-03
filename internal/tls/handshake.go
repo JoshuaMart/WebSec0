@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/JoshuaMart/websec0/internal/logsafe"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 )
 
@@ -27,11 +28,7 @@ type handshakeOpts struct {
 	CipherSuites []uint16
 }
 
-// probeSeq is a process-wide handshake counter, used by the per-handshake
-// diagnostic log emitted from attemptHandshake. The log is silenced unless
-// the binary is started with WEBSEC0_DEBUG_HANDSHAKES=1, but the counter
-// always runs (atomic, near-zero cost) so a debug session can correlate
-// the bascule to a specific protocol/cipher pair without re-deploying.
+// probeSeq identifies handshakes in logs enabled by log.debug_handshakes.
 var probeSeq atomic.Int64
 
 // attemptHandshake performs one TLS handshake against the pinned target
@@ -48,7 +45,7 @@ func attemptHandshake(ctx context.Context, target *safehttp.Target, opts handsha
 	defer func() {
 		attrs := []any{
 			slog.Int64("seq", seq),
-			slog.String("host", target.Host),
+			slog.String("host", logsafe.SingleLine(target.Host)),
 			slog.Int("port", target.Port),
 			slog.String("min_version", versionLabel(opts.MinVersion)),
 			slog.String("max_version", versionLabel(opts.MaxVersion)),
@@ -64,7 +61,7 @@ func attemptHandshake(ctx context.Context, target *safehttp.Target, opts handsha
 			if len(msg) > 120 {
 				msg = msg[:120]
 			}
-			attrs = append(attrs, slog.String("err_msg", msg))
+			attrs = append(attrs, slog.String("err_msg", logsafe.SingleLine(msg)))
 		}
 		slog.Debug("handshake", attrs...)
 	}()

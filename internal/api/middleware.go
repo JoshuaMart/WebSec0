@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/JoshuaMart/websec0/internal/logsafe"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -21,11 +22,11 @@ func slogRequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			next.ServeHTTP(ww, r)
 			logger.Info(
 				"request",
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
+				slog.String("method", logsafe.SingleLine(r.Method)),
+				slog.String("path", logsafe.SingleLine(r.URL.Path)),
 				slog.Int("status", ww.Status()),
 				slog.Int64("duration_ms", time.Since(start).Milliseconds()),
-				slog.String("request_id", middleware.GetReqID(r.Context())),
+				slog.String("request_id", logsafe.SingleLine(middleware.GetReqID(r.Context()))),
 			)
 		})
 	}
