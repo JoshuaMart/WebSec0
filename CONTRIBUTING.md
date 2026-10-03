@@ -151,6 +151,11 @@ alongside the TLS and Headers reports.
   Existing examples live in `safehttp` and `tls`.
 
 Report presentation regression tests run with `make frontend-test` (Node 22.18+).
+They include certificate-tab HTML rendering with Preact, checking SCT source
+wiring and unavailable/absent/malformed states. TSX is loaded with `tsx`;
+these tests do not require a browser.
+The independent SCT certificate fixture and its provenance are documented in
+[`internal/tls/testdata/scts/README.md`](internal/tls/testdata/scts/README.md).
 TLS scoring reference profiles run with
 `go test ./internal/scoring -run '^TestTLSReferenceFixtures$' -v` and are
 included in `make test`. See [the fixture guide](internal/scoring/testdata/tls/README.md)

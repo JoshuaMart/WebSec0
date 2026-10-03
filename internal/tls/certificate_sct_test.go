@@ -11,10 +11,12 @@ import (
 	"encoding/asn1"
 	"encoding/binary"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -22,6 +24,35 @@ import (
 
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
+
+func TestCertificateSCTsReference(t *testing.T) {
+	raw, err := os.ReadFile("testdata/scts/google-leaf.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, rest := pem.Decode(raw)
+	if block == nil || block.Type != "CERTIFICATE" || len(bytes.TrimSpace(rest)) != 0 {
+		t.Fatal("reference fixture must contain one PEM certificate")
+	}
+	leaf, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Constants independently decoded with OpenSSL; see testdata/scts/README.md.
+	want := &scan.CertificateSCTs{
+		Present: true,
+		SCTSummary: scan.SCTSummary{
+			Count: 2,
+			LogIDs: []string{
+				"7a328c54d8b72db620ea38e0521ee98416703213854d3bd22bc13a57a352eb52",
+				"e83ed0da3ef5063532e75728bc896bc903d3cbd1116beceb69e1777d6d06bd6e",
+			},
+		},
+	}
+	if got := extractCertificateSCTs([]*x509.Certificate{leaf}); !reflect.DeepEqual(got, want) {
+		t.Fatalf("reference certificate SCTs: got %+v, want %+v", got, want)
+	}
+}
 
 func wrapSCTList(t testing.TB, serialized []byte) []byte {
 	t.Helper()
