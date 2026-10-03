@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/JoshuaMart/WebSec0/actions/workflows/ci.yml"><img src="https://github.com/JoshuaMart/WebSec0/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/JoshuaMart/WebSec0/actions/workflows/codeql.yml"><img src="https://github.com/JoshuaMart/WebSec0/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
-  <a href="https://goreportcard.com/report/github.com/JoshuaMart/websec0"><img src="https://goreportcard.com/badge/github.com/JoshuaMart/websec0" alt="Go Report Card"></a>
+  <a href="https://golangci-lint.run/"><img src="https://img.shields.io/badge/lint-golangci--lint-00ADD8?logo=go&amp;logoColor=white" alt="golangci-lint"></a>
   <a href="https://api.securityscorecards.dev/projects/github.com/JoshuaMart/WebSec0"><img src="https://api.securityscorecards.dev/projects/github.com/JoshuaMart/WebSec0/badge" alt="OpenSSF Scorecard"></a>
 </p>
 
