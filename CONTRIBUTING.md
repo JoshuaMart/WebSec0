@@ -158,6 +158,21 @@ for the expected calculations and how to update them after a scoring policy chan
 History purge benchmarks run with
 `go test ./internal/history -run '^$' -bench BenchmarkHistoryPurge -benchmem`.
 
+## Embedded certificate roots
+
+`cmd/websec0` registers `golang.org/x/crypto/x509roots/fallback`; reusable
+packages leave root selection to `crypto/x509`. Keep this module current via
+the existing Go Dependabot updates and check it with `govulncheck` when updating
+dependencies. Its Mozilla/NSS bundle includes trust constraints, so do not
+replace it with an unconstrained PEM export.
+
+The root-selection tests run in subprocesses because Go caches system roots
+and permits fallback registration only once. Linux CI covers missing and empty
+system stores, system-root priority, and certificate rejection cases without
+network access. Forced fallback and production bundle registration are also
+tested on other platforms. File-based system-root overrides require Go 1.27
+on macOS/Windows; those cases are skipped there with older toolchains.
+
 ## Reporting issues
 
 - Functional bugs and feature requests:

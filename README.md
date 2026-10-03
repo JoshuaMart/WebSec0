@@ -68,6 +68,13 @@ docker run --rm -p 8080:8080 \
 Use [`websec0.yaml.example`](./websec0.yaml.example) as a starting point —
 every field is annotated.
 
+Certificate validation uses the operating system's trust store. If system trust
+is unavailable, the binary uses an embedded Mozilla/NSS root bundle provided by
+[`x509roots/fallback`](https://pkg.go.dev/golang.org/x/crypto/x509roots/fallback).
+No roots are downloaded at runtime. A certificate rejected by an available
+system store is not retried against the fallback. Trust decisions can still
+differ between operating systems. Keep WebSec0 updated to refresh the bundle.
+
 <details>
 <summary><strong>Build the image yourself</strong></summary>
 

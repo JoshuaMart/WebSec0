@@ -265,6 +265,10 @@ does not invalidate the others.
   `not_before`, `not_after`, `days_left`, `key_alg`, `sig_alg`, `san[]`.
 - `tls.chain_trust`: `trusted` | `expired` | `self_signed` |
   `hostname_mismatch` | `untrusted` (capping the grade at T when ≠ trusted).
+  The shipped binary prefers system trust and falls back to an embedded
+  Mozilla/NSS root bundle only when system trust is unavailable. It does not
+  retry rejected chains against that bundle when a system store is available;
+  trust outcomes may therefore differ across OSes.
 - `tls.ocsp_stapling` (bool) and `tls.ocsp_status` (`good` | `revoked`
   | `unknown` | `""`).
 - `tls.session_resumption`: `supported` | `not_supported` | `""`.
