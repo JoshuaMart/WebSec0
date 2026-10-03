@@ -12,7 +12,7 @@ GO          ?= go
 GOLANGCI    ?= golangci-lint
 PNPM        ?= pnpm
 
-BUNDLE_BUDGET_BYTES ?= 81920  # 80 KB gzip — see SPEC + TODO Phase 11
+BUNDLE_BUDGET_BYTES ?= 81920  # 80 KB gzip
 
 # Frontend sources that, when modified, must trigger a bundle rebuild.
 # FRONTEND_STAMP is the sentinel: Make rebuilds it iff a source is newer.
@@ -21,7 +21,7 @@ FRONTEND_SRCS  := $(shell find web/src web/public -type f 2>/dev/null) \
                   web/tsconfig.json
 FRONTEND_STAMP := internal/frontend/dist/index.html
 
-.PHONY: help build test lint frontend frontend-install bundle-size docker release-dry-run clean tidy
+.PHONY: help build test lint frontend frontend-test frontend-install bundle-size docker release-dry-run clean tidy
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Targets:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -38,6 +38,9 @@ lint: ## Run golangci-lint
 
 tidy: ## go mod tidy
 	$(GO) mod tidy
+
+frontend-test: ## Run report presentation regression tests (Node 22.18+)
+	cd web && $(PNPM) test
 
 frontend-install: ## Install frontend dependencies (pnpm)
 	cd web && $(PNPM) install

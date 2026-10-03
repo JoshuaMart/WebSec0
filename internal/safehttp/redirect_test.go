@@ -40,8 +40,9 @@ func TestAllowRedirect_HopLimitEnforced(t *testing.T) {
 	via := []*http.Request{
 		mustReq(t, "https://example.com/1"),
 		mustReq(t, "https://example.com/2"),
+		mustReq(t, "https://example.com/3"),
 	}
-	req := mustReq(t, "https://example.com/3")
+	req := mustReq(t, "https://example.com/4")
 	if err := check(req, via); !errors.Is(err, ErrTooManyRedirects) {
 		t.Errorf("expected ErrTooManyRedirects at maxHops=%d via=%d, got %v", 2, len(via), err)
 	}

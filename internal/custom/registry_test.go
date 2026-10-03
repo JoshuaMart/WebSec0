@@ -25,7 +25,7 @@ func TestRunAll_AllFindingsReturned(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer srv.Close()
-	out := RunAll(context.Background(), makeTarget(t, srv))
+	out := RunAll(context.Background(), makeTarget(t, srv), true)
 	if len(out) != len(All()) {
 		t.Errorf("got %d findings, want %d (one per registered check)", len(out), len(All()))
 	}

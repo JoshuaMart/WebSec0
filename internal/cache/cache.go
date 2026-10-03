@@ -39,6 +39,9 @@ func (c *Cache[V]) Get(key string) (V, bool) {
 	return c.inner.Get(key)
 }
 
+// Peek reads a live entry without changing its LRU priority.
+func (c *Cache[V]) Peek(key string) (V, bool) { return c.inner.Peek(key) }
+
 // Len returns the number of currently-stored entries.
 func (c *Cache[V]) Len() int { return c.inner.Len() }
 

@@ -19,7 +19,7 @@ type Config struct {
 // Server holds HTTP listener options.
 type Server struct {
 	Listen         string   `yaml:"listen"`
-	TrustedProxies []string `yaml:"trusted_proxies"`
+	TrustedProxies []string `yaml:"trusted_proxies"` // Reserved; only an empty list is supported.
 }
 
 // Scan holds per-scan engine parameters.
@@ -60,7 +60,7 @@ type HistoryLimits struct {
 // Frontend holds embedded-UI options.
 type Frontend struct {
 	Enabled  bool   `yaml:"enabled"`
-	BasePath string `yaml:"base_path"`
+	BasePath string `yaml:"base_path"` // Only "/" is supported.
 	// HeadInject is a raw HTML fragment spliced just before </head> in
 	// every embedded shell page (landing + report). Intended for opt-in
 	// analytics on a public deployment (Umami, Plausible, …). Empty by
@@ -82,7 +82,7 @@ type Frontend struct {
 	StaticOverlayDir string `yaml:"static_overlay_dir"`
 }
 
-// Telemetry holds optional anonymous-stats reporting flags.
+// Telemetry reserves future reporting options; enabling them is rejected.
 type Telemetry struct {
 	AnonymousStats bool `yaml:"anonymous_stats"`
 }

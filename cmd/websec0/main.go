@@ -73,14 +73,7 @@ func run() error {
 		Logger:  logger,
 	})
 
-	server := &http.Server{
-		Addr:              cfg.Server.Listen,
-		Handler:           router,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      60 * time.Second,
-		IdleTimeout:       120 * time.Second,
-	}
+	server := newServer(cfg, router)
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -120,4 +113,16 @@ func loadConfig(explicit string) (*config.Config, string, error) {
 		return cfg, explicit, nil
 	}
 	return config.Load()
+}
+
+// newServer budgets request-body reading, scanning and response writing separately.
+func newServer(cfg *config.Config, router http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              cfg.Server.Listen,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30*time.Second + cfg.Scan.Timeout.Std() + 5*time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 }

@@ -36,7 +36,13 @@ type securityTxtDetails struct {
 func (s SecurityTxt) Run(ctx context.Context, target *safehttp.Target) scan.CustomFinding {
 	url := target.URL("/.well-known/security.txt")
 	body, status, mediaType, err := fetchText(ctx, target, "/.well-known/security.txt", securityTxtMaxBytes)
-	if err != nil || status != http.StatusOK {
+	if err != nil {
+		return scan.CustomFinding{
+			ID: s.ID(), Title: "security.txt", Status: scan.StatusInfo,
+			Details: mustJSON(securityTxtDetails{URL: url, Note: "Incomplete response: " + err.Error()}),
+		}
+	}
+	if status != http.StatusOK {
 		return scan.CustomFinding{
 			ID:     s.ID(),
 			Title:  "security.txt",

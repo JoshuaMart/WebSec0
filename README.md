@@ -85,7 +85,7 @@ docker run --rm -p 8080:8080 websec0
 <details>
 <summary><strong>From source</strong></summary>
 
-Requires Go 1.26+, Node 22+, pnpm 10+, and rsync.
+Requires Go 1.26+, Node 22.18+, pnpm 10+, and rsync.
 
 ```bash
 make frontend-install

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -65,8 +64,14 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if c.Frontend.Enabled && !strings.HasPrefix(c.Frontend.BasePath, "/") {
-		errs = append(errs, fmt.Errorf("frontend.base_path: must start with '/', got %q", c.Frontend.BasePath))
+	if c.Frontend.BasePath != "/" {
+		errs = append(errs, errors.New("frontend.base_path: only '/' is supported"))
+	}
+	if len(c.Server.TrustedProxies) > 0 {
+		errs = append(errs, errors.New("server.trusted_proxies: not supported; must be empty"))
+	}
+	if c.Telemetry.AnonymousStats {
+		errs = append(errs, errors.New("telemetry.anonymous_stats: not supported; must be false"))
 	}
 
 	return errors.Join(errs...)
