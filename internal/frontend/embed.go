@@ -40,31 +40,10 @@ func FS() (fs.FS, error) {
 // yet on this checkout.
 var ErrIndexMissing = errors.New("frontend: index.html missing — run `make frontend`")
 
-// Handler returns an http.Handler that serves the embedded frontend with
-// SPA fallback: any URL that does not correspond to an existing file is
-// answered with the contents of index.html so the client-side router
-// (Astro + Preact) can take over (e.g. /r/<scan-id>).
-//
-// The fallback writes the index bytes directly rather than rewriting the
-// request and re-entering http.FileServer, which would trigger Go's
-// built-in `/index.html → ./` redirect and loop.
-//
-// When the embedded dist does not contain index.html, Handler returns
-// ErrIndexMissing so callers can choose to disable the frontend route
-// gracefully rather than panic.
-//
-// headInject, when non-empty, is spliced once into every shell HTML just
-// before </head>. Used to opt the public deployment into analytics
-// without touching self-hosted builds. The snippet is trusted operator
-// config — not escaped. If </head> is absent (or the snippet is empty)
-// the bytes are served verbatim.
-//
-// staticOverlayDir, when non-empty, is a directory whose tree mirrors
-// URL paths. Anything under .well-known/ is served from the overlay
-// when the file exists; at the root only a closed whitelist (robots.txt,
-// humans.txt, ads.txt, sitemap.xml) is honoured so a misconfigured
-// overlay cannot accidentally hijack index.html or the report shell.
-// Paths absent from the overlay fall back to the embedded fs.
+// Handler serves embedded assets and the landing/report shells, or returns
+// ErrIndexMissing if the frontend has not been built. Shells receive the
+// trusted headInject HTML; allowed static files may come from staticOverlayDir.
+// Shell bytes are written directly to avoid FileServer's index.html redirect.
 func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 	sub, err := FS()
 	if err != nil {

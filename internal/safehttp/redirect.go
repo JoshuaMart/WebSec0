@@ -14,7 +14,7 @@ func AllowRedirect(target *Target, maxHops int) func(*http.Request, []*http.Requ
 		if maxHops <= 0 {
 			return http.ErrUseLastResponse
 		}
-		if len(via) >= maxHops {
+		if len(via) > maxHops {
 			return ErrTooManyRedirects
 		}
 		if !strings.EqualFold(req.URL.Hostname(), target.Host) {

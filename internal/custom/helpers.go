@@ -26,6 +26,7 @@ func fetchText(ctx context.Context, target *safehttp.Target, path string, maxByt
 		MaxBodyBytes: maxBytes,
 		Timeout:      fetchTimeout,
 	})
+	defer client.CloseIdleConnections()
 	req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, target.URL(path), http.NoBody)
 	if reqErr != nil {
 		return "", 0, "", reqErr
@@ -35,9 +36,9 @@ func fetchText(ctx context.Context, target *safehttp.Target, path string, maxByt
 		return "", 0, "", doErr
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, _ := io.ReadAll(resp.Body) // ErrBodyTooLarge is fine — we keep what we got.
+	raw, readErr := io.ReadAll(resp.Body)
 	mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-	return string(raw), resp.StatusCode, strings.ToLower(mt), nil
+	return string(raw), resp.StatusCode, strings.ToLower(mt), readErr
 }
 
 // isHTMLMediaType reports whether mt is a recognised HTML/XHTML media

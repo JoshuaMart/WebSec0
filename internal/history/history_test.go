@@ -1,6 +1,7 @@
 package history
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestHistory_AddListOrder(t *testing.T) {
 func TestHistory_ListLimit(t *testing.T) {
 	h := New(time.Hour)
 	for i := 0; i < 5; i++ {
-		h.Add(Entry{ID: "x", ScannedAt: time.Now()})
+		h.Add(Entry{ID: strconv.Itoa(i), ScannedAt: time.Now()})
 	}
 	if got := h.List(2); len(got) != 2 {
 		t.Errorf("limit 2: got %d entries", len(got))
@@ -87,5 +88,65 @@ func TestHistory_ListReturnsCopy(t *testing.T) {
 	list[0].ID = "tampered"
 	if h.List(0)[0].ID != "a" {
 		t.Error("internal state must not be reachable through the returned slice")
+	}
+}
+
+func TestHistory_OutOfOrderExpiryPreservesValidEntries(t *testing.T) {
+	now := time.Now()
+	h := New(time.Hour)
+	h.now = func() time.Time { return now }
+	h.Add(Entry{ID: "newer-start", ScannedAt: now.Add(-10 * time.Minute)})
+	h.Add(Entry{ID: "older-start", ScannedAt: now.Add(-50 * time.Minute)})
+	now = now.Add(20 * time.Minute)
+	got := h.List(0)
+	if len(got) != 1 || got[0].ID != "newer-start" {
+		t.Fatalf("lost valid entry: %+v", got)
+	}
+}
+
+func TestHistory_CachedScanListedOnce(t *testing.T) {
+	h := New(time.Hour)
+	entry := Entry{ID: "cached", ScannedAt: time.Now()}
+	h.Add(entry)
+	h.Add(entry)
+	if h.Len() != 1 {
+		t.Fatal("duplicate report in history")
+	}
+}
+
+func BenchmarkHistoryPurge(b *testing.B) {
+	for _, size := range []int{1000, 10000} {
+		b.Run(strconv.Itoa(size), func(b *testing.B) {
+			now := time.Now()
+			h := New(time.Hour)
+			h.entries = make([]Entry, size)
+			for i := range h.entries {
+				h.entries[i].ScannedAt = now
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				h.purgeLocked(now)
+			}
+		})
+	}
+}
+
+func TestHistoryPurgeClearsExpiredReferences(t *testing.T) {
+	now := time.Now()
+	h := New(time.Hour)
+	h.entries = []Entry{
+		{ID: "expired", ScannedAt: now.Add(-time.Hour)},
+		{ID: "live", ScannedAt: now},
+		{ID: "also-expired", ScannedAt: now.Add(-2 * time.Hour)},
+	}
+	h.purgeLocked(now)
+	if len(h.entries) != 1 || h.entries[0].ID != "live" {
+		t.Fatalf("incorrect filtering: %+v", h.entries)
+	}
+	for _, removed := range h.entries[1:3] {
+		if removed != (Entry{}) {
+			t.Fatal("expired references retained in backing array")
+		}
 	}
 }

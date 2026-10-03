@@ -240,3 +240,24 @@ func TestValidate_ErrorsAreJoined(t *testing.T) {
 		t.Error("expected joined error to expose Unwrap() []error")
 	}
 }
+
+func TestUnsupportedOptionsRejected(t *testing.T) {
+	for _, tc := range []struct{ yaml, field string }{
+		{"server:\n  trusted_proxies: [\"127.0.0.1/32\"]\n", "server.trusted_proxies"},
+		{"frontend:\n  base_path: /scanner\n", "frontend.base_path"},
+		{"telemetry:\n  anonymous_stats: true\n", "telemetry.anonymous_stats"},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			_, err := LoadFile(writeYAML(t, tc.yaml))
+			if err == nil || !strings.Contains(err.Error(), tc.field) {
+				t.Fatalf("expected unsupported option error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestExampleConfigurationValid(t *testing.T) {
+	if _, err := LoadFile("../../websec0.yaml.example"); err != nil {
+		t.Fatal(err)
+	}
+}

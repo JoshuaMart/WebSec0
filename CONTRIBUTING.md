@@ -150,6 +150,10 @@ alongside the TLS and Headers reports.
   `//nolint` directive must end with the reason on the same line.
   Existing examples live in `safehttp` and `tls`.
 
+Report presentation regression tests run with `make frontend-test` (Node 22.18+).
+History purge benchmarks run with
+`go test ./internal/history -run '^$' -bench BenchmarkHistoryPurge -benchmem`.
+
 ## Reporting issues
 
 - Functional bugs and feature requests:

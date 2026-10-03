@@ -164,22 +164,14 @@ func TestRun_RejectsBadScheme(t *testing.T) {
 	}
 }
 
-func TestRun_CachesResult(t *testing.T) {
+func TestGet_ReturnsCachedResult(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
 
-	// Stub the resolver to return loopback for any name, bypassing the
-	// IsBlocked check by switching policy at the resolver level. We can't
-	// flip AllowPrivate to cover loopback here, so we exploit the typed
-	// failure: a private-target rejection still surfaces as an error and
-	// keeps Run end-to-end testable on the error path.
-	cfg := config.Defaults()
-	s := New(cfg)
+	s := New(config.Defaults())
 
-	// Bypass the resolver/policy: stitch a target into the cache directly
-	// to exercise the Get path.
 	tgt := targetFor(t, srv)
 	result := s.runProbes(context.Background(), tgt)
 	result.ID = "fake-id"

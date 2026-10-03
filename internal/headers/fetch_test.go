@@ -38,7 +38,7 @@ func TestProbe_HappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	report, _, err := Probe(context.Background(), makeTarget(t, srv))
+	report, _, err := Probe(context.Background(), makeTarget(t, srv), Options{FollowRedirects: true, MaxRedirects: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestProbe_EmptyResponse_AllCoreFail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	report, _, err := Probe(context.Background(), makeTarget(t, srv))
+	report, _, err := Probe(context.Background(), makeTarget(t, srv), Options{FollowRedirects: true, MaxRedirects: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestFetch_CapturesMultipleSetCookie(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	h, _, err := Fetch(context.Background(), makeTarget(t, srv))
+	h, _, err := Fetch(context.Background(), makeTarget(t, srv), Options{FollowRedirects: true, MaxRedirects: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,14 +110,52 @@ func TestFetch_OffHostRedirect_ReturnsPartialHeaders(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	h, redirect, err := Fetch(context.Background(), makeTarget(t, srv))
+	h, redirect, err := Fetch(context.Background(), makeTarget(t, srv), Options{FollowRedirects: true, MaxRedirects: 3})
 	if err != nil {
 		t.Fatalf("Fetch should swallow off-host rejection, got err=%v", err)
 	}
-	if redirect != "https://www.example.test/" {
-		t.Errorf("redirect: got %q, want https://www.example.test/", redirect)
+	if redirect == nil || redirect.Location != "https://www.example.test/" {
+		t.Errorf("redirect: got %+v, want https://www.example.test/", redirect)
 	}
 	if got := h.Get("Strict-Transport-Security"); got == "" {
 		t.Errorf("HSTS from 3xx should be captured, got empty")
+	}
+}
+
+func TestFetch_RedirectBudgets(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			http.Redirect(w, r, "/second", http.StatusFound)
+		case "/second":
+			http.Redirect(w, r, "https://www.example.test/final", http.StatusFound)
+		}
+	}))
+	defer srv.Close()
+	for _, tc := range []struct {
+		name         string
+		opts         Options
+		wantRedirect bool
+		remaining    int
+		wantErr      bool
+	}{
+		{"disabled", Options{false, 3}, false, 0, false},
+		{"zero", Options{true, 0}, false, 0, false},
+		{"one", Options{true, 1}, false, 0, true},
+		{"exactly two", Options{true, 2}, true, 0, false},
+		{"three", Options{true, 3}, true, 1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, redirect, err := Fetch(context.Background(), makeTarget(t, srv), tc.opts)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("err=%v", err)
+			}
+			if (redirect != nil) != tc.wantRedirect {
+				t.Fatalf("redirect=%+v", redirect)
+			}
+			if redirect != nil && redirect.Remaining != tc.remaining {
+				t.Fatalf("remaining=%d", redirect.Remaining)
+			}
+		})
 	}
 }

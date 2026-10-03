@@ -1,16 +1,16 @@
 # WebSec0 configuration — example
 # Resolution order: $WEBSEC0_CONFIG → ./websec0.yaml → /etc/websec0/websec0.yaml
-# See SPECIFICATIONS.md §7 for the authoritative reference.
+# Unsupported options are rejected at startup.
 
 server:
   listen: "0.0.0.0:8080"
-  trusted_proxies: []           # CIDRs allowed to set X-Forwarded-For
+  trusted_proxies: []           # reserved; non-empty lists are not supported
 
 scan:
   timeout: 30s                  # global per-scan budget
-  parallel_probes: true
+  parallel_probes: true         # false runs all probes sequentially
   follow_redirects: true        # for header probing
-  max_redirects: 3
+  max_redirects: 3              # total redirect hops, including an apex/www retry
 
 security:
   # Public instance: keep both `false`. Self-hosted on a private network:
@@ -26,14 +26,14 @@ cache:
 
 history:
   enabled: true                 # exposes the "Recent scans" strip on the landing
-  retention: 7d                 # scans listed publicly are purged after this
+  retention: 7d                 # upper bound; expired/evicted reports disappear sooner
   rate_limit:
     per_ip: "10/hour"
     per_host: "1/minute"        # avoid hammering a target
 
 frontend:
   enabled: true                 # serve the embedded UI at /
-  base_path: "/"
+  base_path: "/"               # only / is currently supported
   # Raw HTML spliced before </head> in every served page. Intended for
   # analytics on a public deployment (Umami, Plausible, …). Trusted: not
   # escaped. Empty = no injection (default, what self-hosters get).
@@ -60,7 +60,7 @@ frontend:
   static_overlay_dir: ""
 
 telemetry:
-  anonymous_stats: false        # if true, send scan counts (no hostnames) to a stats endpoint
+  anonymous_stats: false        # reserved; true is not supported
 
 log:
   # When true, surfaces a per-handshake diagnostic line on stderr:

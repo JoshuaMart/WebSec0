@@ -1,4 +1,4 @@
-# Backend tests + lint + frontend build + bundle-size budget.
+# Backend and frontend tests + lint + build + bundle-size budget.
 # Single source of truth for every gate that must pass before merge.
 name: CI
 
@@ -59,7 +59,7 @@ jobs:
           version: v2.11.4
 
   frontend:
-    name: Frontend build + bundle-size
+    name: Frontend tests + build + bundle-size
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -82,6 +82,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Test report presentation
+        run: pnpm test
 
       - name: Build
         run: pnpm build

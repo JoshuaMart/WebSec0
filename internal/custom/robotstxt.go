@@ -36,7 +36,12 @@ func (r RobotsTxt) Run(ctx context.Context, target *safehttp.Target) scan.Custom
 	body, status, mediaType, err := fetchText(ctx, target, "/robots.txt", robotsTxtMaxBytes)
 	finding := scan.CustomFinding{ID: r.ID(), Title: "robots.txt"}
 
-	if err != nil || status != http.StatusOK {
+	if err != nil {
+		finding.Status = scan.StatusInfo
+		finding.Details = mustJSON(robotsTxtDetails{URL: url, SizeBytes: len(body), Note: "Incomplete response: " + err.Error()})
+		return finding
+	}
+	if status != http.StatusOK {
 		finding.Status = scan.StatusInfo
 		finding.Details = mustJSON(robotsTxtDetails{
 			URL:  url,

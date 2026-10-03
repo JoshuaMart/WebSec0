@@ -35,8 +35,13 @@ const rawProbeTimeout = 5 * time.Second
 type Scanner struct {
 	cfg      *config.Config
 	cache    *cache.Cache[*scan.Result]
+	latest   *cache.Cache[string]
 	history  *history.History
-	resolver *safehttp.Resolver
+	resolver targetResolver
+}
+
+type targetResolver interface {
+	Resolve(context.Context, *safehttp.Validated) (*safehttp.Target, error)
 }
 
 // New returns a Scanner wired with the given config. The cache is sized
@@ -50,6 +55,7 @@ func New(cfg *config.Config) *Scanner {
 	return &Scanner{
 		cfg:     cfg,
 		cache:   cache.New[*scan.Result](cfg.Cache.MaxEntries, cfg.Cache.TTL.Std()),
+		latest:  cache.New[string](cfg.Cache.MaxEntries, cfg.Cache.TTL.Std()),
 		history: hist,
 		resolver: &safehttp.Resolver{
 			Policy: safehttp.Policy{
@@ -72,9 +78,8 @@ type Request struct {
 // ErrEmptyHost is returned when Request.Host is empty.
 var ErrEmptyHost = errors.New("scanner: host is required")
 
-// Run executes a full scan: input validation → DNS lookup + IP pinning →
-// parallel probes under the scan budget → scoring → cache. The returned
-// Result has its ID set even on partial probe failures.
+// Run reuses a live report for the normalized target unless Fresh is set.
+// Cache misses resolve and probe under the scan budget, then store the result.
 func (s *Scanner) Run(ctx context.Context, req Request) (*scan.Result, error) {
 	if req.Host == "" {
 		return nil, ErrEmptyHost
@@ -94,13 +99,22 @@ func (s *Scanner) Run(ctx context.Context, req Request) (*scan.Result, error) {
 		return nil, err
 	}
 
-	target, err := s.resolver.Resolve(ctx, v)
-	if err != nil {
-		return nil, err
+	key := v.Scheme + "://" + v.Host + ":" + strconv.Itoa(v.Port)
+	if !req.Fresh {
+		if id, ok := s.latest.Get(key); ok {
+			if result, exists := s.cache.Get(id); exists {
+				s.listIfRequested(result, req.ListInHistory)
+				return result, nil
+			}
+		}
 	}
 
 	scanCtx, cancel := context.WithTimeout(ctx, s.cfg.Scan.Timeout.Std())
 	defer cancel()
+	target, err := s.resolver.Resolve(scanCtx, v)
+	if err != nil {
+		return nil, err
+	}
 
 	start := time.Now()
 	result := s.runProbes(scanCtx, target)
@@ -112,10 +126,15 @@ func (s *Scanner) Run(ctx context.Context, req Request) (*scan.Result, error) {
 	result.DurationMs = time.Since(start).Milliseconds()
 
 	s.cache.Put(result.ID, result)
-	if req.ListInHistory && s.history != nil {
+	s.latest.Put(key, result.ID)
+	s.listIfRequested(result, req.ListInHistory)
+	return result, nil
+}
+
+func (s *Scanner) listIfRequested(result *scan.Result, requested bool) {
+	if requested && s.history != nil {
 		s.history.Add(summarise(result))
 	}
-	return result, nil
 }
 
 // Get retrieves a previously-completed scan by its ID. Returns (nil, false)
@@ -131,7 +150,18 @@ func (s *Scanner) History(limit int) []history.Entry {
 	if s.history == nil {
 		return nil
 	}
-	return s.history.List(limit)
+	entries := s.history.List(0)
+	available := entries[:0]
+	for _, entry := range entries {
+		if _, ok := s.cache.Peek(entry.ID); !ok {
+			continue
+		}
+		available = append(available, entry)
+		if limit > 0 && len(available) == limit {
+			break
+		}
+	}
+	return available
 }
 
 func summarise(r *scan.Result) history.Entry {
@@ -169,16 +199,8 @@ func highestOfferedProtocol(protocols []scan.ProtocolSupport) string {
 	return ""
 }
 
-// runProbes fans out the probes against a resolved Target. Three goroutines
-// run in parallel: the SSL/TLS pipeline, the headers probe and the custom
-// checks. Within the SSL/TLS pipeline everything is sequential — modern
-// versions first (best-to-worst), then SSLv3, then SSLv2. This serialization
-// is deliberate: some WAFs blackhole the scanner IP as soon as they observe
-// a legacy ClientHello, and running the SSLv2/v3 raw probes in parallel
-// with the modern probe used to trigger that ban before the modern data
-// was collected. Headers and custom remain parallel because they're
-// HTTP-level and never trip the WAF on their own (and we want them to
-// complete before any legacy hello goes out).
+// runProbes keeps the TLS pipeline sequential, with modern protocols before
+// legacy probes. Headers and custom checks run first in sequential mode.
 func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.Result {
 	var (
 		tlsReport     *scan.TLSReport
@@ -186,10 +208,7 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 		customFinds   []scan.CustomFinding
 	)
 
-	var wg sync.WaitGroup
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
+	probeTLS := func() {
 		tlsReport = tlsprobe.Probe(ctx, target)
 		if tlsReport == nil {
 			return
@@ -213,10 +232,10 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 			scan.ProtocolSupport{Name: "SSL 3.0", Offered: ssl3Offered, Probe: scan.ProbeRawClientHello},
 			scan.ProtocolSupport{Name: "SSL 2.0", Offered: ssl2Offered, Probe: scan.ProbeRawClientHello},
 		)
-	}()
-	go func() {
-		defer wg.Done()
-		r, redirect, err := headers.Probe(ctx, target)
+	}
+	probeHeaders := func() {
+		opts := headers.Options{FollowRedirects: s.cfg.Scan.FollowRedirects, MaxRedirects: s.cfg.Scan.MaxRedirects}
+		r, redirect, err := headers.Probe(ctx, target, opts)
 		if err != nil {
 			return
 		}
@@ -226,10 +245,10 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 		// and re-probe; replace the partial report on success. Strictly
 		// off-host redirects (different registrable host) still surface
 		// whatever the 3xx already exposed (HSTS, Server, …) — no retry.
-		if redirect == "" {
+		if redirect == nil {
 			return
 		}
-		u, perr := url.Parse(redirect)
+		u, perr := url.Parse(redirect.Location)
 		if perr != nil || !wwwSibling(target.Host, u.Hostname()) {
 			return
 		}
@@ -239,25 +258,28 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 		if rerr != nil {
 			return
 		}
-		r2, _, perr := headers.Probe(ctx, sibling)
+		opts.MaxRedirects = redirect.Remaining
+		r2, _, perr := headers.Probe(ctx, sibling, opts)
 		if perr != nil || r2 == nil {
 			return
 		}
 		r2.ProbedHost = sibling.Host
 		headersReport = r2
-	}()
-	go func() {
-		defer wg.Done()
-		customFinds = custom.RunAll(ctx, target)
-	}()
+	}
+	probeCustom := func() {
+		customFinds = custom.RunAll(ctx, target, s.cfg.Scan.ParallelProbes)
+	}
+	var wg sync.WaitGroup
+	for _, probe := range []func(){probeHeaders, probeCustom, probeTLS} {
+		if s.cfg.Scan.ParallelProbes {
+			wg.Go(probe)
+		} else {
+			probe()
+		}
+	}
 	wg.Wait()
 
-	// Weakness derivation is owned by the tls package but called here
-	// because it joins observations from two probes: protocols+ciphers
-	// from tls.Probe and the HTTP Server header from headers.Probe
-	// (needed to fingerprint Heartbleed and Ticketbleed). The orchestrator
-	// is the only layer that has both reports in scope. SSLv2/v3 rows are
-	// already merged into tlsReport.Protocols by the TLS goroutine.
+	// Weaknesses combine TLS observations with the HTTP Server header.
 	if tlsReport != nil {
 		var serverHeader string
 		if headersReport != nil && headersReport.Additional.Server != nil {
@@ -285,16 +307,6 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 		Headers: headersReport,
 		Custom:  customFinds,
 	}
-}
-
-// hostWithPort is a small helper kept here in case future callers need to
-// stringify a target — left exported via Result.Host + Result.Port today.
-// Marked _ so the compiler keeps it documented even if unused.
-var _ = func(host string, port int) string {
-	if port == 0 || port == 443 {
-		return host
-	}
-	return host + ":" + strconv.Itoa(port)
 }
 
 // wwwSibling returns true when a and b differ only by the leading "www."

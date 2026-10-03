@@ -57,6 +57,7 @@ func NewClient(opts ClientOpts) *http.Client {
 		ResponseHeaderTimeout: 5 * time.Second,
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          2,
+		IdleConnTimeout:       30 * time.Second,
 		DisableCompression:    false,
 	}
 
@@ -84,6 +85,13 @@ type cappedTransport struct {
 	cap  int64
 }
 
+// CloseIdleConnections preserves http.Client's cleanup through the wrapper.
+func (c *cappedTransport) CloseIdleConnections() {
+	if closer, ok := c.base.(interface{ CloseIdleConnections() }); ok {
+		closer.CloseIdleConnections()
+	}
+}
+
 func (c *cappedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.base.RoundTrip(req)
 	if err != nil {
@@ -94,13 +102,26 @@ func (c *cappedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 type cappedReader struct {
-	r         io.ReadCloser
-	remaining int64
+	r           io.ReadCloser
+	remaining   int64
+	terminalErr error
 }
 
 func (c *cappedReader) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if c.terminalErr != nil {
+		return 0, c.terminalErr
+	}
 	if c.remaining <= 0 {
-		return 0, ErrBodyTooLarge
+		var extra [1]byte
+		n, err := c.r.Read(extra[:])
+		if n > 0 {
+			err = ErrBodyTooLarge
+		}
+		c.terminalErr = err
+		return 0, err
 	}
 	if int64(len(p)) > c.remaining {
 		p = p[:c.remaining]

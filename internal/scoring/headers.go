@@ -1,8 +1,7 @@
 package scoring
 
 import (
-	"strings"
-
+	"github.com/JoshuaMart/websec0/internal/headers"
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
@@ -100,7 +99,7 @@ func cookieAdjustment(cookies []scan.CookieResult) int {
 		if c.SameSite == nil {
 			delta += malusCookieNoSameSite
 		}
-		if !c.HTTPOnly && cookieIsSessionLike(c.Name) {
+		if !c.HTTPOnly && headers.LooksLikeSession(c.Name) {
 			delta += malusCookieNoHTTPOnly
 		}
 	}
@@ -108,17 +107,4 @@ func cookieAdjustment(cookies []scan.CookieResult) int {
 		noSecureMalus = malusCookieNoSecureCap
 	}
 	return delta + noSecureMalus
-}
-
-// cookieIsSessionLike mirrors headers.LooksLikeSession so scoring can apply
-// the HttpOnly malus without depending on the headers package (which would
-// pull scan into a cycle through this file).
-func cookieIsSessionLike(name string) bool {
-	lower := strings.ToLower(name)
-	for _, hint := range []string{"session", "auth", "token", "sid", "jwt", "csrf"} {
-		if strings.Contains(lower, hint) {
-			return true
-		}
-	}
-	return false
 }

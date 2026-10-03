@@ -32,13 +32,16 @@ func All() []Check {
 	}
 }
 
-// RunAll executes every registered check in parallel and returns the
-// findings in registration order.
-func RunAll(ctx context.Context, target *safehttp.Target) []scan.CustomFinding {
+// RunAll returns findings in registration order, optionally running checks in parallel.
+func RunAll(ctx context.Context, target *safehttp.Target, parallel bool) []scan.CustomFinding {
 	checks := All()
 	out := make([]scan.CustomFinding, len(checks))
 	var wg sync.WaitGroup
 	for i, c := range checks {
+		if !parallel {
+			out[i] = c.Run(ctx, target)
+			continue
+		}
 		wg.Add(1)
 		go func(i int, c Check) {
 			defer wg.Done()
