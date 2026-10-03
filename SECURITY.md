@@ -42,7 +42,7 @@ In scope:
   (`internal/frontend/`).
 - The `safehttp` security gate (SSRF, IP pinning, DNS rebinding) and
   its documented invariants — see the "SSRF defence" section of
-  `CLAUDE.md`.
+  [`AGENTS.md`](AGENTS.md#ssrf-defence).
 
 Out of scope:
 

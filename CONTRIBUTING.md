@@ -1,6 +1,7 @@
 # Contributing to WebSec0
 
 Keep changes focused and check [TODO.md](TODO.md) for planned work.
+Coding-agent instructions are in [AGENTS.md](AGENTS.md).
 
 ## Getting started
 
