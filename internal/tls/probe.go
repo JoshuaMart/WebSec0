@@ -27,13 +27,13 @@ import (
 func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 	// extractChain runs first because the certificate is informative even
 	// when downstream enumeration ends up partial.
-	chain, trust, stapled, ocspStatus := extractChain(ctx, target)
+	cert := extractChain(ctx, target)
 
 	bd := newBanDetector()
 	// extractChain just completed a handshake against the same host. If it
 	// succeeded we seed the detector so a single subsequent timeout is
 	// enough to short-circuit the rest.
-	if len(chain) > 0 {
+	if len(cert.chain) > 0 {
 		bd.Record(nil)
 	}
 
@@ -74,10 +74,11 @@ func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
 		Protocols:         protocols,
 		Ciphers:           ciphers,
 		CipherPreference:  cipherPref,
-		CertificateChain:  chain,
-		ChainTrust:        trust,
-		OCSPStapling:      stapled,
-		OCSPStatus:        ocspStatus,
+		CertificateChain:  cert.chain,
+		ChainTrust:        cert.trust,
+		OCSPStapling:      cert.stapled,
+		OCSPStatus:        cert.ocspStatus,
+		HandshakeSCTs:     cert.handshakeSCTs,
 		SessionResumption: resumption,
 		ScanStatus:        status,
 	}

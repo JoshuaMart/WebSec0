@@ -46,6 +46,11 @@ export type CookieResult = {
   samesite: string | null;
   status: Status;
 };
+export type HandshakeSCTs = {
+  count: number;
+  log_ids: string[];
+  unparsed_count: number;
+};
 export type TLSReport = {
   grade: Grade;
   scores: {
@@ -62,6 +67,7 @@ export type TLSReport = {
   chain_trust: string;
   ocsp_stapling: boolean;
   ocsp_status?: string;
+  handshake_scts?: HandshakeSCTs;
   session_resumption?: string;
   vulnerabilities: Vuln[];
   scan_status?: TLSScanStatus;

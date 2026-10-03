@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { deriveHighlights, statusSev } from './report-highlights.ts';
+import { sctSummary } from './report-scts.ts';
 import type {
   Severity, ProtocolSupport, Cipher, Certificate, Vuln, HeaderResult,
-  TLSReport, HeadersReport, CustomFinding, ScanResult,
+  TLSReport, HeadersReport, CustomFinding, ScanResult, HandshakeSCTs,
 } from './report-types.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -419,7 +420,12 @@ function TabPanel({ id, data }: { id: TabId; data: ScanResult }) {
     case 'overview':
       return <Overview data={data} />;
     case 'certificate':
-      return <CertificateTab chain={data.tls?.certificate_chain ?? []} />;
+      return (
+        <div class="section">
+          <HandshakeSCTCard scts={data.tls?.handshake_scts} />
+          <CertificateTab chain={data.tls?.certificate_chain ?? []} />
+        </div>
+      );
     case 'protocols':
       return <ProtocolsTab protocols={data.tls?.protocols ?? []} />;
     case 'ciphers':
@@ -612,6 +618,29 @@ function CertificateTab({ chain }: { chain: Certificate[] }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function HandshakeSCTCard({ scts }: { scts?: HandshakeSCTs }) {
+  return (
+    <div class="card">
+      <div class="card-head">
+        <h3>Certificate Transparency <span class="sub">· TLS handshake</span></h3>
+        <SevPill level="info" />
+      </div>
+      <div class="card-body sct-body">
+        <p>{sctSummary(scts)}</p>
+        {!!scts?.log_ids.length && (
+          <>
+            <p class="muted">Log IDs (SHA-256, unique)</p>
+            <ul class="sct-log-ids mono">
+              {scts.log_ids.map((id) => <li key={id}>{id}</li>)}
+            </ul>
+          </>
+        )}
+        <p class="muted">Informational only; no effect on the grade. SCT signatures and log inclusion are not verified. SCTs embedded in the certificate or OCSP response are not assessed.</p>
       </div>
     </div>
   );

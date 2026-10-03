@@ -40,6 +40,25 @@ func preloadHeaders() *scan.HeadersReport {
 	}
 }
 
+func TestTLSFinal_HandshakeSCTsInformational(t *testing.T) {
+	report := strongTLS13()
+	headers := preloadHeaders()
+	wantScores, wantGrade := TLSFinal(report, headers)
+	for name, scts := range map[string]*scan.HandshakeSCTs{
+		"absent":   {LogIDs: []string{}},
+		"present":  {Count: 1, LogIDs: []string{"abababababababababababababababababababababababababababababababab"}},
+		"unparsed": {Count: 1, LogIDs: []string{}, UnparsedCount: 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			report.HandshakeSCTs = scts
+			scores, grade := TLSFinal(report, headers)
+			if scores != wantScores || grade != wantGrade {
+				t.Fatalf("SCT observation changed scoring: %+v %s, want %+v %s", scores, grade, wantScores, wantGrade)
+			}
+		})
+	}
+}
+
 func TestCertificateScore(t *testing.T) {
 	cases := []struct {
 		name  string

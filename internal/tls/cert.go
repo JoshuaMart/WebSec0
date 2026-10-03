@@ -15,23 +15,30 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
-// extractChain runs one permissive handshake to capture the peer
-// certificates, validates the chain against the system root store and
-// parses the stapled OCSP response (if any). Failure to handshake yields
-// an empty chain and ChainTrustUnknown.
-func extractChain(ctx context.Context, target *safehttp.Target) ([]scan.Certificate, scan.ChainTrust, bool, scan.OCSPStatus) {
+type certificateInfo struct {
+	chain         []scan.Certificate
+	trust         scan.ChainTrust
+	stapled       bool
+	ocspStatus    scan.OCSPStatus
+	handshakeSCTs *scan.HandshakeSCTs
+}
+
+// extractChain captures certificates, OCSP and SCTs in one permissive handshake.
+func extractChain(ctx context.Context, target *safehttp.Target) certificateInfo {
 	state, err := attemptHandshake(ctx, target, handshakeOpts{
 		MinVersion: stdtls.VersionTLS10,
 		MaxVersion: stdtls.VersionTLS13,
 	})
 	if err != nil {
-		return []scan.Certificate{}, scan.ChainTrustUnknown, false, scan.OCSPStatusUnknown
+		return certificateInfo{chain: []scan.Certificate{}}
 	}
-	chain := mapChain(state.PeerCertificates)
-	trust := validateChain(state.PeerCertificates, target.Host)
-	stapled := len(state.OCSPResponse) > 0
-	ocspStatus := parseOCSPStatus(state.OCSPResponse, state.PeerCertificates)
-	return chain, trust, stapled, ocspStatus
+	return certificateInfo{
+		chain:         mapChain(state.PeerCertificates),
+		trust:         validateChain(state.PeerCertificates, target.Host),
+		stapled:       len(state.OCSPResponse) > 0,
+		ocspStatus:    parseOCSPStatus(state.OCSPResponse, state.PeerCertificates),
+		handshakeSCTs: extractHandshakeSCTs(state.SignedCertificateTimestamps),
+	}
 }
 
 func mapChain(certs []*x509.Certificate) []scan.Certificate {

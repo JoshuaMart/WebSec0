@@ -389,6 +389,11 @@ button { font-family: inherit; cursor: pointer; }
 }
 .cert-body .k { border-top: 1px dashed var(--line); padding-top: 8px; padding-bottom: 4px; }
 
+/* Certificate Transparency */
+.sct-body { display: grid; gap: 12px; font-size: 13px; }
+.sct-body p { margin: 0; }
+.sct-log-ids { margin: 0; padding-left: 20px; font-size: 12px; overflow-wrap: anywhere; }
+
 /* Cipher rows */
 .cipher-row td:first-child { width: 36px; }
 .cipher-name { font-family: var(--font-mono); font-size: 12.5px; }
