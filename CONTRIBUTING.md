@@ -151,6 +151,10 @@ alongside the TLS and Headers reports.
   Existing examples live in `safehttp` and `tls`.
 
 Report presentation regression tests run with `make frontend-test` (Node 22.18+).
+TLS scoring reference profiles run with
+`go test ./internal/scoring -run '^TestTLSReferenceFixtures$' -v` and are
+included in `make test`. See [the fixture guide](internal/scoring/testdata/tls/README.md)
+for the expected calculations and how to update them after a scoring policy change.
 History purge benchmarks run with
 `go test ./internal/history -run '^$' -bench BenchmarkHistoryPurge -benchmem`.
 

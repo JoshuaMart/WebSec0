@@ -1,0 +1,89 @@
+{
+  "report": {
+    "host": "modern.example.test",
+    "port": 443,
+    "scanned_at": "2026-01-01T00:00:00Z",
+    "tls": {
+      "chain_trust": "trusted",
+      "scan_status": "complete",
+      "certificate_chain": [
+        {
+          "step": 1,
+          "kind": "Leaf",
+          "cn": "modern.example.test",
+          "key_alg": "ECDSA",
+          "not_before": "2025-12-01T00:00:00Z",
+          "not_after": "2027-01-01T00:00:00Z",
+          "days_left": 365
+        }
+      ],
+      "protocols": [
+        {
+          "name": "TLS 1.3",
+          "offered": true,
+          "probe": "stdlib"
+        },
+        {
+          "name": "TLS 1.2",
+          "offered": true,
+          "probe": "stdlib"
+        },
+        {
+          "name": "TLS 1.1",
+          "offered": false,
+          "probe": "stdlib"
+        },
+        {
+          "name": "TLS 1.0",
+          "offered": false,
+          "probe": "stdlib"
+        },
+        {
+          "name": "SSL 3.0",
+          "offered": false,
+          "probe": "raw_clienthello"
+        },
+        {
+          "name": "SSL 2.0",
+          "offered": false,
+          "probe": "raw_clienthello"
+        }
+      ],
+      "ciphers": [
+        {
+          "protocol": "TLS 1.3",
+          "name": "TLS_AES_256_GCM_SHA384",
+          "strength": 256,
+          "aead": true,
+          "pfs": true
+        },
+        {
+          "protocol": "TLS 1.2",
+          "name": "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+          "strength": 256,
+          "aead": true,
+          "pfs": true
+        }
+      ]
+    },
+    "headers": {
+      "core": {
+        "strict-transport-security": {
+          "present": true,
+          "value": "max-age=31536000; includeSubDomains; preload",
+          "status": "pass"
+        }
+      }
+    }
+  },
+  "expected": {
+    "scores": {
+      "certificate": 100,
+      "protocol_support": 97,
+      "key_exchange": 90,
+      "cipher_strength": 100,
+      "final": 96
+    },
+    "grade": "A+"
+  }
+}

@@ -23,7 +23,7 @@
 
 ## Scoring TLS
 
-- [ ] Reference fixtures: snapshot scores for 5 well-known sites in CI (no live network, replay captured handshakes) — *deferred to v1.1*
+- [x] Reference fixtures: five synthetic TLS report profiles with fixed dates, exact sub-scores and grade expectations in CI — no live network; see `internal/scoring/testdata/tls/README.md`
 
 ## API layer
 
