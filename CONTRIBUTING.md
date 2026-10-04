@@ -53,7 +53,7 @@ Custom findings are informational and do not affect grades.
    registration order determines API output order.
 3. Add an entry with the same ID to [catalog/checks.json](catalog/checks.json).
 4. Test success, missing resources and malformed input with an `httptest.Server`.
-5. Document new `details` fields in [the API guide](skills/websec0/SKILL.md).
+5. Document new `details` fields in [the report guide](skills/websec0/references/interpretation.md#custom-fields).
 
 ### TLS weakness heuristic
 

@@ -20,8 +20,8 @@ Consult the reference relevant to the change:
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): setup, PR conventions and procedures for
   adding checks or configuration fields.
-- [skills/websec0/SKILL.md](skills/websec0/SKILL.md): API contract, grading model
-  and finding interpretation.
+- [skills/websec0/SKILL.md](skills/websec0/SKILL.md): agent workflow, with references
+  for the API contract, grading model and finding interpretation.
 - [catalog/checks.json](catalog/checks.json): finding IDs and remediation text.
 - [websec0.yaml.example](websec0.yaml.example): configuration reference.
 - [TODO.md](TODO.md): planned and deferred work. Keep deferred items outside

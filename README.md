@@ -45,9 +45,9 @@ curl -sS -X POST https://www.websec0.com/api/v1/scan \
   -d '{"host":"github.com"}' | jq .
 ```
 
-The full request/response contract, error envelope and grading model are
-documented in [`SKILL.md`](./skills/websec0/SKILL.md) — written for AI agents
-but human-readable.
+See the [API contract](./skills/websec0/references/api.md) and
+[report interpretation guide](./skills/websec0/references/interpretation.md)
+for request/response fields, errors and grading.
 
 ## Self-host
 
