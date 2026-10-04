@@ -35,7 +35,7 @@ test('email tab identifies the selected domain and stays informational', () => {
   email.dmarc.records = ['v=DMARC1; p=reject'];
   const html = panel(email);
   assert.match(html, /Email domain:.*example.com/);
-  assert.doesNotMatch(html, /www.example.com/);
+  assert.equal(html.includes('www.example.com'), false);
   assert.match(html, /no effect on TLS or HTTP grades/);
   assert.match(html, /Assessment unavailable/);
   assert.match(html, /First catch-all mechanism: <code>-all/);
@@ -87,7 +87,8 @@ test('TXT records and DNS diagnostics render as escaped text', () => {
   email.spf.records = ['v=spf1 <script>alert("record")</script>'];
   email.spf.warnings = ['<img src=x onerror=alert(1)>'];
   const html = panel(email);
-  assert.doesNotMatch(html, /<script>|<img /);
+  assert.equal(html.toLowerCase().includes('<script'), false);
+  assert.equal(html.toLowerCase().includes('<img'), false);
   assert.match(html, /&lt;script>/);
   assert.match(html, /&lt;img /);
 });
