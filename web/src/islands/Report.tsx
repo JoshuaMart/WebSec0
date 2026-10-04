@@ -1,5 +1,6 @@
 // Report island mounted at /r/{id}.
 
+import { EmailTab } from './EmailTab.tsx';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { deriveHighlights, statusSev } from './report-highlights.ts';
 import { certificateSCTSummary, sctSummary } from './report-scts.ts';
@@ -363,9 +364,10 @@ type TabId =
   | 'ciphers'
   | 'headers'
   | 'vulns'
-  | 'custom';
+  | 'custom'
+  | 'email';
 
-function Tabs({
+export function Tabs({
   active,
   onChange,
   data,
@@ -399,6 +401,7 @@ function Tabs({
     },
     { id: 'custom', label: 'Custom', count: data.custom?.length },
   ];
+  if (data.email) tabs.push({ id: 'email', label: 'Email security' });
   return (
     <div class="tabs" role="tablist">
       {tabs.map((t) => (
@@ -436,6 +439,8 @@ export function TabPanel({ id, data }: { id: TabId; data: ScanResult }) {
       return <VulnsTab vulns={data.tls?.vulnerabilities ?? []} />;
     case 'custom':
       return <CustomTab findings={data.custom ?? []} />;
+    case 'email':
+      return <EmailTab email={data.email} />;
   }
 }
 

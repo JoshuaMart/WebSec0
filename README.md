@@ -22,6 +22,9 @@ configuration and HTTP security headers, runs a handful of custom checks
 (`security.txt`, `robots.txt`, …), and produces **actionable reports with
 copy-paste remediation snippets**.
 
+Registrable domains and their `www` aliases also get **SPF/DMARC checks**,
+with verdicts and recommendations independent of TLS/HTTP grades.
+
 Built for **two audiences at parity**:
 
 - Humans — clear reports prioritized by ROI (security ÷ effort)
@@ -42,9 +45,9 @@ curl -sS -X POST https://www.websec0.com/api/v1/scan \
   -d '{"host":"github.com"}' | jq .
 ```
 
-The full request/response contract, error envelope and grading model are
-documented in [`SKILL.md`](./skills/websec0/SKILL.md) — written for AI agents
-but human-readable.
+See the [API contract](./skills/websec0/references/api.md) and
+[report interpretation guide](./skills/websec0/references/interpretation.md)
+for request/response fields, errors and grading.
 
 ## Self-host
 

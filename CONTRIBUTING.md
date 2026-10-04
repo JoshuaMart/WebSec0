@@ -53,7 +53,7 @@ Custom findings are informational and do not affect grades.
    registration order determines API output order.
 3. Add an entry with the same ID to [catalog/checks.json](catalog/checks.json).
 4. Test success, missing resources and malformed input with an `httptest.Server`.
-5. Document new `details` fields in [the API guide](skills/websec0/SKILL.md).
+5. Document new `details` fields in [the report guide](skills/websec0/references/interpretation.md#custom-fields).
 
 ### TLS weakness heuristic
 
@@ -90,8 +90,14 @@ it in [websec0.yaml.example](websec0.yaml.example).
   and independent decoding reference.
 - [Certificate-tab tests](web/tests/report-certificate.test.tsx): Preact HTML
   rendering; included in `make frontend-test`, with no browser required.
+- [Email DNS tests](internal/email/probe_test.go) and
+  [email-tab tests](web/tests/report-email.test.tsx): synthetic TXT responses,
+  DNS failures and rendered states; no external DNS queries.
 - Root selection: [validation tests](internal/tls/roots_test.go) and
   [binary registration tests](cmd/websec0/roots_test.go).
+
+Email parsing benchmark (synthetic DNS, no network latency):
+`go test ./internal/email -run '^$' -bench BenchmarkProbeFixtures -benchmem`.
 
 History benchmarks:
 `go test ./internal/history -run '^$' -bench BenchmarkHistoryPurge -benchmem`.

@@ -516,6 +516,26 @@
         "example_stack": "static-file",
         "example_snippet": "User-agent: *\nDisallow: /search\nDisallow: /private/  # avoid; protect via auth instead\nSitemap: https://example.com/sitemap.xml"
       }
+    },
+    {
+      "id": "email.spf",
+      "category": "email",
+      "title": "SPF DNS policy",
+      "severity_when_fail": "info",
+      "score_impact": "none",
+      "remediation": {
+        "summary": "Publish one SPF TXT record describing authorized senders. Review includes and redirects with your mail provider before changing the policy. The audit checks static dependencies and flags potential lookup-budget overflow; sender-specific evaluation remains unassessed."
+      }
+    },
+    {
+      "id": "email.dmarc",
+      "category": "email",
+      "title": "DMARC DNS policy",
+      "severity_when_fail": "info",
+      "score_impact": "none",
+      "remediation": {
+        "summary": "Publish a DMARC TXT record at _dmarc for the email domain. Verify SPF/DKIM alignment and review reports before increasing enforcement. Parent policies may apply; the report identifies their source. A p=none policy without a usable rua destination requests neither enforcement nor aggregate reports."
+      }
     }
   ]
 }
