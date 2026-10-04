@@ -67,6 +67,7 @@ type Result struct {
 	TLS        *TLSReport      `json:"tls,omitempty"`
 	Headers    *HeadersReport  `json:"headers,omitempty"`
 	Custom     []CustomFinding `json:"custom,omitempty"`
+	Email      *EmailReport    `json:"email,omitempty"`
 }
 
 // TLSReport carries the full TLS observation: the four sub-scores and

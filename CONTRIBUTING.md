@@ -90,8 +90,14 @@ it in [websec0.yaml.example](websec0.yaml.example).
   and independent decoding reference.
 - [Certificate-tab tests](web/tests/report-certificate.test.tsx): Preact HTML
   rendering; included in `make frontend-test`, with no browser required.
+- [Email DNS tests](internal/email/probe_test.go) and
+  [email-tab tests](web/tests/report-email.test.tsx): synthetic TXT responses,
+  DNS failures and rendered states; no external DNS queries.
 - Root selection: [validation tests](internal/tls/roots_test.go) and
   [binary registration tests](cmd/websec0/roots_test.go).
+
+Email parsing benchmark (synthetic DNS, no network latency):
+`go test ./internal/email -run '^$' -bench BenchmarkProbeFixtures -benchmem`.
 
 History benchmarks:
 `go test ./internal/history -run '^$' -bench BenchmarkHistoryPurge -benchmem`.

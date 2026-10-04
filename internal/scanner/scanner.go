@@ -1,5 +1,5 @@
 // Package scanner is the scan orchestrator. It wires the safehttp gate,
-// the probes (tls, sslv2, sslv3, headers, custom) and the scoring engine
+// the probes (tls, sslv2, sslv3, headers, custom, email) and the scoring engine
 // together, fans them out under the configured scan budget, assembles a
 // scan.Result and stores it in the cache.
 // The orchestrator deliberately lives outside internal/scan to avoid an
@@ -18,6 +18,7 @@ import (
 	"github.com/JoshuaMart/websec0/internal/cache"
 	"github.com/JoshuaMart/websec0/internal/config"
 	"github.com/JoshuaMart/websec0/internal/custom"
+	"github.com/JoshuaMart/websec0/internal/email"
 	"github.com/JoshuaMart/websec0/internal/headers"
 	"github.com/JoshuaMart/websec0/internal/history"
 	"github.com/JoshuaMart/websec0/internal/safehttp"
@@ -33,11 +34,12 @@ const rawProbeTimeout = 5 * time.Second
 
 // Scanner is the top-level scan engine.
 type Scanner struct {
-	cfg      *config.Config
-	cache    *cache.Cache[*scan.Result]
-	latest   *cache.Cache[string]
-	history  *history.History
-	resolver targetResolver
+	cfg       *config.Config
+	cache     *cache.Cache[*scan.Result]
+	latest    *cache.Cache[string]
+	history   *history.History
+	resolver  targetResolver
+	lookupTXT safehttp.TXTLookupFunc
 }
 
 type targetResolver interface {
@@ -206,6 +208,7 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 		tlsReport     *scan.TLSReport
 		headersReport *scan.HeadersReport
 		customFinds   []scan.CustomFinding
+		emailReport   *scan.EmailReport
 	)
 
 	probeTLS := func() {
@@ -269,8 +272,11 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 	probeCustom := func() {
 		customFinds = custom.RunAll(ctx, target, s.cfg.Scan.ParallelProbes)
 	}
+	probeEmail := func() {
+		emailReport = email.Probe(ctx, target.Host, s.lookupTXT)
+	}
 	var wg sync.WaitGroup
-	for _, probe := range []func(){probeHeaders, probeCustom, probeTLS} {
+	for _, probe := range []func(){probeHeaders, probeCustom, probeTLS, probeEmail} {
 		if s.cfg.Scan.ParallelProbes {
 			wg.Go(probe)
 		} else {
@@ -306,6 +312,7 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 		TLS:     tlsReport,
 		Headers: headersReport,
 		Custom:  customFinds,
+		Email:   emailReport,
 	}
 }
 

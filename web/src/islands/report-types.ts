@@ -97,6 +97,41 @@ export type CustomFinding = {
   status: Status;
   details?: Record<string, unknown>;
 };
+export type EmailAssessment = {
+  status: Status;
+  title: string;
+  summary: string;
+  recommendations: string[];
+};
+export type SPFAudit = {
+  complete: boolean;
+  lookup_terms: number;
+  lookup_limit_exceeded: boolean;
+  queries: string[];
+  issues: string[];
+  limitations: string[];
+};
+export type DNSRecord = {
+  id: string;
+  state: 'observed' | 'absent' | 'invalid' | 'unavailable';
+  records: string[];
+  warnings: string[];
+  assessment?: EmailAssessment;
+};
+export type EmailReport = {
+  domain: string;
+  spf: DNSRecord & { all?: string; includes: string[]; redirect?: string; audit?: SPFAudit };
+  dmarc: DNSRecord & {
+    policy?: 'none' | 'quarantine' | 'reject';
+    policy_domain?: string;
+    policy_tag?: 'p' | 'sp';
+    inherited: boolean;
+    testing: boolean;
+    queries: string[];
+    reporting_state?: 'configured' | 'absent' | 'invalid';
+    reporting_uris?: string[];
+  };
+};
 export type ScanResult = {
   id: string;
   host: string;
@@ -107,4 +142,5 @@ export type ScanResult = {
   tls?: TLSReport;
   headers?: HeadersReport;
   custom?: CustomFinding[];
+  email?: EmailReport;
 };

@@ -22,6 +22,9 @@ configuration and HTTP security headers, runs a handful of custom checks
 (`security.txt`, `robots.txt`, …), and produces **actionable reports with
 copy-paste remediation snippets**.
 
+Registrable domains and their `www` aliases also get **SPF/DMARC checks**,
+with verdicts and recommendations independent of TLS/HTTP grades.
+
 Built for **two audiences at parity**:
 
 - Humans — clear reports prioritized by ROI (security ÷ effort)
