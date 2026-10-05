@@ -1,12 +1,22 @@
 // Report island mounted at /r/{id}.
 
 import { EmailTab } from './EmailTab.tsx';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { deriveHighlights, statusSev } from './report-highlights.ts';
 import { certificateSCTSummary, sctSummary } from './report-scts.ts';
 import type {
-  Severity, ProtocolSupport, Cipher, Certificate, Vuln, HeaderResult,
-  TLSReport, HeadersReport, CustomFinding, ScanResult, SCTSummary, CertificateSCTs,
+  Severity,
+  ProtocolSupport,
+  Cipher,
+  Certificate,
+  Vuln,
+  HeaderResult,
+  TLSReport,
+  HeadersReport,
+  CustomFinding,
+  ScanResult,
+  SCTSummary,
+  CertificateSCTs,
 } from './report-types.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -49,7 +59,11 @@ function fmtDuration(ms: number): string {
 
 function scanIDFromPath(): string {
   const m = location.pathname.match(/^\/r\/([^/?#]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
+  try {
+    return m ? decodeURIComponent(m[1]) : '';
+  } catch {
+    return '';
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -59,6 +73,27 @@ export default function Report() {
   const [data, setData] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>('overview');
+
+  useEffect(() => {
+    const syncTab = () => {
+      const section = location.hash.slice(1) as TabId;
+      setTab(
+        Object.hasOwn(sectionDetails, section) &&
+          (section !== 'email' || data?.email)
+          ? section
+          : 'overview',
+      );
+    };
+    syncTab();
+    window.addEventListener('hashchange', syncTab);
+    return () => window.removeEventListener('hashchange', syncTab);
+  }, [data]);
+
+  function selectTab(next: TabId, focus = false) {
+    setTab(next);
+    history.replaceState(null, '', `#${next}`);
+    if (focus) document.getElementById(`tab-${next}`)?.focus();
+  }
 
   useEffect(() => {
     const id = scanIDFromPath();
@@ -73,22 +108,25 @@ export default function Report() {
         throw new Error(body?.error?.message ?? `HTTP ${r.status}`);
       })
       .then((r) => setData(r as ScanResult))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : String(e)),
+      );
   }, []);
 
   if (error) return <ErrorState message={error} />;
   if (!data) return <LoadingState />;
 
   return (
-    <div>
-      <Crumbs host={data.host} />
+    <div class="report-layout">
+      <Crumbs />
       <Header data={data} />
+      <PartialScanNotice tls={data.tls} />
       <div class="report-intro">
-        <h2>Configuration at a glance</h2>
+        <h2>Your configuration, at a glance.</h2>
         <p>Two independent grades. Open a section for the evidence.</p>
       </div>
       <GradePanel data={data} />
-      <Tabs active={tab} onChange={setTab} data={data} />
+      <Tabs active={tab} onChange={(next) => selectTab(next)} data={data} />
       <div
         class="report-panel"
         role="tabpanel"
@@ -96,73 +134,66 @@ export default function Report() {
         aria-labelledby={`tab-${tab}`}
         tabIndex={0}
       >
-        <TabPanel id={tab} data={data} />
+        <div class="section-heading">
+          <div>
+            <span class="report-eyebrow">The evidence</span>
+            <h2>{sectionDetails[tab].title}</h2>
+          </div>
+          <p>{sectionDetails[tab].description}</p>
+        </div>
+        <TabPanel
+          id={tab}
+          data={data}
+          onNavigate={(next) => selectTab(next, true)}
+        />
       </div>
     </div>
   );
 }
 
-// PartialScanNotice is the right-side slot inside the header. Rendered only
-// when the TLS probe stopped early (typically a WAF blackholing the scanner
-// after a legacy ClientHello). Sized to align with the host/IP block on
-// its left so the header row balances visually.
 function PartialScanNotice({ tls }: { tls?: TLSReport }) {
-  if (!tls || tls.scan_status !== 'partial_blocked') return null;
-  // flex: '1 1 auto' lets the box grow to fill the right side on desktop
-  // (row flex) while sizing to content on mobile (column flex) — using a
-  // pixel flex-basis here would make the box demand that many pixels of
-  // height once .header switches to flex-direction: column.
+  if (tls?.scan_status !== 'partial_blocked') return null;
   return (
-    <div
-      style={{
-        flex: '1 1 auto',
-        minWidth: 0,
-        maxWidth: 520,
-        alignSelf: 'stretch',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        gap: 6,
-        padding: '10px 14px',
-        border: '1px solid var(--info-line)',
-        borderRadius: 8,
-        background: 'var(--info-bg)',
-      }}
-    >
-      <span class="pill info" style={{ alignSelf: 'flex-start' }}>
-        <span class="dot" />
-        Partial scan
-      </span>
-      <div style={{ color: 'var(--ink-2)', fontSize: 12.5, lineHeight: 1.45 }}>
-        The target stopped responding to TLS handshakes mid-probe. Protocol rows
-        marked <b>Indeterminate</b> could not be tested; the grades reflect only
-        what was observed before the block.
-      </div>
-    </div>
+    <aside class="partial-notice" aria-label="Scan completeness">
+      <span class="pill info">Partial scan</span>
+      <p>
+        The target stopped responding during TLS checks. <b>Indeterminate</b>{' '}
+        protocols were not assessed; grades reflect the observations collected.
+      </p>
+    </aside>
   );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 // Header + grade panel
 
-function Crumbs({ host }: { host: string }) {
+function Crumbs() {
   return (
-    <div class="crumbs">
+    <nav class="crumbs" aria-label="Breadcrumb">
       <a href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
-        scans
+        ← New scan
       </a>
       <span class="sep">/</span>
-      <span class="ink2">{host}</span>
-    </div>
+      <span class="ink2">Report</span>
+    </nav>
   );
 }
 
 function Header({ data }: { data: ScanResult }) {
+  const [copyState, setCopyState] = useState('');
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setCopyState('Report link copied.');
+    } catch {
+      setCopyState('Copy the address from your browser to share this report.');
+    }
+  }
   return (
     <div class="header">
       <div>
+        <p class="report-eyebrow">Website security report</p>
         <h1 class="h-title">
-          <span class="scheme">https://</span>
           {data.host}
           <TrustPill trust={data.tls?.chain_trust} />
         </h1>
@@ -185,13 +216,33 @@ function Header({ data }: { data: ScanResult }) {
           </div>
         </div>
       </div>
-      <PartialScanNotice tls={data.tls} />
+      <div class="report-actions">
+        <div class="report-action-buttons">
+          <a
+            class="btn"
+            href={`/api/v1/scan/${encodeURIComponent(data.id)}`}
+            target="_blank"
+            rel="noopener"
+            aria-label="View JSON (opens in a new tab)"
+          >
+            View JSON <span aria-hidden="true">↗</span>
+          </a>
+          <button class="btn btn-primary" type="button" onClick={copyLink}>
+            Copy report link <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+        <span class="action-feedback" role="status">
+          {copyState}
+        </span>
+      </div>
     </div>
   );
 }
 
 function TrustPill({ trust }: { trust?: string }) {
   if (!trust || trust === '') return null;
+  if (trust === 'no_chain')
+    return <span class="pill info">Trust not assessed</span>;
   if (trust === 'trusted')
     return (
       <span class="pill good">
@@ -240,15 +291,40 @@ export function GradePanel({ data }: { data: ScanResult }) {
           label="TLS grade"
           grade={tlsGrade}
           score={tlsScore}
-          sub={data.tls ? prettyTrust(data.tls.chain_trust) : 'TLS assessment unavailable'}
+          sub={
+            data.tls
+              ? `${tlsScore}/100 · ${prettyTrust(data.tls.chain_trust) || 'Trust not assessed'}`
+              : 'TLS assessment unavailable'
+          }
         />
         {data.tls && (
-          <div class="score-list" style={{ marginTop: 24 }}>
-            <ScoreBar name="Certificate" value={data.tls.scores.certificate} />
-            <ScoreBar name="Protocol support" value={data.tls.scores.protocol_support} />
-            <ScoreBar name="Key exchange" value={data.tls.scores.key_exchange} />
-            <ScoreBar name="Cipher strength" value={data.tls.scores.cipher_strength} />
-          </div>
+          <details class="grade-details">
+            <summary>
+              How this score breaks down <span aria-hidden="true">+</span>
+            </summary>
+            <div class="score-list">
+              <ScoreBar
+                name="Certificate"
+                value={data.tls.scores.certificate}
+              />
+              <ScoreBar
+                name="Protocol support"
+                value={data.tls.scores.protocol_support}
+              />
+              <ScoreBar
+                name="Key exchange"
+                value={data.tls.scores.key_exchange}
+              />
+              <ScoreBar
+                name="Cipher strength"
+                value={data.tls.scores.cipher_strength}
+              />
+            </div>
+            <p class="grade-explanation">
+              TLS score: {tlsScore}/100. Certificate trust and legacy
+              configurations can cap the grade.
+            </p>
+          </details>
         )}
       </div>
       <div class="grade-cell">
@@ -257,21 +333,31 @@ export function GradePanel({ data }: { data: ScanResult }) {
           grade={headersGrade}
           score={headersScore}
           sub={
-            !data.headers ? 'HTTP headers assessment unavailable' : data.headers.probed_host
-              ? `${headersScore}/100 · via ${data.headers.probed_host}`
-              : `${headersScore}/100`
+            !data.headers
+              ? 'HTTP headers assessment unavailable'
+              : data.headers.probed_host
+                ? `${headersScore}/100 · via ${data.headers.probed_host}`
+                : `${headersScore}/100`
           }
         />
         {data.headers && (
-          <div class="score-list" style={{ marginTop: 24 }}>
-            {Object.entries(data.headers.core).map(([name, r]) => (
-              <ScoreBar
-                key={name}
-                name={prettyHeader(name)}
-                value={r.status === 'pass' ? 100 : r.status === 'warn' ? 50 : 0}
-              />
-            ))}
-          </div>
+          <details class="grade-details">
+            <summary>
+              Core header checks <span aria-hidden="true">+</span>
+            </summary>
+            <div class="header-status-list">
+              {Object.entries(data.headers.core).map(([name, r]) => (
+                <div key={name}>
+                  <span>{prettyHeader(name)}</span>
+                  <SevPill level={statusSev(r.status)} />
+                </div>
+              ))}
+            </div>
+            <p class="grade-explanation">
+              The weighted core checks and additional header observations
+              determine this score.
+            </p>
+          </details>
         )}
       </div>
     </div>
@@ -313,9 +399,22 @@ function GradeRing({ grade, score }: { grade: string; score: number }) {
   const color = gradeColorVar(grade);
   const showGrade = grade || '—';
   return (
-    <svg role="img" viewBox="0 0 168 168" width="132" height="132" aria-label={`Grade ${showGrade}`}>
+    <svg
+      role="img"
+      viewBox="0 0 168 168"
+      width="132"
+      height="132"
+      aria-label={`Grade ${showGrade}`}
+    >
       <circle cx="84" cy="84" r={r} fill="var(--ink)" />
-      <circle cx="84" cy="84" r={r} fill="none" stroke="var(--line)" stroke-width="6" />
+      <circle
+        cx="84"
+        cy="84"
+        r={r}
+        fill="none"
+        stroke="var(--line)"
+        stroke-width="6"
+      />
       <circle
         cx="84"
         cy="84"
@@ -351,7 +450,7 @@ function gradeColorVar(grade: string): string {
 }
 
 function prettyTrust(trust?: string): string {
-  if (!trust) return '';
+  if (!trust || trust === 'no_chain') return 'Trust not assessed';
   if (trust === 'trusted') return 'Browser-trusted';
   return trust.replace(/_/g, ' ');
 }
@@ -382,6 +481,49 @@ type TabId =
   | 'custom'
   | 'email';
 
+const sectionDetails: Record<TabId, { title: string; description: string }> = {
+  overview: {
+    title: 'Report summary.',
+    description:
+      'Start with the highest-priority observations. Open a section to inspect the evidence.',
+  },
+  certificate: {
+    title: 'Identity & trust.',
+    description:
+      'Inspect the certificate chain, validity and certificate transparency observations.',
+  },
+  protocols: {
+    title: 'The connections your server accepts.',
+    description:
+      'Offered, disabled and indeterminate protocols are shown separately.',
+  },
+  ciphers: {
+    title: 'Inside the encrypted connection.',
+    description:
+      'Explore each offered cipher suite, its strength and forward secrecy.',
+  },
+  headers: {
+    title: 'The browser’s first line of defence.',
+    description:
+      'Inspect the returned policies and the status of each header check.',
+  },
+  vulns: {
+    title: 'Configuration weaknesses.',
+    description:
+      'These are configuration and version indicators. They do not establish exploitability.',
+  },
+  custom: {
+    title: 'The surrounding signals.',
+    description:
+      'Additional observations provide context without changing the TLS or Headers grades.',
+  },
+  email: {
+    title: 'Email policy observations.',
+    description:
+      'SPF and DMARC findings are informational and do not change the two grades.',
+  },
+};
+
 export function Tabs({
   active,
   onChange,
@@ -411,10 +553,10 @@ export function Tabs({
     { id: 'headers', label: 'Headers' },
     {
       id: 'vulns',
-      label: 'Vulnerabilities',
+      label: 'Weaknesses',
       count: data.tls?.vulnerabilities?.length,
     },
-    { id: 'custom', label: 'Custom', count: data.custom?.length },
+    { id: 'custom', label: 'Other checks', count: data.custom?.length },
   ];
   if (data.email) tabs.push({ id: 'email', label: 'Email security' });
   return (
@@ -434,7 +576,8 @@ export function Tabs({
             const index = tabs.findIndex((item) => item.id === t.id);
             let next: number;
             if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
-            else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+            else if (event.key === 'ArrowLeft')
+              next = (index - 1 + tabs.length) % tabs.length;
             else if (event.key === 'Home') next = 0;
             else if (event.key === 'End') next = tabs.length - 1;
             else return;
@@ -451,21 +594,65 @@ export function Tabs({
   );
 }
 
-export function TabPanel({ id, data }: { id: TabId; data: ScanResult }) {
+export function TabPanel({
+  id,
+  data,
+  onNavigate,
+}: {
+  id: TabId;
+  data: ScanResult;
+  onNavigate?: (id: TabId) => void;
+}) {
   switch (id) {
     case 'overview':
-      return <Overview data={data} />;
+      return <Overview data={data} onNavigate={onNavigate} />;
     case 'certificate':
       return (
         <div class="section">
-          <CertificateTransparencyCard handshake={data.tls?.handshake_scts} certificate={data.tls?.certificate_scts} />
+          {data.tls && (
+            <div class="card">
+              <div class="card-head">
+                <h3>Trust & connection</h3>
+              </div>
+              <dl class="connection-facts">
+                <div>
+                  <dt>Certificate trust</dt>
+                  <dd>{prettyTrust(data.tls.chain_trust)}</dd>
+                </div>
+                <div>
+                  <dt>OCSP stapling</dt>
+                  <dd>
+                    {data.tls.ocsp_stapling
+                      ? `Stapled · ${data.tls.ocsp_status || 'Status unknown'}`
+                      : 'Not observed'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Session resumption</dt>
+                  <dd>
+                    {data.tls.session_resumption?.replace(/_/g, ' ') ||
+                      'Not assessed'}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
           <CertificateTab chain={data.tls?.certificate_chain ?? []} />
+          <CertificateTransparencyCard
+            handshake={data.tls?.handshake_scts}
+            certificate={data.tls?.certificate_scts}
+          />
         </div>
       );
     case 'protocols':
       return <ProtocolsTab protocols={data.tls?.protocols ?? []} />;
     case 'ciphers':
-      return <CiphersTab ciphers={data.tls?.ciphers ?? []} pref={data.tls?.cipher_preference} />;
+      return (
+        <CiphersTab
+          ciphers={data.tls?.ciphers ?? []}
+          pref={data.tls?.cipher_preference}
+        />
+      );
     case 'headers':
       return <HeadersTab headers={data.headers} />;
     case 'vulns':
@@ -480,87 +667,143 @@ export function TabPanel({ id, data }: { id: TabId; data: ScanResult }) {
 // ────────────────────────────────────────────────────────────────────────────
 // Overview
 
-function Overview({ data }: { data: ScanResult }) {
+function Overview({
+  data,
+  onNavigate,
+}: {
+  data: ScanResult;
+  onNavigate?: (id: TabId) => void;
+}) {
   const tls = data.tls;
   const headers = data.headers;
-  const offeredProtos = (tls?.protocols ?? []).filter((p) => p.offered).map((p) => p.name);
+  const offeredProtos = (tls?.protocols ?? [])
+    .filter((p) => p.offered)
+    .map((p) => p.name);
   const leaf = tls?.certificate_chain?.[0];
   const highlights = deriveHighlights(data);
   return (
     <div class="section">
-      <div class="grid-2">
-        <div class="card">
+      <div class="overview-grid">
+        <div class="card findings-card">
           <div class="card-head">
-            <h3>Highlights</h3>
-            <span class="sub">Key observations</span>
+            <h3>Key observations</h3>
+            <span class="sub">{highlights.length} selected</span>
           </div>
-          <div class="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <ol class="finding-list">
             {highlights.map((h, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '14px 1fr',
-                  gap: 12,
-                  alignItems: 'flex-start',
-                  paddingTop: i ? 12 : 0,
-                  borderTop: i ? '1px dashed var(--line)' : 'none',
-                }}
-              >
-                <span class={`sev ${h.level}`} style={{ marginTop: 6 }} />
+              <li key={i} class={`finding-item ${h.level}`}>
+                <span class="finding-number" aria-hidden="true">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{h.title}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{h.body}</div>
+                  <span class={`finding-label ${h.level}`}>
+                    {h.section === 'custom'
+                      ? 'Informational'
+                      : h.level === 'bad'
+                        ? 'Needs attention'
+                        : h.level === 'warn'
+                          ? 'Review'
+                          : h.level === 'good'
+                            ? 'Working well'
+                            : 'For context'}
+                  </span>
+                  <h3>{h.title}</h3>
+                  <p>{h.body}</p>
+                  {h.section && (
+                    <a
+                      class="evidence-link"
+                      href={`#${h.section}`}
+                      onClick={(event) => {
+                        if (
+                          onNavigate &&
+                          !event.metaKey &&
+                          !event.ctrlKey &&
+                          !event.shiftKey &&
+                          !event.altKey
+                        ) {
+                          event.preventDefault();
+                          onNavigate(h.section!);
+                        }
+                      }}
+                    >
+                      View{' '}
+                      {h.section === 'vulns'
+                        ? 'weaknesses'
+                        : h.section === 'custom'
+                          ? 'other checks'
+                          : h.section}{' '}
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                  )}
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
-        <div class="card">
-          <div class="card-head">
-            <h3>At a glance</h3>
-          </div>
-          <div class="card-body" style={{ padding: 0 }}>
-            <div class="kv-grid" style={{ padding: '0 18px 16px' }}>
-              <div class="k">Host</div>
-              <div class="v">{data.host}</div>
-              <div class="k">Resolved IP</div>
-              <div class="v">{data.resolved_ip}</div>
-              <div class="k">Port</div>
-              <div class="v">{data.port}</div>
-              <div class="k">TLS versions</div>
-              <div class="v">{offeredProtos.join(', ') || '—'}</div>
-              <div class="k">Cipher count</div>
-              <div class="v">{tls ? `${tls.ciphers?.length ?? 0} offered` : 'Not assessed'}</div>
-              <div class="k">Cipher preference</div>
-              <div class="v">{tls?.cipher_preference || '—'}</div>
-              <div class="k">OCSP stapling</div>
-              <div class="v">
-                {!tls ? 'Not assessed' : tls.ocsp_stapling ? `yes (${tls.ocsp_status || 'unknown'})` : 'no'}
-              </div>
-              <div class="k">Session resumption</div>
-              <div class="v">{tls?.session_resumption || '—'}</div>
-              {leaf && (
-                <>
-                  <div class="k">Certificate</div>
-                  <div class="v">
-                    {leaf.key_alg} · {leaf.sig_alg}
-                  </div>
-                  <div class="k">Expires in</div>
-                  <div class="v">
-                    {leaf.days_left} days · {leaf.not_after.slice(0, 10)}
-                  </div>
-                </>
-              )}
-              {headers && (
-                <>
-                  <div class="k">Headers score</div>
-                  <div class="v">
-                    {headers.score}/100 ({headers.grade})
-                  </div>
-                </>
-              )}
+        <div class="overview-aside">
+          <div class="card">
+            <div class="card-head">
+              <h3>Connection snapshot</h3>
             </div>
+            <div class="card-body" style={{ padding: 0 }}>
+              <div class="kv-grid" style={{ padding: '0 18px 16px' }}>
+                <div class="k">Host</div>
+                <div class="v">{data.host}</div>
+                <div class="k">Resolved IP</div>
+                <div class="v">{data.resolved_ip}</div>
+                <div class="k">Port</div>
+                <div class="v">{data.port}</div>
+                <div class="k">TLS versions</div>
+                <div class="v">{offeredProtos.join(', ') || '—'}</div>
+                <div class="k">Cipher count</div>
+                <div class="v">
+                  {tls ? `${tls.ciphers?.length ?? 0} offered` : 'Not assessed'}
+                </div>
+                <div class="k">Cipher preference</div>
+                <div class="v">{tls?.cipher_preference || '—'}</div>
+                <div class="k">OCSP stapling</div>
+                <div class="v">
+                  {!tls
+                    ? 'Not assessed'
+                    : tls.ocsp_stapling
+                      ? `yes (${tls.ocsp_status || 'unknown'})`
+                      : 'no'}
+                </div>
+                <div class="k">Session resumption</div>
+                <div class="v">{tls?.session_resumption || '—'}</div>
+                {leaf && (
+                  <>
+                    <div class="k">Certificate</div>
+                    <div class="v">
+                      {leaf.key_alg} · {leaf.sig_alg}
+                    </div>
+                    <div class="k">Expires in</div>
+                    <div class="v">
+                      {leaf.days_left} days · {leaf.not_after.slice(0, 10)}
+                    </div>
+                  </>
+                )}
+                {headers && (
+                  <>
+                    <div class="k">Headers score</div>
+                    <div class="v">
+                      {headers.score}/100 ({headers.grade})
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <div class="report-scope">
+            <span class="report-eyebrow">Reading this report</span>
+            <h3>Two grades. One point in time.</h3>
+            <p>
+              TLS and Headers measure different parts of your configuration.
+              Missing or incomplete checks are not passing results.
+            </p>
+            <a href="/api/v1/checks" class="evidence-link">
+              Explore the check catalog <span aria-hidden="true">↗</span>
+            </a>
           </div>
         </div>
       </div>
@@ -573,12 +816,14 @@ function Overview({ data }: { data: ScanResult }) {
 
 function CertificateTab({ chain }: { chain: Certificate[] }) {
   const [open, setOpen] = useState<Record<number, boolean>>({ 0: true });
-  if (!chain.length) return <EmptyCard message="No certificate chain captured." />;
+  if (!chain.length)
+    return <EmptyCard message="No certificate chain captured." />;
   return (
     <div class="card">
       <div class="card-head">
         <h3>
-          Certification path <span class="sub">· {chain.length} certificates</span>
+          Certification path{' '}
+          <span class="sub">· {chain.length} certificates</span>
         </h3>
       </div>
       <div class="card-body flush chain">
@@ -602,7 +847,10 @@ function CertificateTab({ chain }: { chain: Certificate[] }) {
                 </div>
                 <div class="cert-meta">
                   <span class="pill">
-                    <span class="dot" style={{ background: 'var(--muted-2)' }} />
+                    <span
+                      class="dot"
+                      style={{ background: 'var(--muted-2)' }}
+                    />
                     {c.key_alg.split(' ')[0] || c.key_alg}
                   </span>
                   {c.days_left < 0 ? (
@@ -664,7 +912,10 @@ function CertificateTab({ chain }: { chain: Certificate[] }) {
   );
 }
 
-function CertificateTransparencyCard({ handshake, certificate }: {
+function CertificateTransparencyCard({
+  handshake,
+  certificate,
+}: {
   handshake?: SCTSummary;
   certificate?: CertificateSCTs;
 }) {
@@ -675,16 +926,38 @@ function CertificateTransparencyCard({ handshake, certificate }: {
         <SevPill level="info" />
       </div>
       <div class="card-body sct-body">
-        <SCTSource title="Leaf certificate" summary={certificateSCTSummary(certificate)}
-          logIDs={certificate?.present && !certificate.parse_error ? certificate.log_ids : undefined} />
-        <SCTSource title="TLS handshake" summary={sctSummary(handshake)} logIDs={handshake?.log_ids} />
-        <p class="muted">Informational only; no effect on the grade. SCT signatures and log inclusion are not verified. SCTs in OCSP responses are not assessed.</p>
+        <SCTSource
+          title="Leaf certificate"
+          summary={certificateSCTSummary(certificate)}
+          logIDs={
+            certificate?.present && !certificate.parse_error
+              ? certificate.log_ids
+              : undefined
+          }
+        />
+        <SCTSource
+          title="TLS handshake"
+          summary={sctSummary(handshake)}
+          logIDs={handshake?.log_ids}
+        />
+        <p class="muted">
+          Informational only; no effect on the grade. SCT signatures and log
+          inclusion are not verified. SCTs in OCSP responses are not assessed.
+        </p>
       </div>
     </div>
   );
 }
 
-function SCTSource({ title, summary, logIDs }: { title: string; summary: string; logIDs?: string[] }) {
+function SCTSource({
+  title,
+  summary,
+  logIDs,
+}: {
+  title: string;
+  summary: string;
+  logIDs?: string[];
+}) {
   return (
     <section class="sct-source" aria-label={title}>
       <h4>{title}</h4>
@@ -693,7 +966,9 @@ function SCTSource({ title, summary, logIDs }: { title: string; summary: string;
         <>
           <p class="muted">Log IDs (SHA-256, unique per source)</p>
           <ul class="sct-log-ids mono">
-            {logIDs.map((id) => <li key={id}>{id}</li>)}
+            {logIDs.map((id) => (
+              <li key={id}>{id}</li>
+            ))}
           </ul>
         </>
       )}
@@ -705,7 +980,8 @@ function SCTSource({ title, summary, logIDs }: { title: string; summary: string;
 // Protocols, Ciphers, Headers, Vulns, Custom tabs
 
 function ProtocolsTab({ protocols }: { protocols: ProtocolSupport[] }) {
-  if (!protocols.length) return <EmptyCard message="No protocols enumerated." />;
+  if (!protocols.length)
+    return <EmptyCard message="No protocols enumerated." />;
   const offered = protocols.filter((p) => p.offered).length;
   const indeterminate = protocols.filter((p) => p.probe === 'aborted').length;
   const disabled = protocols.length - offered - indeterminate;
@@ -726,7 +1002,13 @@ function ProtocolsTab({ protocols }: { protocols: ProtocolSupport[] }) {
             <div key={p.name} class="proto-row">
               <div class="proto-name">
                 <b>{p.name}</b>
-                <span>via {p.probe}</span>
+                <span>
+                  {p.name.startsWith('SSL')
+                    ? 'Obsolete'
+                    : ['TLS 1.0', 'TLS 1.1'].includes(p.name)
+                      ? 'Deprecated'
+                      : 'Modern TLS'}
+                </span>
               </div>
               {p.probe === 'aborted' ? (
                 <span class="pill info" style={{ borderStyle: 'dashed' }}>
@@ -759,152 +1041,85 @@ function CiphersTab({
   ciphers: Cipher[];
   pref?: 'server' | 'client' | '';
 }) {
-  const [tooltip, setTooltip] = useState<
-    | {
-        x: number;
-        y: number;
-        c: Cipher;
-        parsed: ReturnType<typeof parseCipherName>;
-      }
-    | null
-  >(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
   if (!ciphers.length) return <EmptyCard message="No ciphers enumerated." />;
-  const grouped = useMemo(() => {
-    const g: Record<string, Cipher[]> = {};
-    for (const c of ciphers) (g[c.protocol] ??= []).push(c);
-    return g;
-  }, [ciphers]);
-
-  function onMove(e: MouseEvent, c: Cipher) {
-    const rect = wrapRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setTooltip({
-      x: e.clientX - rect.left + 14,
-      y: e.clientY - rect.top + 14,
-      c,
-      parsed: parseCipherName(c.name),
-    });
-  }
-
+  const grouped: Record<string, Cipher[]> = {};
+  for (const cipher of ciphers) (grouped[cipher.protocol] ??= []).push(cipher);
   return (
-    <div class="card" ref={wrapRef} style={{ position: 'relative' }}>
+    <div class="card">
       <div class="card-head">
-        <h3>
-          Cipher suites{' '}
-          <span class="sub">
-            · {pref ? `${pref} preference` : 'preference unknown'} · forward secrecy required
-          </span>
-        </h3>
-        <span class="muted" style={{ fontSize: 12 }}>Hover for details</span>
+        <h3>Cipher suites</h3>
+        <span class="sub">
+          {pref ? `${pref} preference` : 'Preference not assessed'}
+        </span>
       </div>
-      <div class="card-body flush">
-        {Object.entries(grouped).map(([proto, list]) => (
-          <div key={proto}>
-            <div
-              style={{
-                padding: '10px 18px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 11,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                color: 'var(--muted)',
-                background: 'var(--bg-sub)',
-                borderTop: '1px solid var(--line)',
-                borderBottom: '1px solid var(--line)',
-              }}
-            >
-              {proto} · {list.length} suites
-            </div>
-            <table class="tbl">
-              <tbody>
-                {list.map((c) => (
-                  <tr
-                    key={c.code}
-                    class="hoverable cipher-row"
-                    onMouseMove={(e) => onMove(e, c)}
-                    onMouseLeave={() => setTooltip(null)}
-                  >
-                    <td>
-                      <span class={`sev ${c.level}`} />
-                    </td>
-                    <td class="cipher-name">
-                      {c.name}
-                      <span class="small">{c.code}</span>
-                    </td>
-                    <td class="mono" style={{ textAlign: 'right', width: 80 }}>
-                      {c.strength} bit
-                    </td>
-                    <td style={{ width: 100 }}>
-                      {c.aead ? (
-                        <span class="pill good">
-                          <span class="dot" />
-                          AEAD
-                        </span>
-                      ) : (
-                        <span class="pill warn">
-                          <span class="dot" />
-                          CBC
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ width: 96 }}>
-                      {c.pfs ? (
-                        <span class="pill good">
-                          <span class="dot" />
-                          PFS
-                        </span>
-                      ) : (
-                        <span class="pill bad">
-                          <span class="dot" />
-                          No PFS
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {Object.entries(grouped).map(([protocol, list]) => (
+        <div key={protocol}>
+          <div class="cipher-group-label">
+            {protocol}
+            <span>{list.length} suites</span>
           </div>
-        ))}
-      </div>
-      {tooltip && (
-        <div class="tt" style={{ left: tooltip.x, top: tooltip.y }}>
-          <h5>
-            {tooltip.c.code} · {tooltip.c.protocol}
-          </h5>
-          <p style={{ marginBottom: 8 }}>{tooltip.c.name}</p>
-          <div class="row">
-            <span class="k">Key exchange</span>
-            <span class="v">{tooltip.parsed.kx}</span>
-          </div>
-          <div class="row">
-            <span class="k">Authentication</span>
-            <span class="v">{tooltip.parsed.auth}</span>
-          </div>
-          <div class="row">
-            <span class="k">Cipher</span>
-            <span class="v">{tooltip.parsed.cipher}</span>
-          </div>
-          <div class="row">
-            <span class="k">MAC</span>
-            <span class="v">{tooltip.parsed.mac}</span>
-          </div>
-          <div class="row">
-            <span class="k">Strength</span>
-            <span class="v">{tooltip.c.strength} bits</span>
-          </div>
+          {list.map((cipher) => {
+            const parts = parseCipherName(cipher.name);
+            return (
+              <details class="cipher-detail" key={cipher.code}>
+                <summary>
+                  <span class="cipher-identity">
+                    <span class={`sev ${cipher.level}`} />
+                    <span>
+                      {cipher.name}
+                      <small>
+                        {cipher.code} · {cipher.strength} bit
+                      </small>
+                    </span>
+                  </span>
+                  <span class="cipher-badges">
+                    <span class={`pill ${cipher.aead ? 'good' : 'warn'}`}>
+                      {cipher.aead ? 'AEAD' : 'Non-AEAD'}
+                    </span>
+                    <span class={`pill ${cipher.pfs ? 'good' : 'warn'}`}>
+                      {cipher.pfs ? 'PFS' : 'No PFS'}
+                    </span>
+                    <span class="disclosure-plus" aria-hidden="true">
+                      +
+                    </span>
+                  </span>
+                </summary>
+                <dl class="cipher-facts">
+                  <div>
+                    <dt>Key exchange</dt>
+                    <dd>{parts.kx}</dd>
+                  </div>
+                  <div>
+                    <dt>Authentication</dt>
+                    <dd>{parts.auth}</dd>
+                  </div>
+                  <div>
+                    <dt>Cipher</dt>
+                    <dd>{parts.cipher}</dd>
+                  </div>
+                  <div>
+                    <dt>MAC / integrity</dt>
+                    <dd>{parts.mac}</dd>
+                  </div>
+                </dl>
+              </details>
+            );
+          })}
         </div>
-      )}
+      ))}
     </div>
   );
 }
 
 // parseCipherName derives the canonical components (key exchange,
 // authentication, bulk cipher, MAC) from an IANA-style suite name.
-// TLS 1.3 names omit KX/auth (always (EC)DHE/AEAD), so we fill the gap.
-function parseCipherName(name: string): { kx: string; auth: string; cipher: string; mac: string } {
+// TLS 1.3 negotiates key exchange and authentication separately from the suite.
+function parseCipherName(name: string): {
+  kx: string;
+  auth: string;
+  cipher: string;
+  mac: string;
+} {
   // TLS 1.3 names like TLS_AES_256_GCM_SHA384 lack the _WITH_ pivot.
   if (!name.includes('_WITH_')) {
     let cipher = '—';
@@ -912,7 +1127,12 @@ function parseCipherName(name: string): { kx: string; auth: string; cipher: stri
     else if (name.includes('AES_256_GCM')) cipher = 'AES-256-GCM';
     else if (name.includes('AES_128_GCM')) cipher = 'AES-128-GCM';
     else if (name.includes('AES_128_CCM')) cipher = 'AES-128-CCM';
-    return { kx: '(EC)DHE', auth: 'signed via cert', cipher, mac: 'AEAD' };
+    return {
+      kx: 'Negotiated separately',
+      auth: 'Negotiated separately',
+      cipher,
+      mac: 'AEAD',
+    };
   }
   const [pre, post] = name.replace(/^TLS_/, '').split('_WITH_');
   if (!post) return { kx: '?', auth: '?', cipher: '?', mac: '?' };
@@ -923,7 +1143,10 @@ function parseCipherName(name: string): { kx: string; auth: string; cipher: stri
     kx = parts.slice(0, -1).join('-');
     auth = parts[parts.length - 1];
   }
-  const aead = post.includes('GCM') || post.includes('CHACHA20') || post.includes('POLY1305');
+  const aead =
+    post.includes('GCM') ||
+    post.includes('CHACHA20') ||
+    post.includes('POLY1305');
   let cipher = '—';
   if (post.startsWith('AES_256_GCM')) cipher = 'AES-256-GCM';
   else if (post.startsWith('AES_128_GCM')) cipher = 'AES-128-GCM';
@@ -954,26 +1177,15 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
           </span>
         </div>
         <div class="card-body" style={{ padding: 0 }}>
-          <table class="tbl">
-            <tbody>
-              {Object.entries(headers.core).map(([name, r]) => (
-                <tr key={name}>
-                  <td style={{ width: 24, paddingRight: 0 }}>
-                    <span class={`sev ${statusSev(r.status)}`} />
-                  </td>
-                  <td class="mono" style={{ whiteSpace: 'nowrap' }}>
-                    {prettyHeader(name)}
-                  </td>
-                  <td class="mono muted" style={{ wordBreak: 'break-all' }}>
-                    {r.present ? r.value || '(present)' : <em>missing</em>}
-                  </td>
-                  <td style={{ textAlign: 'right', width: 80 }}>
-                    <SevPill level={statusSev(r.status)} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div class="header-observations">
+            {Object.entries(headers.core).map(([name, result]) => (
+              <HeaderObservation
+                key={name}
+                name={prettyHeader(name)}
+                result={result}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -982,29 +1194,30 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
           <h3>Additional headers</h3>
         </div>
         <div class="card-body" style={{ padding: 0 }}>
-          <table class="tbl">
-            <tbody>
-              <AdditionalRow name="Server" hr={headers.additional.server} />
-              <AdditionalRow
-                name="Cross-Origin-Opener-Policy"
-                hr={headers.additional['cross-origin-opener-policy']}
+          <div class="header-observations">
+            {(
+              [
+                'server',
+                'cross-origin-opener-policy',
+                'cross-origin-embedder-policy',
+                'cross-origin-resource-policy',
+                'access-control-allow-origin',
+              ] as const
+            ).map((name) => (
+              <HeaderObservation
+                key={name}
+                name={prettyHeader(name)}
+                result={headers.additional[name]}
               />
-              <AdditionalRow
-                name="Cross-Origin-Embedder-Policy"
-                hr={headers.additional['cross-origin-embedder-policy']}
-              />
-              <AdditionalRow
-                name="Cross-Origin-Resource-Policy"
-                hr={headers.additional['cross-origin-resource-policy']}
-              />
-              <AdditionalRow
-                name="Access-Control-Allow-Origin"
-                hr={headers.additional['access-control-allow-origin']}
-              />
-            </tbody>
-          </table>
+            ))}
+          </div>
           {headers.additional['set-cookie']?.length ? (
-            <div style={{ borderTop: '1px solid var(--line)', padding: '12px 18px' }}>
+            <div
+              style={{
+                borderTop: '1px solid var(--line)',
+                padding: '12px 18px',
+              }}
+            >
               <div
                 style={{
                   fontSize: 11,
@@ -1032,7 +1245,8 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
                   <span class={`sev ${statusSev(c.status)}`} />
                   <code>{c.name}</code>
                   <span class="muted">
-                    {c.secure ? 'Secure' : 'no Secure'} · {c.httponly ? 'HttpOnly' : 'no HttpOnly'} ·{' '}
+                    {c.secure ? 'Secure' : 'no Secure'} ·{' '}
+                    {c.httponly ? 'HttpOnly' : 'no HttpOnly'} ·{' '}
                     {c.samesite ? `SameSite=${c.samesite}` : 'no SameSite'}
                   </span>
                 </div>
@@ -1045,35 +1259,49 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
   );
 }
 
-function AdditionalRow({ name, hr }: { name: string; hr?: HeaderResult }) {
+function HeaderObservation({
+  name,
+  result,
+}: {
+  name: string;
+  result?: HeaderResult;
+}) {
   return (
-    <tr>
-      <td style={{ width: 24, paddingRight: 0 }}>
-        {hr ? <span class={`sev ${statusSev(hr.status)}`} /> : <span class="muted">—</span>}
-      </td>
-      <td class="mono" style={{ whiteSpace: 'nowrap' }}>
-        {name}
-      </td>
-      <td class="mono muted" style={{ wordBreak: 'break-all' }}>
-        {hr ? hr.value || '(present)' : <em>absent</em>}
-      </td>
-      <td style={{ textAlign: 'right', width: 80 }}>
-        {hr ? <SevPill level={statusSev(hr.status)} /> : <span class="muted">—</span>}
-      </td>
-    </tr>
+    <div class="header-observation">
+      <div>
+        <h4>{name}</h4>
+        {result ? (
+          <SevPill level={statusSev(result.status)} />
+        ) : (
+          <span class="pill">Not reported</span>
+        )}
+      </div>
+      <p>
+        {result ? (
+          result.present ? (
+            <code>{result.value || '(present)'}</code>
+          ) : (
+            'Header not present'
+          )
+        ) : (
+          'No observation available.'
+        )}
+      </p>
+    </div>
   );
 }
 
 function VulnsTab({ vulns }: { vulns: Vuln[] }) {
   const [filter, setFilter] = useState<'all' | Severity>('all');
-  if (!vulns.length) return <EmptyCard message="No vulnerability checks performed." />;
+  if (!vulns.length)
+    return <EmptyCard message="No vulnerability checks performed." />;
   const counts: Record<string, number> = { all: vulns.length };
   for (const v of vulns) counts[v.level] = (counts[v.level] || 0) + 1;
   const visible = vulns.filter((v) => filter === 'all' || v.level === filter);
 
   const sev = [
     { id: 'all', label: 'All' },
-    { id: 'bad', label: 'Critical' },
+    { id: 'bad', label: 'Failed' },
     { id: 'warn', label: 'Warning' },
     { id: 'good', label: 'Passed' },
     { id: 'info', label: 'Info' },
@@ -1082,12 +1310,14 @@ function VulnsTab({ vulns }: { vulns: Vuln[] }) {
   return (
     <div class="card">
       <div class="card-head">
-        <h3>Known vulnerabilities</h3>
+        <h3>Weakness indicators</h3>
         <div class="filters">
           {sev.map((s) => (
             <button
               key={s.id}
               class={'chip' + (filter === s.id ? ' on' : '')}
+              type="button"
+              aria-pressed={filter === s.id}
               onClick={() => setFilter(s.id as typeof filter)}
             >
               {s.label}
@@ -1105,7 +1335,10 @@ function VulnsTab({ vulns }: { vulns: Vuln[] }) {
             <div>
               <h4>{v.title || v.id}</h4>
               <p>{v.body}</p>
-              {v.cve && <div class="cve">{v.cve}</div>}
+              <div class="cve">
+                {v.state}
+                {v.cve ? ` · ${v.cve}` : ''}
+              </div>
             </div>
             <div>
               <SevPill level={v.level} />
@@ -1113,7 +1346,14 @@ function VulnsTab({ vulns }: { vulns: Vuln[] }) {
           </div>
         ))}
         {!visible.length && (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+          <div
+            style={{
+              padding: 40,
+              textAlign: 'center',
+              color: 'var(--muted)',
+              fontSize: 13,
+            }}
+          >
             No findings at this severity.
           </div>
         )}
@@ -1185,7 +1425,9 @@ function factsForFinding(f: CustomFinding): Fact[] {
     }
     if (typeof d.signed === 'boolean') {
       facts.push(
-        d.signed ? { label: '✓ Signed', level: 'good' } : { label: '✗ Signed', level: 'bad' },
+        d.signed
+          ? { label: '✓ Signed', level: 'good' }
+          : { label: '✗ Signed', level: 'bad' },
       );
     }
     if (typeof d.contact_count === 'number') {
@@ -1214,7 +1456,10 @@ function factsForFinding(f: CustomFinding): Fact[] {
     if (typeof d.size_bytes === 'number') {
       facts.push({ label: `${d.size_bytes} bytes`, level: 'neutral' });
     }
-    if (Array.isArray(d.suspicious_disallow) && d.suspicious_disallow.length > 0) {
+    if (
+      Array.isArray(d.suspicious_disallow) &&
+      d.suspicious_disallow.length > 0
+    ) {
       const items = d.suspicious_disallow as string[];
       const head = items.slice(0, 3).join(', ');
       const suffix = items.length > 3 ? ` +${items.length - 3} more` : '';
@@ -1233,7 +1478,13 @@ function factsForFinding(f: CustomFinding): Fact[] {
     if (typeof v === 'string' && v === ZERO_TIME) continue;
     if (Array.isArray(v) && v.length === 0) continue;
     const value =
-      typeof v === 'object' ? JSON.stringify(v) : typeof v === 'boolean' ? (v ? 'yes' : 'no') : String(v);
+      typeof v === 'object'
+        ? JSON.stringify(v)
+        : typeof v === 'boolean'
+          ? v
+            ? 'yes'
+            : 'no'
+          : String(v);
     facts.push({ label: `${prettyKey(k)}: ${value}`, level: 'neutral' });
   }
   if (typeof d.note === 'string' && d.note) {
@@ -1243,7 +1494,10 @@ function factsForFinding(f: CustomFinding): Fact[] {
 }
 
 function CustomFactStrip({ finding }: { finding: CustomFinding }) {
-  const url = typeof finding.details?.url === 'string' ? (finding.details.url as string) : null;
+  const url =
+    typeof finding.details?.url === 'string'
+      ? (finding.details.url as string)
+      : null;
   const facts = factsForFinding(finding);
   if (!url && !facts.length) return null;
   return (
@@ -1256,7 +1510,10 @@ function CustomFactStrip({ finding }: { finding: CustomFinding }) {
       {facts.length > 0 && (
         <div class="fact-strip">
           {facts.map((f, i) => (
-            <span key={i} class={f.level === 'neutral' ? 'pill' : `pill ${f.level}`}>
+            <span
+              key={i}
+              class={f.level === 'neutral' ? 'pill' : `pill ${f.level}`}
+            >
               {f.label}
             </span>
           ))}
@@ -1272,7 +1529,10 @@ function CustomFactStrip({ finding }: { finding: CustomFinding }) {
 function EmptyCard({ message }: { message: string }) {
   return (
     <div class="card">
-      <div class="card-body" style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+      <div
+        class="card-body"
+        style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}
+      >
         {message}
       </div>
     </div>
@@ -1281,19 +1541,35 @@ function EmptyCard({ message }: { message: string }) {
 
 function LoadingState() {
   return (
-    <div role="status" style={{ padding: '60px 16px', textAlign: 'center', color: 'var(--muted)' }}>
-      <div class="scan-title" style={{ justifyContent: 'center', marginBottom: 12 }}>
+    <div
+      role="status"
+      style={{
+        padding: '60px 16px',
+        textAlign: 'center',
+        color: 'var(--muted)',
+      }}
+    >
+      <div
+        class="scan-title"
+        style={{ justifyContent: 'center', marginBottom: 12 }}
+      >
         <span class="spinner" />
         Loading scan…
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{scanIDFromPath()}</div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+        {scanIDFromPath()}
+      </div>
     </div>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div class="card" role="alert" style={{ maxWidth: 640, margin: '60px auto' }}>
+    <div
+      class="card"
+      role="alert"
+      style={{ maxWidth: 640, margin: '60px auto' }}
+    >
       <div class="card-head">
         <h3>Couldn't load scan</h3>
       </div>

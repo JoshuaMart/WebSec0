@@ -1,5 +1,10 @@
 import type {
-  Severity, Status, TLSReport, HeadersReport, CustomFinding, ScanResult,
+  Severity,
+  Status,
+  TLSReport,
+  HeadersReport,
+  CustomFinding,
+  ScanResult,
 } from './report-types.ts';
 
 export function statusSev(status: Status): Severity {
@@ -9,18 +14,40 @@ export function statusSev(status: Status): Severity {
   return 'info';
 }
 
-type Highlight = { title: string; body: string; level: Severity };
+type HighlightSection =
+  | 'protocols'
+  | 'ciphers'
+  | 'certificate'
+  | 'vulns'
+  | 'headers'
+  | 'custom';
+type Highlight = {
+  title: string;
+  body: string;
+  level: Severity;
+  section?: HighlightSection;
+};
 
 function protocolHighlights(tls?: TLSReport): Highlight[] {
   if (!tls) return [];
-  const offered = new Set((tls.protocols ?? []).filter((p) => p.offered).map((p) => p.name));
-  const out: Highlight[] = [];
-  const legacyDisabled = ['SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.1'].every((name) =>
-    tls.protocols?.some((p) =>
-      p.name === name && !p.offered && ['stdlib', 'raw_clienthello'].includes(p.probe),
-    ),
+  const offered = new Set(
+    (tls.protocols ?? []).filter((p) => p.offered).map((p) => p.name),
   );
-  if (tls.scan_status !== 'partial_blocked' && offered.has('TLS 1.3') && legacyDisabled) {
+  const out: Highlight[] = [];
+  const legacyDisabled = ['SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.1'].every(
+    (name) =>
+      tls.protocols?.some(
+        (p) =>
+          p.name === name &&
+          !p.offered &&
+          ['stdlib', 'raw_clienthello'].includes(p.probe),
+      ),
+  );
+  if (
+    tls.scan_status !== 'partial_blocked' &&
+    offered.has('TLS 1.3') &&
+    legacyDisabled
+  ) {
     out.push({
       title: 'TLS 1.3 with no legacy fallback',
       body: 'TLS 1.3 is offered; SSLv2, SSLv3, TLS 1.0 and TLS 1.1 were tested and are disabled.',
@@ -30,7 +57,7 @@ function protocolHighlights(tls?: TLSReport): Highlight[] {
   if (offered.has('SSL 2.0') || offered.has('SSL 3.0')) {
     out.push({
       title: 'Obsolete SSL versions enabled',
-      body: 'SSLv2 or SSLv3 is enabled — POODLE/DROWN are exploitable.',
+      body: 'SSLv2 or SSLv3 is offered. These obsolete protocols cap the TLS grade at F; this observation does not establish exploitability.',
       level: 'bad',
     });
   }
@@ -52,21 +79,23 @@ function cipherHighlights(tls?: TLSReport): Highlight[] {
   if (ciphers.every((c) => c.pfs)) {
     out.push({
       title: 'All offered ciphers provide forward secrecy',
-      body: 'Every cipher uses ECDHE/DHE — past sessions stay safe even if the private key is compromised.',
+      body: 'Every enumerated cipher is marked as providing forward secrecy.',
       level: 'good',
     });
   } else if (ciphers.some((c) => c.name.includes('_RSA_WITH_'))) {
     out.push({
-      title: 'Caveat: RSA key-exchange ciphers offered',
+      title: 'RSA key-exchange ciphers offered',
       body: 'Some TLS 1.2 suites use static RSA — no forward secrecy. Drop the TLS_RSA_WITH_* suites.',
       level: 'warn',
     });
   }
 
-  const cbc12 = ciphers.filter((c) => c.protocol === 'TLS 1.2' && !c.aead);
+  const cbc12 = ciphers.filter(
+    (c) => c.protocol === 'TLS 1.2' && c.name.includes('_CBC_'),
+  );
   if (cbc12.length) {
     out.push({
-      title: 'Caveat: legacy CBC modes on TLS 1.2',
+      title: 'Legacy CBC modes on TLS 1.2',
       body: `${cbc12.length} CBC-mode cipher${cbc12.length > 1 ? 's are' : ' is'} offered. Prefer AEAD (GCM/ChaCha20-Poly1305) and drop the rest.`,
       level: 'warn',
     });
@@ -74,7 +103,10 @@ function cipherHighlights(tls?: TLSReport): Highlight[] {
 
   const weak = ciphers.filter((c) => c.level === 'bad');
   if (weak.length) {
-    const sample = weak.slice(0, 3).map((c) => c.name).join(', ');
+    const sample = weak
+      .slice(0, 3)
+      .map((c) => c.name)
+      .join(', ');
     const suffix = weak.length > 3 ? ` (+${weak.length - 3} more)` : '';
     out.push({
       title: `${weak.length} weak cipher${weak.length > 1 ? 's' : ''} offered`,
@@ -86,7 +118,7 @@ function cipherHighlights(tls?: TLSReport): Highlight[] {
   if (tls.cipher_preference === 'server') {
     out.push({
       title: 'Server enforces cipher preference',
-      body: 'The server picks the cipher instead of trusting the client list — prevents downgrade games.',
+      body: 'The server selects from the offered cipher suites according to its own preference.',
       level: 'good',
     });
   }
@@ -100,7 +132,13 @@ function certificateHighlights(tls?: TLSReport): Highlight[] {
   if (!leaf) return [];
   const out: Highlight[] = [];
 
-  if (leaf.days_left < 7) {
+  if (leaf.days_left < 0) {
+    out.push({
+      title: 'Leaf certificate has expired',
+      body: 'The observed certificate is past its expiry date. Review its replacement and deployment.',
+      level: 'bad',
+    });
+  } else if (leaf.days_left < 7) {
     out.push({
       title: 'Leaf certificate expires within a week',
       body: `Renew immediately — only ${leaf.days_left} day${leaf.days_left === 1 ? '' : 's'} left.`,
@@ -128,11 +166,23 @@ function trustAndOcspHighlights(tls?: TLSReport): Highlight[] {
   if (!tls) return [];
   const out: Highlight[] = [];
 
-  if (tls.chain_trust && tls.chain_trust !== 'trusted') {
+  if (
+    ['expired', 'self_signed', 'hostname_mismatch', 'untrusted'].includes(
+      tls.chain_trust,
+    )
+  ) {
     out.push({
       title: 'Certificate chain does not validate',
       body: `Chain trust: ${tls.chain_trust.replace(/_/g, ' ')}. The grade is capped at T.`,
       level: 'bad',
+    });
+  }
+
+  if (tls.chain_trust === 'no_chain') {
+    out.push({
+      title: 'Certificate trust not assessed',
+      body: 'No certificate chain was captured. Trust could not be established.',
+      level: 'info',
     });
   }
 
@@ -174,7 +224,7 @@ function vulnHighlights(tls?: TLSReport): Highlight[] {
   const warn = vulns.filter((v) => v.level === 'warn');
   if (bad.length) {
     out.push({
-      title: `${bad.length} active vulnerability ${bad.length > 1 ? 'findings' : 'finding'}`,
+      title: `${bad.length} configuration weakness ${bad.length > 1 ? 'findings' : 'finding'}`,
       body: bad.map((v) => v.title || v.id).join(', '),
       level: 'bad',
     });
@@ -224,23 +274,33 @@ function headerHighlights(headers?: HeadersReport): Highlight[] {
     if (!result) continue;
     if (result.status === 'pass') {
       out.push({
-        title: `${label} passes the check`,
+        title: label,
         body: result.present
           ? 'The configured header passed the scanner’s checks.'
           : 'Protection is provided by the configured policy.',
         level: 'good',
       });
     } else if (result.status === 'warn' || result.status === 'fail') {
-      out.push({ title: `${label} needs attention`, body: fix, level: statusSev(result.status) });
+      out.push({
+        title: label,
+        body: fix,
+        level: statusSev(result.status),
+      });
     }
   }
   const additional = headers.additional;
   for (const name of [
-    'cross-origin-opener-policy', 'cross-origin-embedder-policy', 'cross-origin-resource-policy',
+    'cross-origin-opener-policy',
+    'cross-origin-embedder-policy',
+    'cross-origin-resource-policy',
   ] as const) {
     const result = additional[name];
     if (!result || result.status === 'info') continue;
-    out.push({ title: name, body: result.value || 'Review this policy.', level: statusSev(result.status) });
+    out.push({
+      title: name,
+      body: result.value || 'Review this policy.',
+      level: statusSev(result.status),
+    });
   }
   if (additional.server?.status === 'warn') {
     out.push({
@@ -264,13 +324,18 @@ function cookieHighlights(headers?: HeadersReport): Highlight[] {
     (c) => c.status === 'warn' || c.status === 'fail',
   );
   if (!weak.length) return [];
-  const names = weak.slice(0, 2).map((c) => c.name).join(', ');
+  const names = weak
+    .slice(0, 2)
+    .map((c) => c.name)
+    .join(', ');
   const suffix = weak.length > 2 ? ` (+${weak.length - 2} more)` : '';
-  return [{
-    title: `${weak.length} cookie${weak.length > 1 ? 's need' : ' needs'} attention`,
-    body: `${names}${suffix} — review Secure, SameSite and HttpOnly where applicable.`,
-    level: weak.some((c) => c.status === 'fail') ? 'bad' : 'warn',
-  }];
+  return [
+    {
+      title: `${weak.length} cookie${weak.length > 1 ? 's need' : ' needs'} attention`,
+      body: `${names}${suffix} — review Secure, SameSite and HttpOnly where applicable.`,
+      level: weak.some((c) => c.status === 'fail') ? 'bad' : 'warn',
+    },
+  ];
 }
 
 function customHighlights(custom?: CustomFinding[]): Highlight[] {
@@ -278,7 +343,11 @@ function customHighlights(custom?: CustomFinding[]): Highlight[] {
   const out: Highlight[] = [];
   for (const f of custom) {
     if (f.status === 'info' && typeof f.details?.note === 'string') {
-      out.push({ title: `${f.title}: not assessed`, body: f.details.note, level: 'info' });
+      out.push({
+        title: `${f.title}: not assessed`,
+        body: f.details.note,
+        level: 'info',
+      });
       continue;
     }
     if (f.id === 'custom.security_txt') {
@@ -314,22 +383,49 @@ function customHighlights(custom?: CustomFinding[]): Highlight[] {
 }
 
 export function deriveHighlights(data: ScanResult): Highlight[] {
-  const all = [
-    ...protocolHighlights(data.tls),
-    ...cipherHighlights(data.tls),
-    ...certificateHighlights(data.tls),
-    ...trustAndOcspHighlights(data.tls),
-    ...vulnHighlights(data.tls),
-    ...headerHighlights(data.headers),
-    ...cookieHighlights(data.headers),
-    ...customHighlights(data.custom),
+  const all: Highlight[] = [
+    ...protocolHighlights(data.tls).map((h) => ({
+      ...h,
+      section: 'protocols' as const,
+    })),
+    ...cipherHighlights(data.tls).map((h) => ({
+      ...h,
+      section: 'ciphers' as const,
+    })),
+    ...certificateHighlights(data.tls).map((h) => ({
+      ...h,
+      section: 'certificate' as const,
+    })),
+    ...trustAndOcspHighlights(data.tls).map((h) => ({
+      ...h,
+      section: 'certificate' as const,
+    })),
+    ...vulnHighlights(data.tls).map((h) => ({
+      ...h,
+      section: 'vulns' as const,
+    })),
+    ...headerHighlights(data.headers).map((h) => ({
+      ...h,
+      section: 'headers' as const,
+    })),
+    ...cookieHighlights(data.headers).map((h) => ({
+      ...h,
+      section: 'headers' as const,
+    })),
+    ...customHighlights(data.custom).map((h) => ({
+      ...h,
+      section: 'custom' as const,
+    })),
   ];
   const order: Record<Severity, number> = { bad: 0, warn: 1, info: 2, good: 3 };
   all.sort((a, b) => order[a.level] - order[b.level]);
   const top = all.slice(0, 6);
   if (top.length === 0) {
     top.push({
-      title: !data.tls && !data.headers ? 'Assessment unavailable' : 'No highlights to display',
+      title:
+        !data.tls && !data.headers
+          ? 'Assessment unavailable'
+          : 'No highlights to display',
       body: 'Review the available observations in each section. Missing data does not establish a passing result.',
       level: 'info',
     });

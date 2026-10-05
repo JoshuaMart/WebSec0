@@ -1,0 +1,680 @@
+/* Report-specific layout. The landing page shares only the design tokens. */
+.report-layout {
+  --pad: 24px;
+  --gap: 20px;
+}
+.report-page .page {
+  max-width: 1264px;
+  padding: 36px 40px 64px;
+}
+.report-page .crumbs {
+  margin: 0 0 30px;
+  font-size: 12px;
+}
+.report-page .crumbs a:hover {
+  color: var(--good) !important;
+}
+.report-eyebrow {
+  display: block;
+  margin: 0 0 12px;
+  font: 10px/1.5 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.report-page .header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.report-page .h-title {
+  margin: 0 0 14px;
+  font-size: clamp(28px, 3.2vw, 42px);
+  font-weight: 550;
+  line-height: 1.15;
+  gap: 16px;
+}
+.report-page .h-title .pill {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+}
+.report-page .h-meta {
+  gap: 8px 18px;
+  font-size: 11px;
+}
+.report-actions {
+  flex: 0 0 auto;
+  max-width: 350px;
+  position: relative;
+}
+.report-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.report-page .btn {
+  min-height: 40px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  gap: 12px;
+}
+.report-page .btn-primary {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.report-page .btn-primary:hover {
+  background: var(--ink-2);
+}
+.action-feedback {
+  display: block;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+}
+.partial-notice {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: var(--info-bg);
+  margin: 0 0 28px;
+}
+.partial-notice .pill {
+  flex-shrink: 0;
+}
+.partial-notice p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.report-page .report-intro {
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.report-page .report-intro h2 {
+  font-size: 15px;
+}
+.report-page .grade-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  background: transparent;
+  box-shadow: none;
+  margin-bottom: 36px;
+  align-items: start;
+  overflow: visible;
+}
+.report-page .grade-cell {
+  padding: 24px 28px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  min-width: 0;
+  box-shadow: 0 3px 5px #1c292103;
+}
+.report-page .grade-summary {
+  padding-bottom: 24px;
+  gap: 24px;
+}
+.report-page .grade-summary svg {
+  width: 80px;
+  height: 80px;
+}
+.report-page .grade-summary .grade-label {
+  font-size: 20px;
+  font-weight: 550;
+}
+.report-page .grade-summary .grade-sub {
+  font: 12px/1.7 var(--font-mono);
+}
+.grade-details {
+  border-top: 1px solid var(--line);
+}
+.grade-details summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  list-style: none;
+}
+.grade-details summary::-webkit-details-marker,
+.cipher-detail summary::-webkit-details-marker {
+  display: none;
+}
+.grade-details summary:hover {
+  color: var(--ink);
+}
+.grade-details summary > span,
+.disclosure-plus {
+  font: 20px/1 var(--font-mono);
+  color: var(--muted);
+  transition: transform 180ms ease;
+}
+.grade-details[open] summary > span,
+.cipher-detail[open] .disclosure-plus {
+  transform: rotate(45deg);
+}
+.grade-details .score-list {
+  padding-block: 12px;
+  gap: 16px;
+}
+.grade-explanation {
+  margin: 10px 0 20px;
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.header-status-list > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.header-status-list > div > span:first-child {
+  overflow-wrap: anywhere;
+}
+.report-page .tabs {
+  position: sticky;
+  top: 76px;
+  z-index: 20;
+  border-radius: 0;
+  padding: 0;
+  gap: 24px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 32px;
+  scrollbar-width: thin;
+  scroll-margin-top: 100px;
+}
+.report-page .tab {
+  padding: 16px 0;
+  border-radius: 0;
+  min-height: 54px;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  margin-bottom: 0;
+  gap: 6px;
+}
+.report-page .tab.active {
+  background: transparent;
+  box-shadow: none;
+  border-bottom-color: var(--ink);
+}
+.report-page .tab .count {
+  background: #e8ece3;
+  color: var(--muted);
+  padding: 1px 5px;
+  font-size: 10px;
+}
+.report-page .tab.active .count {
+  background: var(--ink);
+  color: white;
+}
+.report-page .report-panel {
+  outline-offset: 8px;
+}
+.section-heading {
+  margin-bottom: 24px;
+}
+.section-heading h2 {
+  margin: 0;
+  font-size: clamp(24px, 2.3vw, 30px);
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.section-heading .report-eyebrow {
+  margin-bottom: 8px;
+}
+.section-heading > p {
+  max-width: 680px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 12px 0 0;
+}
+.report-page .card {
+  box-shadow: none;
+  overflow: hidden;
+  min-width: 0;
+}
+.report-page .card-head {
+  padding: 18px 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.report-page .card-head h3 {
+  font-size: 14px;
+}
+.report-page .card-head .sub {
+  font-size: 11px;
+}
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+.finding-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.finding-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.finding-item:last-child {
+  border-bottom: 0;
+}
+.finding-number {
+  padding-top: 2px;
+  font: 11px/1.6 var(--font-mono);
+  color: var(--muted-2);
+}
+.finding-label {
+  display: inline-block;
+  font: 9px/1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.finding-label.bad {
+  color: var(--bad);
+}
+.finding-label.warn {
+  color: var(--warn);
+}
+.finding-label.good {
+  color: var(--good);
+}
+.finding-label.info {
+  color: var(--muted);
+}
+.finding-item h3 {
+  margin: 0 0 7px;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.finding-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.evidence-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.evidence-link:hover {
+  color: var(--good);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.overview-aside {
+  min-width: 0;
+}
+.overview-aside .kv-grid {
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 0 12px;
+}
+.overview-aside .kv-grid .k {
+  font-size: 9px;
+}
+.overview-aside .kv-grid .v {
+  font-size: 11px;
+}
+.report-scope {
+  padding: 28px 24px;
+  margin-top: 20px;
+  border-radius: 12px;
+  background: #edf0e7;
+}
+.report-scope h3 {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  margin: 0 0 10px;
+}
+.report-scope p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 0;
+}
+.header-observation {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+}
+.header-observation:last-child {
+  border-bottom: 0;
+}
+.header-observation > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.header-observation h4 {
+  margin: 0;
+  font: 12px/1.6 var(--font-mono);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.header-observation p {
+  color: var(--muted);
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.header-observation code {
+  display: block;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font: 11px/1.8 var(--font-mono);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+.cipher-group-label {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--bg-sub);
+  border-bottom: 1px solid var(--line);
+  font: 11px/1.5 var(--font-mono);
+}
+.cipher-group-label span {
+  color: var(--muted);
+}
+.cipher-detail {
+  border-bottom: 1px solid var(--line);
+}
+.cipher-detail:last-child {
+  border-bottom: 0;
+}
+.cipher-detail summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 24px;
+  list-style: none;
+  cursor: pointer;
+}
+.cipher-detail summary:hover {
+  background: var(--bg);
+}
+.cipher-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  font: 12px/1.7 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.cipher-identity small {
+  display: block;
+  color: var(--muted);
+  margin-top: 3px;
+  font-size: 10px;
+}
+.cipher-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cipher-badges .disclosure-plus {
+  margin-left: 12px;
+}
+.cipher-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  background: var(--bg);
+  margin: 0;
+  padding: 20px 24px 20px 48px;
+}
+.cipher-facts dt {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.cipher-facts dd {
+  margin: 0;
+  font: 12px/1.6 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.report-page .vuln-row {
+  align-items: start;
+  padding-block: 20px;
+}
+.report-page .vuln-row > :first-child {
+  padding-top: 6px;
+}
+.report-page .vuln-row p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.report-page .filters {
+  flex-wrap: wrap;
+}
+.report-page .chip {
+  min-height: 34px;
+}
+.report-page .proto-row {
+  padding-block: 18px;
+  gap: 16px;
+}
+.report-page .proto-name {
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.report-page .report-footer {
+  max-width: 1184px;
+  margin-top: 0;
+}
+@media (max-width: 1050px) {
+  .report-page .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .report-actions {
+    max-width: none;
+  }
+  .action-feedback {
+    position: static;
+    text-align: left;
+    margin-top: 6px;
+  }
+  .report-page .tabs {
+    gap: 20px;
+  }
+  .report-page .score-row {
+    grid-template-columns: 130px 1fr 48px;
+    gap: 10px;
+  }
+}
+@media (max-width: 800px) {
+  .report-page .page {
+    padding: 28px 24px 48px;
+  }
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .section-heading {
+    display: block;
+  }
+  .section-heading > p {
+    max-width: 560px;
+    margin-top: 12px;
+  }
+  .report-page .grade-cell {
+    padding-inline: 20px;
+  }
+  .report-page .grade-summary {
+    gap: 12px;
+  }
+  .report-page .grade-summary svg {
+    width: 68px;
+    height: 68px;
+  }
+  .report-page .grade-summary .grade-label {
+    font-size: 17px;
+  }
+  .report-page .grade-summary .grade-sub {
+    font-size: 10px;
+  }
+  .cipher-detail summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cipher-badges {
+    width: 100%;
+    padding-left: 24px;
+  }
+  .cipher-badges .disclosure-plus {
+    margin-left: auto;
+  }
+  .cipher-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .report-page .page {
+    padding: 24px 16px 40px;
+  }
+  .report-page .crumbs {
+    margin-bottom: 24px;
+  }
+  .report-page .h-title {
+    font-size: 30px;
+  }
+  .report-page .header {
+    margin-bottom: 20px;
+  }
+  .report-page .grade-panel {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .report-page .grade-cell {
+    padding-top: 20px;
+  }
+  .report-page .grade-summary {
+    gap: 20px;
+    padding-bottom: 20px;
+  }
+  .report-page .grade-summary svg {
+    width: 76px;
+    height: 76px;
+  }
+  .report-page .grade-summary .grade-label {
+    font-size: 19px;
+  }
+  .report-page .grade-summary .grade-sub {
+    font-size: 12px;
+  }
+  .partial-notice {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .report-page .tabs {
+    top: 64px;
+    gap: 22px;
+    margin-bottom: 24px;
+  }
+  .report-page .tab {
+    min-height: 48px;
+    padding-block: 12px;
+  }
+  .report-page .card-head {
+    padding: 16px 18px;
+  }
+  .finding-item {
+    padding: 22px 18px;
+    gap: 12px;
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+  .finding-item h3 {
+    font-size: 15px;
+  }
+  .header-observation {
+    padding: 18px;
+  }
+  .cipher-detail summary,
+  .cipher-group-label {
+    padding-inline: 18px;
+  }
+  .cipher-facts {
+    padding: 18px;
+  }
+  .report-page .vuln-row {
+    grid-template-columns: 8px minmax(0, 1fr);
+  }
+  .report-page .vuln-row > :last-child {
+    grid-column: 2;
+  }
+}
+
+.report-page .nav-inner {
+  max-width: 1264px;
+}
+.connection-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 24px;
+  gap: 24px;
+}
+.connection-facts dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.connection-facts dd {
+  margin: 0;
+  font: 12px/1.6 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .connection-facts {
+    grid-template-columns: 1fr;
+    padding: 18px;
+    gap: 18px;
+  }
+}
