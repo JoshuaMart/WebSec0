@@ -1,43 +1,36 @@
 ---
 import '../../styles/global.css';
+import Head from '../../components/Head.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
 import Report from '../../islands/Report.tsx';
 ---
 
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>WebSec0 — scan report</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <nav class="nav">
-      <div class="nav-inner">
-        <a href="/" class="brand" style="text-decoration:none;color:inherit">
-          <svg class="brand-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--good)" stroke-width="1.5" />
-            <circle cx="8" cy="8" r="3.5" fill="var(--ink)" />
-          </svg>
-          websec0
-        </a>
-        <div style="flex:1"></div>
-        <div class="nav-links">
-          <a href="/">New scan</a>
-          <a href="/api/v1/checks">Catalog</a>
-        </div>
-      </div>
-    </nav>
-
-    <main class="page">
+  <head
+    ><Head
+      title="Website security report | WebSec0"
+      description="TLS configuration, certificate and HTTP security header observations from your WebSec0 scan."
+      report
+    /></head
+  >
+  <body class="report-page">
+    <SiteHeader report />
+    <main class="page" id="main">
       <Report client:only="preact" />
+      <noscript
+        ><div class="card">
+          <div class="card-body">
+            Enable JavaScript to load this report. <a href="/"
+              >Return to WebSec0</a
+            >.
+          </div>
+        </div></noscript
+      >
     </main>
+    <footer class="report-footer">
+      WebSec0 · Observations at scan time. Grades describe configuration within
+      the checks performed.
+    </footer>
   </body>
 </html>

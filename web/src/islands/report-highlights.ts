@@ -329,8 +329,8 @@ export function deriveHighlights(data: ScanResult): Highlight[] {
   const top = all.slice(0, 6);
   if (top.length === 0) {
     top.push({
-      title: 'No notable findings yet',
-      body: 'The scan completed without highlights to surface.',
+      title: !data.tls && !data.headers ? 'Assessment unavailable' : 'No highlights to display',
+      body: 'Review the available observations in each section. Missing data does not establish a passing result.',
       level: 'info',
     });
   }

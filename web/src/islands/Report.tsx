@@ -83,9 +83,21 @@ export default function Report() {
     <div>
       <Crumbs host={data.host} />
       <Header data={data} />
+      <div class="report-intro">
+        <h2>Configuration at a glance</h2>
+        <p>Two independent grades. Open a section for the evidence.</p>
+      </div>
       <GradePanel data={data} />
       <Tabs active={tab} onChange={setTab} data={data} />
-      <TabPanel id={tab} data={data} />
+      <div
+        class="report-panel"
+        role="tabpanel"
+        id={`panel-${tab}`}
+        aria-labelledby={`tab-${tab}`}
+        tabIndex={0}
+      >
+        <TabPanel id={tab} data={data} />
+      </div>
     </div>
   );
 }
@@ -216,7 +228,7 @@ function TrustPill({ trust }: { trust?: string }) {
   );
 }
 
-function GradePanel({ data }: { data: ScanResult }) {
+export function GradePanel({ data }: { data: ScanResult }) {
   const tlsGrade = data.tls?.grade ?? '';
   const tlsScore = data.tls?.scores.final ?? 0;
   const headersGrade = data.headers?.grade ?? '';
@@ -228,7 +240,7 @@ function GradePanel({ data }: { data: ScanResult }) {
           label="TLS grade"
           grade={tlsGrade}
           score={tlsScore}
-          sub={prettyTrust(data.tls?.chain_trust)}
+          sub={data.tls ? prettyTrust(data.tls.chain_trust) : 'TLS assessment unavailable'}
         />
         {data.tls && (
           <div class="score-list" style={{ marginTop: 24 }}>
@@ -245,7 +257,7 @@ function GradePanel({ data }: { data: ScanResult }) {
           grade={headersGrade}
           score={headersScore}
           sub={
-            data.headers?.probed_host
+            !data.headers ? 'HTTP headers assessment unavailable' : data.headers.probed_host
               ? `${headersScore}/100 · via ${data.headers.probed_host}`
               : `${headersScore}/100`
           }
@@ -278,10 +290,12 @@ function GradeCard({
   sub: string;
 }) {
   return (
-    <div style={{ display: 'grid', placeItems: 'center', padding: '8px 0 4px' }}>
+    <div class="grade-summary">
       <GradeRing grade={grade} score={score} />
-      <div class="grade-label">{label}</div>
-      <div class="grade-sub">{sub || ''}</div>
+      <div>
+        <h3 class="grade-label">{label}</h3>
+        <div class="grade-sub">{sub || ''}</div>
+      </div>
     </div>
   );
 }
@@ -299,7 +313,7 @@ function GradeRing({ grade, score }: { grade: string; score: number }) {
   const color = gradeColorVar(grade);
   const showGrade = grade || '—';
   return (
-    <svg viewBox="0 0 168 168" width="132" height="132" aria-label={`Grade ${showGrade}`}>
+    <svg role="img" viewBox="0 0 168 168" width="132" height="132" aria-label={`Grade ${showGrade}`}>
       <circle cx="84" cy="84" r={r} fill="var(--ink)" />
       <circle cx="84" cy="84" r={r} fill="none" stroke="var(--line)" stroke-width="6" />
       <circle
@@ -332,7 +346,8 @@ function GradeRing({ grade, score }: { grade: string; score: number }) {
 function gradeColorVar(grade: string): string {
   if (grade === 'A+' || grade === 'A') return 'var(--good)';
   if (grade === 'B' || grade === 'C') return 'var(--warn)';
-  return 'var(--bad)';
+  if (['D', 'E', 'F', 'T'].includes(grade)) return 'var(--bad)';
+  return 'var(--muted-2)';
 }
 
 function prettyTrust(trust?: string): string {
@@ -403,12 +418,30 @@ export function Tabs({
   ];
   if (data.email) tabs.push({ id: 'email', label: 'Email security' });
   return (
-    <div class="tabs" role="tablist">
+    <div class="tabs" role="tablist" aria-label="Report sections">
       {tabs.map((t) => (
         <button
           key={t.id}
           class={'tab' + (active === t.id ? ' active' : '')}
+          type="button"
+          role="tab"
+          id={`tab-${t.id}`}
+          aria-selected={active === t.id}
+          aria-controls={active === t.id ? `panel-${t.id}` : undefined}
+          tabIndex={active === t.id ? 0 : -1}
           onClick={() => onChange(t.id)}
+          onKeyDown={(event) => {
+            const index = tabs.findIndex((item) => item.id === t.id);
+            let next: number;
+            if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+            else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = tabs.length - 1;
+            else return;
+            event.preventDefault();
+            onChange(tabs[next].id);
+            document.getElementById(`tab-${tabs[next].id}`)?.focus();
+          }}
         >
           {t.label}
           {t.count != null && <span class="count">{t.count}</span>}
@@ -459,7 +492,7 @@ function Overview({ data }: { data: ScanResult }) {
         <div class="card">
           <div class="card-head">
             <h3>Highlights</h3>
-            <span class="sub">{highlights.length} findings</span>
+            <span class="sub">Key observations</span>
           </div>
           <div class="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {highlights.map((h, i) => (
@@ -498,12 +531,12 @@ function Overview({ data }: { data: ScanResult }) {
               <div class="k">TLS versions</div>
               <div class="v">{offeredProtos.join(', ') || '—'}</div>
               <div class="k">Cipher count</div>
-              <div class="v">{tls?.ciphers?.length ?? 0} offered</div>
+              <div class="v">{tls ? `${tls.ciphers?.length ?? 0} offered` : 'Not assessed'}</div>
               <div class="k">Cipher preference</div>
               <div class="v">{tls?.cipher_preference || '—'}</div>
               <div class="k">OCSP stapling</div>
               <div class="v">
-                {tls?.ocsp_stapling ? `yes (${tls.ocsp_status || 'unknown'})` : 'no'}
+                {!tls ? 'Not assessed' : tls.ocsp_stapling ? `yes (${tls.ocsp_status || 'unknown'})` : 'no'}
               </div>
               <div class="k">Session resumption</div>
               <div class="v">{tls?.session_resumption || '—'}</div>
@@ -553,7 +586,10 @@ function CertificateTab({ chain }: { chain: Certificate[] }) {
           const isOpen = !!open[i];
           return (
             <div key={i} class={'cert-node' + (isOpen ? ' open' : '')}>
-              <div
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                aria-controls={isOpen ? `certificate-${i}` : undefined}
                 class="cert-head"
                 onClick={() => setOpen({ ...open, [i]: !isOpen })}
               >
@@ -595,9 +631,9 @@ function CertificateTab({ chain }: { chain: Certificate[] }) {
                     <path d="M6 4l4 4-4 4" />
                   </svg>
                 </div>
-              </div>
+              </button>
               {isOpen && (
-                <div class="cert-body">
+                <div class="cert-body" id={`certificate-${i}`}>
                   <div class="k">Subject CN</div>
                   <div class="v">{c.cn || '—'}</div>
                   <div class="k">Issuer</div>
@@ -1245,7 +1281,7 @@ function EmptyCard({ message }: { message: string }) {
 
 function LoadingState() {
   return (
-    <div style={{ padding: 80, textAlign: 'center', color: 'var(--muted)' }}>
+    <div role="status" style={{ padding: '60px 16px', textAlign: 'center', color: 'var(--muted)' }}>
       <div class="scan-title" style={{ justifyContent: 'center', marginBottom: 12 }}>
         <span class="spinner" />
         Loading scan…
@@ -1257,7 +1293,7 @@ function LoadingState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div class="card" style={{ maxWidth: 640, margin: '60px auto' }}>
+    <div class="card" role="alert" style={{ maxWidth: 640, margin: '60px auto' }}>
       <div class="card-head">
         <h3>Couldn't load scan</h3>
       </div>

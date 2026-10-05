@@ -1,0 +1,50 @@
+---
+interface Props {
+  report?: boolean;
+}
+const { report = false } = Astro.props;
+---
+
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="nav">
+  <nav class="nav-inner" aria-label="Main navigation">
+    <a href="/" class="brand" aria-label="WebSec0 home">
+      <svg
+        class="brand-mark"
+        width="26"
+        height="26"
+        viewBox="0 0 26 26"
+        aria-hidden="true"
+      >
+        <rect x="1" y="1" width="24" height="24" rx="8" fill="var(--ink)"
+        ></rect>
+        <circle
+          cx="13"
+          cy="13"
+          r="7"
+          fill="none"
+          stroke="#b6e5a4"
+          stroke-width="1.5"></circle>
+        <circle cx="13" cy="13" r="2.5" fill="#b6e5a4"></circle>
+      </svg>
+      websec<span class="brand-zero">0</span>
+    </a>
+    <div class="nav-links">
+      {
+        report ? (
+          <a href="/">
+            New scan <span aria-hidden="true">↗</span>
+          </a>
+        ) : (
+          <a href="#coverage">What we check</a>
+        )
+      }
+      <a href={report ? '/api/v1/checks' : '#how-it-works'}
+        >{report ? 'Check catalog' : 'How it works'}</a
+      >
+      <a class="nav-github" href="https://github.com/JoshuaMart/WebSec0"
+        >GitHub <span aria-hidden="true">↗</span></a
+      >
+    </div>
+  </nav>
+</header>
