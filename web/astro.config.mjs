@@ -5,6 +5,7 @@ import preact from '@astrojs/preact';
 // SPEC §3 — Astro static + Preact islands. The whole build is //go:embed-ed
 // into the websec0 binary, so we keep the output fully static.
 export default defineConfig({
+  site: process.env.PUBLIC_SITE_URL || 'https://www.websec0.com',
   output: 'static',
   compressHTML: true,
   integrations: [preact()],

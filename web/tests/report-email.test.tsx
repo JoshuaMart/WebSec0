@@ -3,11 +3,19 @@ import test from 'node:test';
 import render from 'preact-render-to-string';
 import { TabPanel, Tabs } from '../src/islands/Report.tsx';
 import { deriveHighlights } from '../src/islands/report-highlights.ts';
-import type { DNSRecord, EmailReport, ScanResult } from '../src/islands/report-types.ts';
+import type {
+  DNSRecord,
+  EmailReport,
+  ScanResult,
+} from '../src/islands/report-types.ts';
 
 const metadata: ScanResult = {
-  id: 'fixture', host: 'www.example.com', port: 443, resolved_ip: '',
-  scanned_at: '2026-01-01T00:00:00Z', duration_ms: 0,
+  id: 'fixture',
+  host: 'www.example.com',
+  port: 443,
+  resolved_ip: '',
+  scanned_at: '2026-01-01T00:00:00Z',
+  duration_ms: 0,
 };
 
 function report(state: DNSRecord['state'] = 'observed'): EmailReport {
@@ -15,8 +23,13 @@ function report(state: DNSRecord['state'] = 'observed'): EmailReport {
     domain: 'example.com',
     spf: { id: 'email.spf', state, records: [], warnings: [], includes: [] },
     dmarc: {
-      id: 'email.dmarc', state, records: [], warnings: [],
-      inherited: false, testing: false, queries: ['_dmarc.example.com'],
+      id: 'email.dmarc',
+      state,
+      records: [],
+      warnings: [],
+      inherited: false,
+      testing: false,
+      queries: ['_dmarc.example.com'],
     },
   };
 }
@@ -43,11 +56,21 @@ test('email tab identifies the selected domain and stays informational', () => {
   assert.match(html, /Published at.*_dmarc.example.com/);
   assert.match(html, /Static include\/redirect dependencies are inspected/);
   assert.match(html, /DKIM is not assessed/);
-  assert.deepEqual(deriveHighlights({ ...metadata, email }), deriveHighlights(metadata));
+  assert.deepEqual(
+    deriveHighlights({ ...metadata, email }),
+    deriveHighlights(metadata),
+  );
 });
 
 test('old reports and skipped subdomains have no email tab or implied absence', () => {
-  const tabs = (email?: EmailReport) => render(<Tabs active="overview" onChange={() => {}} data={{ ...metadata, email }} />);
+  const tabs = (email?: EmailReport) =>
+    render(
+      <Tabs
+        active="overview"
+        onChange={() => {}}
+        data={{ ...metadata, email }}
+      />,
+    );
   assert.doesNotMatch(tabs(), /Email security/);
   assert.match(tabs(report()), /Email security/);
   assert.match(panel(), /not assessed/);
@@ -62,8 +85,12 @@ test('DNS absence, invalid records and lookup failures stay distinct', () => {
   ] as const) {
     const html = panel(report(state));
     assert.match(html, new RegExp(expected));
-    assert.doesNotMatch(html, /Requested policy|First catch-all|Record observed/);
-    if (state !== 'absent') assert.doesNotMatch(html, /No record found|No SPF TXT record was found/);
+    assert.doesNotMatch(
+      html,
+      /Requested policy|First catch-all|Record observed/,
+    );
+    if (state !== 'absent')
+      assert.doesNotMatch(html, /No record found|No SPF TXT record was found/);
   }
 });
 
@@ -71,8 +98,12 @@ test('parent policy and testing mode are displayed without attributing the TXT t
   const email = report();
   email.domain = 'tenant.github.io';
   email.dmarc = {
-    ...email.dmarc, policy: 'quarantine', policy_domain: 'github.io',
-    policy_tag: 'sp', inherited: true, testing: true,
+    ...email.dmarc,
+    policy: 'quarantine',
+    policy_domain: 'github.io',
+    policy_tag: 'sp',
+    inherited: true,
+    testing: true,
     queries: ['_dmarc.tenant.github.io', '_dmarc.github.io'],
   };
   const html = panel(email);
@@ -97,20 +128,27 @@ test('softfail and DMARC without rua provide actionable verdicts without claimin
   const email = report();
   email.spf.all = '~all';
   email.spf.assessment = {
-    status: 'info', title: 'SPF softfail policy',
+    status: 'info',
+    title: 'SPF softfail policy',
     summary: 'This is a valid policy, not a configuration error.',
     recommendations: ['Confirm that every legitimate sender is covered.'],
   };
   email.spf.audit = {
-    complete: true, lookup_terms: 1, lookup_limit_exceeded: false,
-    queries: ['example.com', 'mx.provider.example.com'], issues: [], limitations: [],
+    complete: true,
+    lookup_terms: 1,
+    lookup_limit_exceeded: false,
+    queries: ['example.com', 'mx.provider.example.com'],
+    issues: [],
+    limitations: [],
   };
   email.dmarc.policy = 'none';
   email.dmarc.reporting_state = 'absent';
   email.dmarc.reporting_uris = [];
   email.dmarc.assessment = {
-    status: 'warn', title: 'No enforcement or reports',
-    summary: 'No rejection, quarantine or usable aggregate reporting destination.',
+    status: 'warn',
+    title: 'No enforcement or reports',
+    summary:
+      'No rejection, quarantine or usable aggregate reporting destination.',
     recommendations: ['Add a valid rua reporting address.'],
   };
   const html = panel(email);
@@ -120,25 +158,35 @@ test('softfail and DMARC without rua provide actionable verdicts without claimin
   assert.match(html, /Not requested \(no rua\)/);
   assert.match(html, /Recommended next steps/);
   assert.match(html, /Add a valid rua/);
-  assert.match(html, /class="pill warn">Review/);
-  assert.doesNotMatch(html, /monitoring|Record observed|Invalid SPF configuration/);
-  assert.match(html, /<details><summary>Technical details/);
+  assert.match(html, /class="pill warn">Needs improvement/);
+  assert.doesNotMatch(
+    html,
+    /monitoring|Record observed|Invalid SPF configuration/,
+  );
+  assert.match(
+    html,
+    /<details class="email-evidence"><summary>View DNS records &amp; check details/,
+  );
 });
 
 test('broken dependencies surface their diagnostics and a correction', () => {
   const email = report();
   email.spf.assessment = {
-    status: 'fail', title: 'Broken SPF dependencies',
+    status: 'fail',
+    title: 'Broken SPF dependencies',
     summary: 'A referenced policy is missing.',
     recommendations: ['Correct the include at missing.example.com.'],
   };
   email.spf.audit = {
-    complete: false, lookup_terms: 1, lookup_limit_exceeded: false,
+    complete: false,
+    lookup_terms: 1,
+    lookup_limit_exceeded: false,
     queries: ['example.com', 'missing.example.com'],
-    issues: ['No SPF policy at missing.example.com.'], limitations: [],
+    issues: ['No SPF policy at missing.example.com.'],
+    limitations: [],
   };
   const html = panel(email);
-  assert.match(html, /class="pill bad">Error/);
+  assert.match(html, /class="pill bad">Needs fixing/);
   assert.match(html, /Broken SPF dependencies/);
   assert.match(html, /No SPF policy at missing.example.com/);
   assert.doesNotMatch(html, /no dependency errors detected/);
@@ -147,12 +195,15 @@ test('broken dependencies surface their diagnostics and a correction', () => {
 test('partial SPF audit never claims all dependencies passed', () => {
   const email = report();
   email.spf.audit = {
-    complete: false, lookup_terms: 1, lookup_limit_exceeded: false,
-    queries: ['example.com'], issues: [],
+    complete: false,
+    lookup_terms: 1,
+    lookup_limit_exceeded: false,
+    queries: ['example.com'],
+    issues: [],
     limitations: ['Macro-based dependencies need sender context.'],
   };
   const html = panel(email);
-  assert.match(html, /Partial verification/);
+  assert.match(html, /Verification incomplete/);
   assert.match(html, /Macro-based dependencies need sender context/);
   assert.doesNotMatch(html, /no dependency errors detected/);
 });
@@ -171,4 +222,40 @@ test('reporting is not inferred for old reports and invalid destinations are exp
   assert.match(html, /Aggregate reports: <strong>Requested/);
   assert.match(html, /mailto:reports@example.com/);
   assert.doesNotMatch(html, /href="mailto:/);
+});
+
+test('plain-language email summary explains softfail and missing DMARC before technical evidence', () => {
+  const email = report();
+  email.spf.assessment = {
+    status: 'info',
+    title: 'SPF softfail policy',
+    summary: 'Scanner source summary.',
+    recommendations: [],
+  };
+  email.spf.all = '~all';
+  email.dmarc.state = 'absent';
+  const html = panel(email);
+  assert.match(html, /Who is allowed to send/);
+  assert.match(html, /Softfail \(~all\)/);
+  assert.match(html, /rejection is not required/);
+  assert.match(html, /Missing policy/);
+  assert.match(html, /Confirm whether this domain sends email/);
+  assert.ok(
+    html.indexOf('Softfail (~all)') < html.indexOf('Scanner source summary'),
+  );
+});
+
+test('unfamiliar assessments retain their evidence and recommended action', () => {
+  const email = report();
+  email.spf.assessment = {
+    status: 'fail',
+    title: 'New policy problem',
+    summary: 'Explanation from the scanner.',
+    recommendations: ['Correct the published rule.'],
+  };
+  const html = panel(email);
+  assert.match(html, /New policy problem/);
+  assert.match(html, /Explanation from the scanner/);
+  assert.match(html, /Correct the published rule/);
+  assert.match(html, /Needs fixing/);
 });

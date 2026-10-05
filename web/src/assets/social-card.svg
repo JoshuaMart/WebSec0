@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>WebSec0 — Your website’s security, in focus.</title>
+  <rect width="1200" height="630" fill="#f7f8f4"/>
+  <g transform="translate(60 48)">
+    <rect width="40" height="40" rx="13" fill="#1c2921"/>
+    <circle cx="20" cy="20" r="11" fill="none" stroke="#b6e5a4" stroke-width="2"/>
+    <circle cx="20" cy="20" r="4" fill="#b6e5a4"/>
+    <text x="54" y="30" font-family="Helvetica, Arial, sans-serif" font-size="31" font-weight="700" letter-spacing="-1.2" fill="#1c2921">websec<tspan fill="#367047">0</tspan></text>
+  </g>
+  <g font-family="Helvetica, Arial, sans-serif">
+    <circle cx="845" cy="69" r="5" fill="#367047"/>
+    <text x="862" y="75" font-size="16" fill="#626d62">FREE WEBSITE SECURITY CHECKER</text>
+    <text x="60" y="214" font-size="68" font-weight="700" letter-spacing="-3" fill="#1c2921">Your website’s</text>
+    <text x="60" y="291" font-size="68" font-weight="700" letter-spacing="-3" fill="#1c2921">security, <tspan fill="#367047">in focus.</tspan></text>
+    <text x="64" y="357" font-size="24" fill="#626d62">Understand your configuration.</text>
+    <text x="64" y="394" font-size="24" fill="#626d62">Know what needs attention.</text>
+    <g transform="translate(64 444)" font-size="16" fill="#344438">
+      <rect width="100" height="36" rx="6" fill="#eaf0e3"/>
+      <text x="19" y="24">SSL / TLS</text>
+      <rect x="112" width="120" height="36" rx="6" fill="#eaf0e3"/>
+      <text x="126" y="24">Certificates</text>
+      <rect x="244" width="145" height="36" rx="6" fill="#eaf0e3"/>
+      <text x="258" y="24">HTTP headers</text>
+    </g>
+    <path d="M60 538H1140" stroke="#d8ded2"/>
+    <text x="60" y="582" font-size="19" fill="#1c2921">websec0.com</text>
+    <text x="1140" y="582" text-anchor="end" font-size="18" fill="#626d62">Free to use. No account needed.</text>
+  </g>
+<svg
+    
+    x="704" y="167" width="448" height="308" viewBox="0 0 480 330"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <defs>
+      <linearGradient
+        id="layer-fill"
+        x1="0"
+        y1="0"
+        x2="150"
+        y2="150"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stop-color="#fcfdf9"></stop>
+        <stop offset="1" stop-color="#e8efdf"></stop>
+      </linearGradient>
+      <linearGradient
+        id="layer-glow"
+        x1="0"
+        y1="0"
+        x2="150"
+        y2="150"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stop-color="#d4edbc"></stop>
+        <stop offset="1" stop-color="#eff7e6"></stop>
+      </linearGradient>
+    </defs>
+    <ellipse cx="240" cy="292" rx="122" ry="17" fill="#dce5d3" opacity=".4"
+    ></ellipse>
+    <g stroke="#b5c4ac" stroke-width="1" stroke-dasharray="3 5">
+      <path d="M90 115v110M390 115v110M240 190v110"></path>
+    </g>
+    <g >
+      <g transform="matrix(1 .5 -1 .5 240 140)">
+        <rect
+          x="0"
+          y="7"
+          width="150"
+          height="150"
+          rx="9"
+          fill="#e1e9d9"
+          stroke="#9aad8e"></rect>
+        <rect
+          width="150"
+          height="150"
+          rx="9"
+          fill="url(#layer-fill)"
+          stroke="#88a17b"></rect>
+        <path
+          d="M35 35h80L75 75l40 40H35l40-40zM35 35l40 40"
+          stroke="#9eb68e"
+          stroke-width="1.5"></path>
+        <g fill="#f7faf3" stroke="#799669" stroke-width="1.5">
+          <circle cx="35" cy="35" r="8"></circle><circle cx="115" cy="35" r="8"
+          ></circle>
+          <circle cx="35" cy="115" r="8"></circle><circle
+            cx="115"
+            cy="115"
+            r="8"></circle>
+          <circle cx="75" cy="75" r="11" fill="#d2e8bd"></circle>
+        </g>
+        <circle  cx="75" cy="75" r="5" fill="#63964b"
+        ></circle>
+      </g>
+    </g>
+    <g >
+      <g transform="matrix(1 .5 -1 .5 240 85)">
+        <rect
+          x="0"
+          y="6"
+          width="150"
+          height="150"
+          rx="9"
+          fill="#e0ebd5"
+          stroke="#8faa7e"></rect>
+        <rect
+          width="150"
+          height="150"
+          rx="9"
+          fill="url(#layer-glow)"
+          stroke="#74985f"></rect>
+        <path d="M18 28h32M18 36h20M101 116h30M113 124h18" stroke="#9cb58c"
+        ></path>
+        <g transform="translate(32 32)">
+          <rect
+            x="52"
+            y="65"
+            width="46"
+            height="39"
+            rx="7"
+            fill="#f7fbef"
+            stroke="#567e45"
+            stroke-width="2"></rect>
+          <path
+            d="M61 65V51a14 14 0 0 1 28 0v14"
+            stroke="#567e45"
+            stroke-width="2.5"></path>
+          <circle cx="75" cy="81" r="4" fill="#567e45"></circle><path
+            d="M75 84v8"
+            stroke="#567e45"
+            stroke-width="2"></path>
+        </g>
+        <path
+          
+          d="m112 37 5 5 10-12"
+          stroke="#567e45"
+          stroke-width="2.5"></path>
+      </g>
+    </g>
+    <g >
+      <g transform="matrix(1 .5 -1 .5 240 30)">
+        <rect
+          x="0"
+          y="6"
+          width="150"
+          height="150"
+          rx="9"
+          fill="#e7eede"
+          stroke="#8da27f"></rect>
+        <rect
+          width="150"
+          height="150"
+          rx="9"
+          fill="url(#layer-fill)"
+          stroke="#6b8d59"
+          stroke-width="1.2"></rect>
+        <path d="M0 25h150" stroke="#9aaf8d"></path>
+        <g fill="#b9cdaa"
+          ><circle cx="13" cy="13" r="2.5"></circle><circle
+            cx="23"
+            cy="13"
+            r="2.5"></circle><circle cx="33" cy="13" r="2.5"></circle></g
+        >
+        <rect x="51" y="8" width="79" height="9" rx="4.5" stroke="#c0cfb5"
+        ></rect>
+        <rect
+          x="16"
+          y="41"
+          width="51"
+          height="89"
+          rx="5"
+          fill="#f6f9f1"
+          stroke="#b1c2a3"></rect>
+        <path
+          d="M26 55h30M26 64h22M26 87h26M26 96h21M26 105h25"
+          stroke="#a0b691"
+          stroke-width="1.5"></path>
+        <rect
+          x="80"
+          y="41"
+          width="53"
+          height="36"
+          rx="5"
+          fill="#dfedcf"
+          stroke="#a6bd94"></rect>
+        <path d="m95 58 6 6 15-15" stroke="#62864d" stroke-width="2"></path>
+        <rect x="80" y="88" width="53" height="42" rx="5" stroke="#b1c2a3"
+        ></rect>
+        <path d="M89 100h34M89 109h25M89 118h30" stroke="#a0b691"></path>
+      </g>
+    </g>
+  </svg>
+</svg>
