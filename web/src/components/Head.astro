@@ -6,6 +6,9 @@ interface Props {
 }
 const { title, description, report = false } = Astro.props;
 const canonical = new URL('/', Astro.site);
+const socialImage = new URL('/og-websec0.png', Astro.site);
+const socialImageAlt =
+  'WebSec0 — Your website’s security, in focus. SSL/TLS, certificate and HTTP header checks, illustrated as layers of a website.';
 ---
 
 <meta charset="utf-8" />
@@ -19,16 +22,25 @@ const canonical = new URL('/', Astro.site);
   ) : (
     <>
       <link rel="canonical" href={canonical} />
-      <meta property="og:type" content="website" />
-      <meta property="og:site_name" content="WebSec0" />
       <meta property="og:url" content={canonical} />
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
-      <meta name="twitter:card" content="summary" />
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
     </>
   )
 }
+<!-- Reports use this generic preview: the static shell contains no scan data. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="WebSec0" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={socialImage} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content={socialImageAlt} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={socialImage} />
+<meta name="twitter:image:alt" content={socialImageAlt} />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
