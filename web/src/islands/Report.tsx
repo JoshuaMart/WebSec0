@@ -1,5 +1,6 @@
 // Report island mounted at /r/{id}.
 
+import { splitWeaknesses } from './report-weaknesses.ts';
 import { EmailTab } from './EmailTab.tsx';
 import { useEffect, useState } from 'preact/hooks';
 import { deriveHighlights, statusSev } from './report-highlights.ts';
@@ -152,7 +153,14 @@ export default function Report() {
 }
 
 function PartialScanNotice({ tls }: { tls?: TLSReport }) {
-  if (tls?.scan_status !== 'partial_blocked') return null;
+  if (
+    tls?.scan_status !== 'partial_blocked' &&
+    !tls?.vulnerabilities?.some(
+      (finding) =>
+        finding.id === 'vuln.scan_blocked' && finding.state === 'Partial',
+    )
+  )
+    return null;
   return (
     <aside class="partial-notice" aria-label="Scan completeness">
       <span class="pill info">Partial scan</span>
@@ -518,9 +526,9 @@ const sectionDetails: Record<TabId, { title: string; description: string }> = {
       'Additional observations provide context without changing the TLS or Headers grades.',
   },
   email: {
-    title: 'Email policy observations.',
+    title: 'Email configuration.',
     description:
-      'SPF and DMARC findings are informational and do not change the two grades.',
+      'Policy validity, requested protection and verification status, at a glance.',
   },
 };
 
@@ -554,7 +562,9 @@ export function Tabs({
     {
       id: 'vulns',
       label: 'Weaknesses',
-      count: data.tls?.vulnerabilities?.length,
+      count: data.tls?.vulnerabilities
+        ? splitWeaknesses(data.tls.vulnerabilities).assessed.length
+        : undefined,
     },
     { id: 'custom', label: 'Other checks', count: data.custom?.length },
   ];
@@ -1293,71 +1303,93 @@ function HeaderObservation({
 
 function VulnsTab({ vulns }: { vulns: Vuln[] }) {
   const [filter, setFilter] = useState<'all' | Severity>('all');
-  if (!vulns.length)
-    return <EmptyCard message="No vulnerability checks performed." />;
-  const counts: Record<string, number> = { all: vulns.length };
-  for (const v of vulns) counts[v.level] = (counts[v.level] || 0) + 1;
-  const visible = vulns.filter((v) => filter === 'all' || v.level === filter);
-
-  const sev = [
-    { id: 'all', label: 'All' },
+  const { assessed, unassessed } = splitWeaknesses(vulns);
+  const counts: Record<string, number> = { all: assessed.length };
+  for (const finding of assessed)
+    counts[finding.level] = (counts[finding.level] || 0) + 1;
+  const visible = assessed.filter(
+    (finding) => filter === 'all' || finding.level === filter,
+  );
+  const filters = [
+    { id: 'all', label: 'All results' },
     { id: 'bad', label: 'Failed' },
-    { id: 'warn', label: 'Warning' },
+    { id: 'warn', label: 'Review' },
     { id: 'good', label: 'Passed' },
     { id: 'info', label: 'Info' },
   ] as const;
-
   return (
-    <div class="card">
-      <div class="card-head">
-        <h3>Weakness indicators</h3>
-        <div class="filters">
-          {sev.map((s) => (
-            <button
-              key={s.id}
-              class={'chip' + (filter === s.id ? ' on' : '')}
-              type="button"
-              aria-pressed={filter === s.id}
-              onClick={() => setFilter(s.id as typeof filter)}
-            >
-              {s.label}
-              <span class="ct">{counts[s.id] || 0}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div class="card-body flush">
-        {visible.map((v) => (
-          <div class="vuln-row" key={v.id}>
-            <div>
-              <span class={`sev ${v.level}`} />
+    <div class="section">
+      <div class="card">
+        <div class="card-head">
+          <h3>Checks with results</h3>
+          {!!assessed.length && (
+            <div class="filters">
+              {filters
+                .filter((item) => item.id === 'all' || counts[item.id])
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    class={'chip' + (filter === item.id ? ' on' : '')}
+                    type="button"
+                    aria-pressed={filter === item.id}
+                    onClick={() => setFilter(item.id)}
+                  >
+                    {item.label}
+                    <span class="ct">{counts[item.id] || 0}</span>
+                  </button>
+                ))}
             </div>
-            <div>
-              <h4>{v.title || v.id}</h4>
-              <p>{v.body}</p>
-              <div class="cve">
-                {v.state}
-                {v.cve ? ` · ${v.cve}` : ''}
+          )}
+        </div>
+        <div class="card-body flush">
+          {visible.map((finding) => (
+            <div class="vuln-row" key={finding.id}>
+              <div>
+                <span class={`sev ${finding.level}`} />
+              </div>
+              <div>
+                <h4>{finding.title || finding.id}</h4>
+                <p>{finding.body}</p>
+                <div class="cve">
+                  {finding.state}
+                  {finding.cve ? ` · ${finding.cve}` : ''}
+                </div>
+              </div>
+              <div>
+                <SevPill level={finding.level} />
               </div>
             </div>
-            <div>
-              <SevPill level={v.level} />
-            </div>
-          </div>
-        ))}
-        {!visible.length && (
-          <div
-            style={{
-              padding: 40,
-              textAlign: 'center',
-              color: 'var(--muted)',
-              fontSize: 13,
-            }}
-          >
-            No findings at this severity.
-          </div>
-        )}
+          ))}
+          {!visible.length && (
+            <p class="weakness-empty">
+              {assessed.length
+                ? 'No results match this filter.'
+                : 'No assessed weakness checks are available in this report.'}
+            </p>
+          )}
+        </div>
       </div>
+      {!!unassessed.length && (
+        <details class="coverage-details">
+          <summary>
+            Checks outside this scan <span>{unassessed.length}</span>
+          </summary>
+          <div class="coverage-body">
+            <p>These checks have no result and are not counted as passes.</p>
+            <ul>
+              {unassessed.map((finding) => (
+                <li key={finding.id}>
+                  <div>
+                    <strong>{finding.title || finding.id}</strong>
+                    {finding.cve && <span class="mono">{finding.cve}</span>}
+                  </div>
+                  <p>{finding.body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      )}
     </div>
   );
 }

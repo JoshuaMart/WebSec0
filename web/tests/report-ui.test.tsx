@@ -165,3 +165,71 @@ test('expired certificate and configuration indicators are accurately qualified'
     /are exploitable|only -2 days/,
   );
 });
+
+test('weakness results separate scan metadata and unassessed coverage', () => {
+  const data = {
+    ...metadata,
+    tls: {
+      ...reportFixture.tls!,
+      vulnerabilities: [
+        {
+          id: 'vuln.scan_blocked',
+          title: 'Partial scan',
+          state: 'Complete',
+          level: 'info' as const,
+          body: 'Scan completed without interruption.',
+        },
+        {
+          id: 'vuln.crime',
+          title: 'CRIME',
+          state: 'Not assessed',
+          level: 'info' as const,
+          body: 'No implementation available.',
+        },
+        {
+          id: 'vuln.poodle',
+          title: 'POODLE',
+          state: 'Not vulnerable',
+          level: 'good' as const,
+          body: 'SSLv3 is disabled.',
+        },
+      ],
+    },
+  };
+  const html = render(<TabPanel id="vulns" data={data} />);
+  const [results, coverage] = html.split('<details class="coverage-details">');
+  assert.doesNotMatch(
+    results,
+    /Partial scan|Scan completed|CRIME|Not assessed/,
+  );
+  assert.match(results, /POODLE/);
+  assert.match(coverage, /Checks outside this scan/);
+  assert.match(coverage, /CRIME/);
+  assert.doesNotMatch(coverage, / open[=>]/);
+  assert.match(
+    render(<Tabs data={data} active="vulns" onChange={() => {}} />),
+    /Weaknesses<span class="count">1<\/span>/,
+  );
+});
+
+test('an entirely unassessed weakness list never becomes a passing report', () => {
+  const data = {
+    ...metadata,
+    tls: {
+      ...reportFixture.tls!,
+      vulnerabilities: [
+        {
+          id: 'vuln.crime',
+          title: 'CRIME',
+          state: 'Not assessed',
+          level: 'info' as const,
+          body: 'Outside coverage.',
+        },
+      ],
+    },
+  };
+  const html = render(<TabPanel id="vulns" data={data} />);
+  assert.match(html, /No assessed weakness checks/);
+  assert.match(html, /not counted as passes/);
+  assert.doesNotMatch(html, />Passed</);
+});

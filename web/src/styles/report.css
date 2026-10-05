@@ -678,3 +678,340 @@
     gap: 18px;
   }
 }
+
+/* Keep coverage gaps available without mixing them into assessed findings. */
+.weakness-empty {
+  margin: 0;
+  padding: 32px 24px;
+  color: var(--muted);
+}
+.coverage-details {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.coverage-details > summary {
+  cursor: pointer;
+  padding: 18px 22px;
+  color: var(--ink-2);
+}
+.coverage-details > summary > span {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--bg-sub);
+  font: 11px/1.6 var(--font-mono);
+}
+.coverage-body {
+  padding: 0 22px 20px;
+  line-height: 1.8;
+}
+.coverage-body > p {
+  margin: 0 0 8px;
+}
+.coverage-body ul {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.coverage-body li {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.coverage-body li > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  color: var(--ink-2);
+}
+.coverage-body li .mono {
+  font-size: 11px;
+  color: var(--muted);
+}
+.coverage-body li p {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.email-domain {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.email-domain strong {
+  display: inline-block;
+  color: var(--ink-2);
+  font-weight: 500;
+  margin-left: 6px;
+  overflow-wrap: anywhere;
+}
+.email-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+.report-page .email-policy .card-head {
+  align-items: flex-start;
+}
+.report-page .email-policy h3 {
+  font-size: 18px;
+}
+.email-purpose {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.email-policy-body {
+  display: grid;
+  gap: 20px;
+  overflow-wrap: anywhere;
+}
+.email-next {
+  padding: 18px 20px;
+  border-radius: 8px;
+  background: var(--bg-sub);
+}
+.email-next .report-eyebrow {
+  margin-bottom: 7px;
+  color: var(--ink-2);
+}
+.email-next p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.email-evidence {
+  border-top: 1px solid var(--line);
+}
+.email-evidence > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  list-style: none;
+}
+.email-evidence > summary::-webkit-details-marker {
+  display: none;
+}
+.email-evidence > summary > span {
+  font: 20px/1 var(--font-mono);
+  transition: transform 180ms ease;
+}
+.email-evidence[open] > summary > span {
+  transform: rotate(45deg);
+}
+.email-evidence > summary:hover {
+  background: var(--bg);
+}
+.email-evidence-body {
+  display: grid;
+  gap: 18px;
+  padding: 4px 24px 24px;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.email-evidence-body h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.email-evidence-body p {
+  margin: 0;
+}
+.email-evidence-body ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.email-evidence-body li + li {
+  margin-top: 6px;
+}
+.email-evidence-body pre {
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: var(--bg-sub);
+  white-space: pre-wrap;
+  font: 11px/1.8 var(--font-mono);
+}
+.email-scope {
+  border: 0;
+}
+.email-scope > summary {
+  padding-left: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.email-scope .coverage-body {
+  padding-left: 0;
+  font-size: 12px;
+}
+@media (max-width: 800px) {
+  .email-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+@media (max-width: 600px) {
+  .email-policy-body {
+    padding: 20px 18px;
+    gap: 18px;
+  }
+  .email-next {
+    padding: 16px;
+  }
+  .email-evidence > summary {
+    padding-inline: 18px;
+  }
+  .email-evidence-body {
+    padding-inline: 18px;
+  }
+}
+
+.email-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+.email-summary.warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+}
+.email-summary.bad {
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+}
+.email-summary.good {
+  background: var(--good-bg);
+  border-color: var(--good-line);
+}
+.email-summary.info {
+  background: var(--bg-sub);
+}
+.email-summary h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 550;
+  letter-spacing: -0.025em;
+}
+.email-summary p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.email-summary-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font: 15px/1 var(--font-mono);
+  margin-top: 2px;
+}
+.email-summary.warn .email-summary-icon {
+  color: var(--warn);
+}
+.email-summary.bad .email-summary-icon {
+  color: var(--bad);
+}
+.email-summary.good .email-summary-icon {
+  color: var(--good);
+}
+.email-summary.info .email-summary-icon {
+  color: var(--muted);
+}
+.email-checks {
+  margin: 0;
+}
+.email-check {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.email-check:first-child {
+  padding-top: 0;
+}
+.email-check:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.email-check dt {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.email-check dd {
+  margin: 0;
+  min-width: 0;
+}
+.email-check-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.email-check-value.good {
+  color: var(--good);
+}
+.email-check-value.warn {
+  color: var(--warn);
+}
+.email-check-value.bad {
+  color: var(--bad);
+}
+.email-check-value.info {
+  color: var(--ink-2);
+}
+.email-check-value > span {
+  width: 12px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  text-align: center;
+}
+.email-check dd p {
+  margin: 6px 0 0 20px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+@media (max-width: 1050px) and (min-width: 801px) {
+  .email-check {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+@media (max-width: 600px) {
+  .email-summary {
+    padding: 18px;
+    gap: 12px;
+  }
+  .email-summary h3 {
+    font-size: 18px;
+  }
+  .email-check {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .email-check-value {
+    font-size: 14px;
+  }
+}
