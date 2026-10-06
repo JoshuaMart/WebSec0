@@ -1,0 +1,20 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "WebSec0",
+    "documentationUrl": "https://github.com/JoshuaMart/WebSec0"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:websec0:skills:report-interpretation",
+      "displayName": "WebSec0 report interpretation",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
+      "url": "https://raw.githubusercontent.com/JoshuaMart/WebSec0/main/skills/websec0/SKILL.md",
+      "description": "Agent skill documenting WebSec0's scope, API usage and interpretation of TLS, HTTP-header and informational findings.",
+      "representativeQueries": [
+        "How do I interpret a WebSec0 report?",
+        "What do WebSec0's TLS and HTTP header grades mean?"
+      ]
+    }
+  ]
+}
