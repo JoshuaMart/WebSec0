@@ -149,7 +149,7 @@ published under [Creative Commons BY 4.0](https://creativecommons.org/licenses/b
 ### Frontend metadata
 
 The static frontend uses `https://www.websec0.com` for its canonical URL,
-sitemap and structured data. When building for another public instance, set
+sitemap, `llms.txt` and structured data. When building for another public instance, set
 `PUBLIC_SITE_URL` to that instance's origin, for example:
 
 ```sh
@@ -160,3 +160,8 @@ make build
 The homepage is indexable; report pages have `noindex` metadata and are excluded
 from the sitemap. Public-history listing remains opt-in. Unlisted reports are
 accessible to anyone with the report link while cached.
+
+Agent discovery is served as static content: `/llms.txt` summarizes the project
+and links to its documentation; `/.well-known/ai-catalog.json` advertises the
+existing WebSec0 agent skill using the ARD 1.0 catalog format. Both are linked
+from the HTML head and embedded in the Go binary by `make build`.

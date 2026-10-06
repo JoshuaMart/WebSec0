@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
@@ -71,6 +72,41 @@ func TestHandler_ServesIndex(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(string(body), "WebSec0") {
 		t.Errorf("expected body to mention WebSec0, got %q", body)
+	}
+}
+
+// Discovery files must survive the Astro build/embed pipeline and bypass the
+// HTML fallback that previously made Lighthouse parse the landing page.
+func TestHandler_AgentDiscovery(t *testing.T) {
+	sub, _ := FS()
+	if _, err := fs.Stat(sub, indexPath); err != nil {
+		t.Skip("frontend dist not built — run `make frontend` first")
+	}
+	h, err := Handler("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		path string
+		mime string
+	}{
+		{"/llms.txt", "text/plain"},
+		{"/.well-known/ai-catalog.json", "application/json"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, tc.path, http.NoBody))
+			if w.Code != http.StatusOK || !strings.HasPrefix(w.Header().Get("Content-Type"), tc.mime) {
+				t.Fatalf("status=%d content-type=%q, want 200 %s", w.Code, w.Header().Get("Content-Type"), tc.mime)
+			}
+			if tc.mime == "application/json" {
+				if !json.Valid(w.Body.Bytes()) {
+					t.Fatal("catalog response is not valid JSON")
+				}
+			} else if body := w.Body.String(); !strings.HasPrefix(body, "# WebSec0\n") || !strings.Contains(body, "](https://") {
+				t.Fatal("llms.txt must contain a Markdown H1 and documentation links")
+			}
+		})
 	}
 }
 
