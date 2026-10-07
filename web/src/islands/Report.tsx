@@ -1270,9 +1270,14 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
   );
 }
 
-// Optional remediation guides, hosted outside this repository. Empty by default
-// so self-hosted builds render no external links.
-const GUIDES_URL = (import.meta.env?.PUBLIC_GUIDES_URL || '').replace(/\/+$/, '');
+// Optional remediation guides, hosted outside this repository. The base URL
+// comes from <meta name="websec0-guides-url"> (added via the head_inject config
+// option), so the published image carries no external links by default.
+function guidesUrl(): string {
+  if (typeof document === 'undefined') return '';
+  const meta = document.querySelector('meta[name="websec0-guides-url"]');
+  return (meta?.getAttribute('content') || '').replace(/\/+$/, '');
+}
 
 function HeaderObservation({
   name,
@@ -1283,8 +1288,9 @@ function HeaderObservation({
   result?: HeaderResult;
   guideSlug?: string;
 }) {
+  const guides = guidesUrl();
   const showGuide =
-    GUIDES_URL && guideSlug && result && statusSev(result.status) !== 'good';
+    guides && guideSlug && result && statusSev(result.status) !== 'good';
   return (
     <div class="header-observation">
       <div>
@@ -1308,7 +1314,7 @@ function HeaderObservation({
       </p>
       {showGuide && (
         <p>
-          <a href={`${GUIDES_URL}/${guideSlug}`}>How to fix {name}</a>
+          <a href={`${guides}/${guideSlug}`}>How to fix {name}</a>
         </p>
       )}
     </div>

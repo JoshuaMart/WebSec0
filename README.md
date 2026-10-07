@@ -157,14 +157,15 @@ PUBLIC_SITE_URL=https://scanner.example.org make -B frontend
 make build
 ```
 
-Two optional build-time variables link to content hosted outside this repository
-(both unset by default, so self-hosted builds emit nothing extra):
+Two optional settings link to content hosted outside this repository. Both are
+off by default, so the published image emits nothing extra:
 
-- `PUBLIC_GUIDES_URL`: base URL of remediation guides, e.g.
-  `https://www.websec0.com/guides`. Non-passing core headers in a report link to
-  `<base>/<header-name>`.
-- `PUBLIC_CONTENT_SITEMAP_URL`: absolute URL of an additional sitemap, added as a
-  second `Sitemap:` line in `robots.txt`.
+- Guides: add `<meta name="websec0-guides-url" content="https://example.org/guides">`
+  through `frontend.head_inject` in the configuration. Non-passing core headers in
+  a report then link to `<content>/<header-name>`.
+- Extra sitemap: set `PUBLIC_CONTENT_SITEMAP_URL` at build time to add a second
+  `Sitemap:` line to the generated `robots.txt`. With `static_overlay_dir`, edit
+  your own `robots.txt` instead.
 
 The homepage is indexable; report pages have `noindex` metadata and are excluded
 from the sitemap. Public-history listing remains opt-in. Unlisted reports are
