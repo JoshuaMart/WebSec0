@@ -32,6 +32,28 @@ func slogRequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 	}
 }
 
+// apiCSP is the policy for responses that are not frontend pages: JSON
+// never needs to load anything or be framed. The frontend handler replaces
+// it with the page policy on everything it serves.
+const apiCSP = "default-src 'none'; frame-ancestors 'none'"
+
+// securityHeaders sets the browser security headers WebSec0 itself grades,
+// so every deployment sends them without proxy configuration. HSTS is left
+// to the TLS-terminating proxy, which knows whether HTTPS is in use.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Content-Security-Policy", apiCSP)
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()")
+		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		h.Set("Cross-Origin-Resource-Policy", "same-origin")
+		next.ServeHTTP(w, r)
+	})
+}
+
 // perIPRateLimit enforces a per-IP token bucket. The bucket key is the
 // remote IP derived from RemoteAddr — trusted-proxy / X-Forwarded-For
 // handling is deferred to v1.1 (requires the operator to declare a

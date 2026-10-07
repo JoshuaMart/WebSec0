@@ -67,6 +67,12 @@ type Frontend struct {
 	// default so self-hosters get an untouched bundle. The string is
 	// trusted operator-supplied content — not escaped.
 	HeadInject string `yaml:"head_inject"`
+	// CSPExtraSources extends the frontend Content-Security-Policy for
+	// external resources that HeadInject loads. Origins such as
+	// "https://umami.example.com" are allowed in script-src and
+	// connect-src; hash sources such as "'sha256-…'" in script-src. Inline
+	// HeadInject scripts are hashed automatically and need no entry.
+	CSPExtraSources []string `yaml:"csp_extra_sources"`
 	// StaticOverlayDir, when non-empty, is a directory whose layout
 	// mirrors URL paths. Files inside are served verbatim and take
 	// precedence over anything embedded in the binary:

@@ -41,6 +41,12 @@ frontend:
   # head_inject: |
   #   <script defer src="https://umami.example.com/script.js"
   #           data-website-id="xxxx-xxxx"></script>
+  # Every page is served with a Content-Security-Policy. Inline scripts in
+  # head_inject are allowed automatically (by hash); list here the origins
+  # of external scripts it loads. Origins go into script-src and connect-src;
+  # 'sha256-…' hash sources are also accepted. Nothing else is allowed.
+  csp_extra_sources: []
+  # csp_extra_sources: ["https://umami.example.com"]
   # Optional directory whose tree mirrors URL paths. Files inside take
   # precedence over anything embedded in the binary:
   #

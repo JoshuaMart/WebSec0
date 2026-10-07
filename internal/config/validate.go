@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
+	"regexp"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -67,6 +70,11 @@ func (c *Config) Validate() error {
 	if c.Frontend.BasePath != "/" {
 		errs = append(errs, errors.New("frontend.base_path: only '/' is supported"))
 	}
+	for _, src := range c.Frontend.CSPExtraSources {
+		if !validCSPSource(src) {
+			errs = append(errs, fmt.Errorf("frontend.csp_extra_sources: %q must be an http(s) origin or a 'sha256-…' hash", src))
+		}
+	}
 	if len(c.Server.TrustedProxies) > 0 {
 		errs = append(errs, errors.New("server.trusted_proxies: not supported; must be empty"))
 	}
@@ -75,4 +83,25 @@ func (c *Config) Validate() error {
 	}
 
 	return errors.Join(errs...)
+}
+
+// cspHashSource matches a CSP hash source such as 'sha256-<base64>'.
+var cspHashSource = regexp.MustCompile(`^'sha(256|384|512)-[A-Za-z0-9+/]+={0,2}'$`)
+
+// validCSPSource accepts an http(s) origin (scheme and host, optional port,
+// no path) or a hash source. Anything else, including keywords like
+// 'unsafe-inline', separators and whitespace, is rejected so an entry
+// cannot weaken or rewrite the policy.
+func validCSPSource(s string) bool {
+	if cspHashSource.MatchString(s) {
+		return true
+	}
+	if strings.ContainsAny(s, " \t;,'\"") {
+		return false
+	}
+	u, err := url.Parse(s)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Hostname() == "" {
+		return false
+	}
+	return u.User == nil && (u.Path == "" || u.Path == "/") && u.RawQuery == "" && !u.ForceQuery && u.Fragment == ""
 }

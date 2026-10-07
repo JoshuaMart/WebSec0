@@ -40,7 +40,7 @@ func TestHandler_NoIndexReturnsErrIndexMissing(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err == nil {
 		t.Skip("frontend dist contains index.html — skipping the no-index path")
 	}
-	_, err := Handler("", "")
+	_, err := Handler("", "", nil)
 	if !errors.Is(err, ErrIndexMissing) {
 		t.Fatalf("expected ErrIndexMissing, got %v", err)
 	}
@@ -54,7 +54,7 @@ func TestHandler_ServesIndex(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
-	h, err := Handler("", "")
+	h, err := Handler("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestHandler_AgentDiscovery(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
-	h, err := Handler("", "")
+	h, err := Handler("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestHandler_SPAFallback(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
-	h, err := Handler("", "")
+	h, err := Handler("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func TestHandler_InjectsSnippetInBothShells(t *testing.T) {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
 	const snippet = `<script data-test="websec0-inject"></script>`
-	h, err := Handler(snippet, "")
+	h, err := Handler(snippet, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestHandler_EmptyInjectKeepsBodyVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h, err := Handler("", "")
+	h, err := Handler("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestHandler_404ForMissingAsset(t *testing.T) {
 	if _, err := fs.Stat(sub, indexPath); err != nil {
 		t.Skip("frontend dist not built — run `make frontend` first")
 	}
-	h, err := Handler("", "")
+	h, err := Handler("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,7 +292,7 @@ func TestHandler_StaticOverlay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h, err := Handler("", dir)
+	h, err := Handler("", dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,5 +345,44 @@ func TestHandler_StaticOverlay(t *testing.T) {
 	}
 	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
 		t.Errorf("overlay miss: content-type %q, want text/html…", ct)
+	}
+}
+
+// TestHandler_ShellCSPAllowsItsInlineCode checks, on the real build, that each
+// shell's policy lists a hash for every inline script it serves, including
+// the head_inject snippet.
+func TestHandler_ShellCSPAllowsItsInlineCode(t *testing.T) {
+	sub, _ := FS()
+	if _, err := fs.Stat(sub, indexPath); err != nil {
+		t.Skip("frontend dist not built — run `make frontend` first")
+	}
+	const snippet = `<script>window.injected = 1</script>`
+	h, err := Handler(snippet, "", []string{"https://stats.example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	for _, path := range []string{"/", "/r/some-scan-id", "/favicon.svg"} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		csp := resp.Header.Get("Content-Security-Policy")
+		if !strings.Contains(csp, "https://stats.example.com") || !strings.Contains(csp, "frame-ancestors 'none'") {
+			t.Errorf("GET %s: unexpected policy %q", path, csp)
+		}
+		scripts, styles := inlineHashes(body)
+		for _, h := range append(scripts, styles...) {
+			if !strings.Contains(csp, h) {
+				t.Errorf("GET %s: inline element hash %s missing from %q", path, h, csp)
+			}
+		}
+		if path != "/favicon.svg" && !strings.Contains(csp, sha("window.injected = 1")) {
+			t.Errorf("GET %s: head_inject script not hashed", path)
+		}
 	}
 }

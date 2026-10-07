@@ -43,8 +43,10 @@ var ErrIndexMissing = errors.New("frontend: index.html missing — run `make fro
 // Handler serves embedded assets and the landing/report shells, or returns
 // ErrIndexMissing if the frontend has not been built. Shells receive the
 // trusted headInject HTML; allowed static files may come from staticOverlayDir.
+// Every response carries a Content-Security-Policy; cspExtraSources extends it
+// for external resources loaded by headInject (see contentSecurityPolicy).
 // Shell bytes are written directly to avoid FileServer's index.html redirect.
-func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
+func Handler(headInject, staticOverlayDir string, cspExtraSources []string) (http.Handler, error) {
 	sub, err := FS()
 	if err != nil {
 		return nil, err
@@ -60,6 +62,9 @@ func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 	if reportBytes != nil {
 		reportBytes = injectHead(reportBytes, headInject)
 	}
+	indexCSP := contentSecurityPolicy(indexBytes, cspExtraSources)
+	reportCSP := contentSecurityPolicy(reportBytes, cspExtraSources)
+	fileCSP := contentSecurityPolicy(nil, cspExtraSources)
 	server := http.FileServer(http.FS(sub))
 
 	var overlay http.Handler
@@ -74,7 +79,7 @@ func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rel := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 		if rel == "" || rel == indexPath {
-			writeIndex(w, indexBytes)
+			writeIndex(w, indexBytes, indexCSP)
 			return
 		}
 		// Overlay wins when configured AND the path is allowed AND it
@@ -84,20 +89,22 @@ func Handler(headInject, staticOverlayDir string) (http.Handler, error) {
 		// fs so an upstream-shipped file is still served.
 		if overlay != nil && overlayAllowed(rel) && filepath.IsLocal(rel) {
 			if info, err := os.Stat(filepath.Join(staticOverlayDir, rel)); err == nil && !info.IsDir() {
+				w.Header().Set("Content-Security-Policy", fileCSP)
 				overlay.ServeHTTP(w, r)
 				return
 			}
 		}
 		if info, err := fs.Stat(sub, rel); err == nil && !info.IsDir() {
+			w.Header().Set("Content-Security-Policy", fileCSP)
 			server.ServeHTTP(w, r)
 			return
 		}
 		// SPA fallback — pick the right shell based on path prefix.
 		if reportBytes != nil && strings.HasPrefix(rel, "r/") {
-			writeIndex(w, reportBytes)
+			writeIndex(w, reportBytes, reportCSP)
 			return
 		}
-		writeIndex(w, indexBytes)
+		writeIndex(w, indexBytes, indexCSP)
 	}), nil
 }
 
@@ -141,8 +148,9 @@ func injectHead(body []byte, snippet string) []byte {
 	return out
 }
 
-func writeIndex(w http.ResponseWriter, body []byte) {
+func writeIndex(w http.ResponseWriter, body []byte, csp string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Security-Policy", csp)
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(body)

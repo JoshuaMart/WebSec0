@@ -261,3 +261,35 @@ func TestExampleConfigurationValid(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestValidate_CSPExtraSources(t *testing.T) {
+	for _, tc := range []struct {
+		src string
+		ok  bool
+	}{
+		{"https://stats.example.com", true},
+		{"https://stats.example.com:8443", true},
+		{"http://localhost:3000/", true},
+		{"'sha256-z45zR03J8fjhB+XZI75tfFNuEulXqY6Qn0ZMYwFwVws='", true},
+		{"'unsafe-inline'", false},
+		{"*", false},
+		{"stats.example.com", false},
+		{"https://stats.example.com/script.js", false},
+		{"https://a.example https://b.example", false},
+		{"https://a.example; script-src *", false},
+		{"javascript:alert(1)", false},
+		{"https://user@stats.example.com", false},
+	} {
+		t.Run(tc.src, func(t *testing.T) {
+			cfg := Defaults()
+			cfg.Frontend.CSPExtraSources = []string{tc.src}
+			err := cfg.Validate()
+			if tc.ok && err != nil {
+				t.Errorf("expected valid, got %v", err)
+			}
+			if !tc.ok && (err == nil || !strings.Contains(err.Error(), "frontend.csp_extra_sources")) {
+				t.Errorf("expected a csp_extra_sources error, got %v", err)
+			}
+		})
+	}
+}

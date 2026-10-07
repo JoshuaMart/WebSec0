@@ -258,3 +258,32 @@ func TestRateLimit_TripsAfterBurst(t *testing.T) {
 		t.Errorf("code: got %s, want rate_limited", code)
 	}
 }
+
+func TestRouter_SetsSecurityHeaders(t *testing.T) {
+	srv := newTestServer(t, &fakeScanner{})
+	for _, path := range []string{"/api/v1/checks", "/api/v1/nope"} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		for name, want := range map[string]string{
+			"Content-Security-Policy":      "default-src 'none'; frame-ancestors 'none'",
+			"X-Content-Type-Options":       "nosniff",
+			"X-Frame-Options":              "DENY",
+			"Referrer-Policy":              "strict-origin-when-cross-origin",
+			"Cross-Origin-Opener-Policy":   "same-origin",
+			"Cross-Origin-Resource-Policy": "same-origin",
+		} {
+			if got := resp.Header.Get(name); got != want {
+				t.Errorf("GET %s: %s = %q, want %q", path, name, got, want)
+			}
+		}
+		if resp.Header.Get("Permissions-Policy") == "" {
+			t.Errorf("GET %s: Permissions-Policy missing", path)
+		}
+		if resp.Header.Get("Strict-Transport-Security") != "" {
+			t.Errorf("GET %s: HSTS belongs to the TLS-terminating proxy", path)
+		}
+	}
+}

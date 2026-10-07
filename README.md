@@ -167,6 +167,25 @@ off by default, so the published image emits nothing extra:
   `Sitemap:` line to the generated `robots.txt`. With `static_overlay_dir`, edit
   your own `robots.txt` instead.
 
+### Security headers
+
+WebSec0 sends the headers it grades on every response: a
+`Content-Security-Policy` without `'unsafe-inline'` (inline scripts and styles
+in the frontend are allowed by hash), `X-Content-Type-Options`,
+`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`,
+`Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`.
+`Strict-Transport-Security` is left to the reverse proxy that terminates TLS.
+
+If `frontend.head_inject` loads an external script, such as analytics, add its
+origin to `frontend.csp_extra_sources`; otherwise the browser blocks it:
+
+```yaml
+frontend:
+  head_inject: |
+    <script defer src="https://umami.example.com/script.js" data-website-id="…"></script>
+  csp_extra_sources: ["https://umami.example.com"]
+```
+
 The homepage is indexable; report pages have `noindex` metadata and are excluded
 from the sitemap. Public-history listing remains opt-in. Unlisted reports are
 accessible to anyone with the report link while cached.
