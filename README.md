@@ -3,7 +3,7 @@
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-111111?style=for-the-badge&logo=unlicense&logoColor=#FFF"></a>
   <img src="https://img.shields.io/badge/Go-1.26+-111111?style=for-the-badge&logo=go&logoColor=#00a6d2">
-  <img src="https://img.shields.io/badge/Astro-6-111111?style=for-the-badge&logo=astro&logoColor=FF3E00">
+  <img src="https://img.shields.io/badge/Astro-7-111111?style=for-the-badge&logo=astro&logoColor=FF3E00">
   <img src="https://img.shields.io/badge/Docker-distroless-111111?style=for-the-badge&logo=docker&logoColor=#2496ed">
 </p>
 
@@ -16,28 +16,36 @@
 
 # WebSec0
 
-**WebSec0** is an open-source, self-hostable, **passive** web security
-configuration scanner. In a single ~15 MB binary, it inspects a host's TLS
-configuration and HTTP security headers, runs a handful of custom checks
-(`security.txt`, `robots.txt`, …), and produces **actionable reports with
-copy-paste remediation snippets**.
+WebSec0 checks a website's TLS setup and HTTP security headers, grades them,
+and explains how to fix what it finds. It is passive: it reads what the server
+offers and never tries to exploit it. It is open source and ships as a single
+binary with its web interface built in.
 
-Registrable domains and their `www` aliases also get **SPF/DMARC checks**,
-with verdicts and recommendations independent of TLS/HTTP grades.
+**Try it at [www.websec0.com](https://www.websec0.com)**: free, no account.
 
-Built for **two audiences at parity**:
+## What it checks
 
-- Humans — clear reports prioritized by ROI (security ÷ effort)
-- AI agents — every finding is self-sufficient (no external fetch needed),
-  the catalog is exposed via `GET /api/v1/checks`, and a ready-to-use
-  [`SKILL.md`](./skills/websec0/SKILL.md) is shipped
+| Area | Checks | Result |
+| --- | --- | --- |
+| TLS | Protocols (SSLv2 to TLS 1.3), cipher suites, certificate chain and expiry, OCSP stapling, known weaknesses | TLS grade |
+| HTTP headers | HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, plus cookies, CORS and cross-origin policies | Headers grade |
+| Other signals | `security.txt`, `robots.txt` | Informational |
+| Email | SPF and DMARC records, for registrable domains and their `www` | Informational |
 
-## Try it
+Every finding comes with an explanation and a remediation snippet. The full
+list is served by the API at `GET /api/v1/checks`.
 
-**Hosted instance:** [www.websec0.com](https://www.websec0.com) — no signup,
-no key, public.
+## Quick start
 
-Or call the API directly:
+**Run your own instance** with the published multi-arch image:
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/joshuamart/websec0:latest
+```
+
+Then open <http://localhost:8080>.
+
+**Use the API** of the hosted or your own instance:
 
 ```bash
 curl -sS -X POST https://www.websec0.com/api/v1/scan \
@@ -45,139 +53,85 @@ curl -sS -X POST https://www.websec0.com/api/v1/scan \
   -d '{"host":"github.com"}' | jq .
 ```
 
-See the [API contract](./skills/websec0/references/api.md) and
-[report interpretation guide](./skills/websec0/references/interpretation.md)
-for request/response fields, errors and grading.
-
-## Self-host
-
-Pull and run the published multi-arch image. Defaults work out of the box:
-
-```bash
-docker run --rm -p 8080:8080 ghcr.io/joshuamart/websec0:latest
-```
-
-Open <http://localhost:8080>. The distroless image weighs ~15 MB and runs as a
-non-root user. To override the defaults (listen address, rate limits, SSRF
-policy, history retention), mount a config file:
-
-```bash
-docker run --rm -p 8080:8080 \
-  -v "$(pwd)/websec0.yaml":/etc/websec0/websec0.yaml:ro \
-  ghcr.io/joshuamart/websec0:latest \
-  --config /etc/websec0/websec0.yaml
-```
-
-Use [`websec0.yaml.example`](./websec0.yaml.example) as a starting point —
-every field is annotated.
-
-Certificate validation uses the operating system's trust store. If system trust
-is unavailable, the binary uses an embedded Mozilla/NSS root bundle provided by
-[`x509roots/fallback`](https://pkg.go.dev/golang.org/x/crypto/x509roots/fallback).
-No roots are downloaded at runtime. A certificate rejected by an available
-system store is not retried against the fallback. Trust decisions can still
-differ between operating systems. Keep WebSec0 updated to refresh the bundle.
-
-<details>
-<summary><strong>Build the image yourself</strong></summary>
-
-The repo ships two Dockerfiles. `Dockerfile` builds Go inside Docker and is
-what `make docker` invokes; `Dockerfile.goreleaser` is the minimal copy-only
-runtime used by the release pipeline.
-
-```bash
-docker build -t websec0 .
-docker run --rm -p 8080:8080 websec0
-```
-
-</details>
-
-<details>
-<summary><strong>From source</strong></summary>
-
-Requires Go 1.26+, Node 22.18+, pnpm 10+, and rsync.
-
-```bash
-make frontend-install
-make build
-./dist/websec0
-```
-
-`make build` declares the embedded Astro bundle as a Make prerequisite,
-so it rebuilds the frontend (and rsyncs it into `internal/frontend/dist/`
-where `//go:embed` picks it up) iff a file under `web/` has changed.
-Iterative Go-only builds incur no frontend overhead.
-
-</details>
+The [API contract](./skills/websec0/references/api.md) and the
+[report guide](./skills/websec0/references/interpretation.md) describe the
+fields, errors and grading.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    User[Web UI · curl · agent] -->|POST /api/v1/scan| API[chi router + rate limit]
-    API --> SSRF[safehttp gate<br/>IP pin · no private · no rebind]
-    SSRF --> Orch[Scanner orchestrator]
-    Orch --> TLS[TLS probe]
-    Orch --> HDR[Headers probe]
-    Orch --> Custom[Custom checks]
-    TLS --> Score[Scoring]
-    HDR --> Score
-    Score --> Result["scan.Result<br/>(2 grades + findings)"]
-    Custom --> Result
-    Result --> User
+    in(["<b>Scan request</b><br/>web UI, API or agent"])
+
+    subgraph ws["WebSec0, one binary"]
+        direction LR
+        gate["<b>Target check</b><br/>resolve once<br/>pin the IP<br/>block private ranges"]
+        tls["<b>TLS probes</b><br/>protocols, ciphers,<br/>certificate"]
+        http["<b>HTTP probes</b><br/>headers, cookies,<br/>security.txt"]
+        dns["<b>DNS lookups</b><br/>SPF, DMARC"]
+        grade["<b>Grading</b><br/>TLS grade<br/>headers grade"]
+        gate --> tls & http
+        tls & http --> grade
+    end
+
+    out(["<b>Report</b><br/>JSON or web page,<br/>findings with fixes"])
+
+    in --> gate
+    in --> dns
+    grade --> out
+    dns --> out
+
+    classDef step fill:#ffffff,stroke:#9aad8e,color:#1c2921
+    classDef edge fill:#1c2921,stroke:#1c2921,color:#ffffff
+    class gate,tls,http,dns,grade step
+    class in,out edge
+    style ws fill:#f7f8f4,stroke:#b5c4ac,color:#367047
 ```
 
-Every outbound request goes through **`safehttp`**: each target is pinned
-to a single IP at DNS-resolution time, RFC 1918 / loopback / link-local
-addresses are always refused, and the connection is rate-limited per host.
-Probes then fan out in parallel — a typical scan completes in ~10 seconds.
+1. **The target is checked first.** WebSec0 resolves the host once, refuses
+   loopback, link-local and (by default) private addresses, and pins the IP
+   for every TLS and HTTP connection, so a DNS change cannot redirect the scan.
+   SPF and DMARC are plain DNS lookups.
+2. **Probes run in parallel** within a 30-second budget. A typical scan takes
+   about 10 seconds.
+3. **The report** gives two independent grades, TLS and headers, and lists
+   each finding with how to fix it. Reports stay available by link for 24
+   hours by default and are only listed publicly if the user opts in.
 
-## Contributing
+## Configuration
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the dev workflow and the
-three flavours of "adding a check". Security reports go through the
-private channel documented in [`SECURITY.md`](./SECURITY.md).
+The defaults work as is. To change them, mount a config file:
 
-AI agents integrating WebSec0 should start with
-[`skills/websec0/SKILL.md`](./skills/websec0/SKILL.md).
-
-## License
-
-[MIT](./LICENSE) for the code. Reports generated by the public instance are
-published under [Creative Commons BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
-### Frontend metadata
-
-The static frontend uses `https://www.websec0.com` for its canonical URL,
-sitemap, `llms.txt` and structured data. When building for another public instance, set
-`PUBLIC_SITE_URL` to that instance's origin, for example:
-
-```sh
-PUBLIC_SITE_URL=https://scanner.example.org make -B frontend
-make build
+```bash
+docker run --rm -p 8080:8080 \
+  -v "$(pwd)/websec0.yaml":/etc/websec0/websec0.yaml:ro \
+  ghcr.io/joshuamart/websec0:latest --config /etc/websec0/websec0.yaml
 ```
 
-Two optional settings link to content hosted outside this repository. Both are
-off by default, so the published image emits nothing extra:
+Start from [`websec0.yaml.example`](./websec0.yaml.example), where every field
+is documented. The settings you are most likely to change:
 
-- Guides: add `<meta name="websec0-guides-url" content="https://example.org/guides">`
-  through `frontend.head_inject` in the configuration. Non-passing core headers in
-  a report then link to `<content>/<header-name>`.
-- Extra sitemap: set `PUBLIC_CONTENT_SITEMAP_URL` at build time to add a second
-  `Sitemap:` line to the generated `robots.txt`. With `static_overlay_dir`, edit
-  your own `robots.txt` instead.
+| Setting | Default | Use it to |
+| --- | --- | --- |
+| `security.allow_private_targets` | `false` | Scan hosts on your private network |
+| `security.allow_custom_ports` | `false` | Scan ports other than 443 |
+| `history.rate_limit` | `10/hour` per IP | Adjust scan limits |
+| `cache.ttl` | `24h` | Keep reports available longer |
+| `frontend.head_inject` | empty | Add analytics or meta tags to every page |
+| `frontend.csp_extra_sources` | empty | Allow external scripts loaded by `head_inject` |
 
-### Security headers
+Certificates are validated against the system trust store, with an embedded
+Mozilla root bundle as a fallback when none is available. Nothing is
+downloaded at runtime.
 
-WebSec0 sends the headers it grades on every response: a
-`Content-Security-Policy` without `'unsafe-inline'` (inline scripts and styles
-in the frontend are allowed by hash), `X-Content-Type-Options`,
-`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`,
-`Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`.
-`Strict-Transport-Security` is left to the reverse proxy that terminates TLS.
+## Running a public instance
 
-If `frontend.head_inject` loads an external script, such as analytics, add its
-origin to `frontend.csp_extra_sources`; otherwise the browser blocks it:
+WebSec0 sends the security headers it grades on every response, including a
+Content-Security-Policy without `'unsafe-inline'`. Leave HSTS to the reverse
+proxy that terminates TLS.
+
+If you add analytics through `head_inject`, allow its origin, or the browser
+blocks it:
 
 ```yaml
 frontend:
@@ -186,11 +140,59 @@ frontend:
   csp_extra_sources: ["https://umami.example.com"]
 ```
 
-The homepage is indexable; report pages have `noindex` metadata and are excluded
-from the sitemap. Public-history listing remains opt-in. Unlisted reports are
-accessible to anyone with the report link while cached.
+<details>
+<summary><strong>Canonical URL, guides and sitemap</strong></summary>
 
-Agent discovery is served as static content: `/llms.txt` summarizes the project
-and links to its documentation; `/.well-known/ai-catalog.json` advertises the
-existing WebSec0 agent skill using the ARD 1.0 catalog format. Both are linked
-from the HTML head and embedded in the Go binary by `make build`.
+- **Your own domain.** The frontend uses `https://www.websec0.com` for its
+  canonical URL, sitemap, `llms.txt` and structured data. Rebuild it with
+  `PUBLIC_SITE_URL=https://scanner.example.org make -B frontend && make build`.
+- **Remediation guides.** Add
+  `<meta name="websec0-guides-url" content="https://example.org/guides">` to
+  `head_inject`. Failing headers in a report then link to
+  `<guides-url>/<header-name>`.
+- **Extra sitemap.** Set `PUBLIC_CONTENT_SITEMAP_URL` at build time to add a
+  second `Sitemap:` line to `robots.txt`, or serve your own `robots.txt`
+  through `static_overlay_dir`.
+- **Indexing.** The homepage is indexable. Report pages are `noindex` and left
+  out of the sitemap.
+
+</details>
+
+<details>
+<summary><strong>Build from source</strong></summary>
+
+Requires Go 1.26+, Node 22.18+, pnpm 10+ and rsync.
+
+```bash
+make frontend-install
+make build
+./dist/websec0
+```
+
+`make build` rebuilds and embeds the frontend only when a file under `web/`
+has changed. To build the Docker image locally, run `docker build -t websec0 .`
+(`Dockerfile.goreleaser` is the copy-only image used for releases).
+
+</details>
+
+## For AI agents
+
+- [`skills/websec0/SKILL.md`](./skills/websec0/SKILL.md): a ready-to-use agent
+  skill covering scope, instance choice and report interpretation.
+- `GET /api/v1/checks`: the catalog of checks and remediations.
+- `/llms.txt` and `/.well-known/ai-catalog.json`: discovery files served by
+  every instance.
+
+Each finding in a report is self-contained, so an agent does not need to fetch
+anything else to explain it.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the development workflow and how
+to add a check. Report vulnerabilities privately as described in
+[`SECURITY.md`](./SECURITY.md).
+
+## License
+
+Code under the [MIT license](./LICENSE). Reports from the public instance are
+published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
