@@ -1193,6 +1193,7 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
                 key={name}
                 name={prettyHeader(name)}
                 result={result}
+                guideSlug={name}
               />
             ))}
           </div>
@@ -1269,13 +1270,21 @@ function HeadersTab({ headers }: { headers?: HeadersReport }) {
   );
 }
 
+// Optional remediation guides, hosted outside this repository. Empty by default
+// so self-hosted builds render no external links.
+const GUIDES_URL = (import.meta.env?.PUBLIC_GUIDES_URL || '').replace(/\/+$/, '');
+
 function HeaderObservation({
   name,
   result,
+  guideSlug,
 }: {
   name: string;
   result?: HeaderResult;
+  guideSlug?: string;
 }) {
+  const showGuide =
+    GUIDES_URL && guideSlug && result && statusSev(result.status) !== 'good';
   return (
     <div class="header-observation">
       <div>
@@ -1297,6 +1306,11 @@ function HeaderObservation({
           'No observation available.'
         )}
       </p>
+      {showGuide && (
+        <p>
+          <a href={`${GUIDES_URL}/${guideSlug}`}>How to fix {name}</a>
+        </p>
+      )}
     </div>
   );
 }
