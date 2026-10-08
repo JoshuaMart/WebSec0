@@ -21,7 +21,7 @@ type HighlightSection =
   | 'vulns'
   | 'headers'
   | 'custom';
-type Highlight = {
+export type Highlight = {
   title: string;
   body: string;
   level: Severity;
@@ -419,9 +419,8 @@ export function deriveHighlights(data: ScanResult): Highlight[] {
   ];
   const order: Record<Severity, number> = { bad: 0, warn: 1, info: 2, good: 3 };
   all.sort((a, b) => order[a.level] - order[b.level]);
-  const top = all.slice(0, 6);
-  if (top.length === 0) {
-    top.push({
+  if (all.length === 0) {
+    all.push({
       title:
         !data.tls && !data.headers
           ? 'Assessment unavailable'
@@ -430,5 +429,5 @@ export function deriveHighlights(data: ScanResult): Highlight[] {
       level: 'info',
     });
   }
-  return top;
+  return all;
 }

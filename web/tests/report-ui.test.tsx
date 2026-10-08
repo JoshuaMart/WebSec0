@@ -233,3 +233,38 @@ test('an entirely unassessed weakness list never becomes a passing report', () =
   assert.match(html, /not counted as passes/);
   assert.doesNotMatch(html, />Passed</);
 });
+
+test('the TLS grade explains the floor that capped it', () => {
+  const html = render(<GradePanel data={reportFixture} />);
+  assert.match(html, /Capped at C · TLS 1\.0 offered/);
+  assert.match(html, /class="grade-breakdown"/);
+  assert.doesNotMatch(
+    render(
+      <GradePanel
+        data={{
+          ...reportFixture,
+          tls: { ...reportFixture.tls!, grade: 'A' },
+        }}
+      />,
+    ),
+    /Capped at/,
+  );
+});
+
+test('overview groups every observation by priority', () => {
+  const html = render(
+    <TabPanel id="overview" data={reportFixture} obsFilter="bad" />,
+  );
+  assert.match(html, /aria-pressed="true">Needs attention/);
+  assert.doesNotMatch(html, /aria-label="Working well"/);
+  assert.match(
+    render(<TabPanel id="overview" data={reportFixture} />),
+    /aria-label="Working well"/,
+  );
+});
+
+test('offered legacy protocols are flagged with their grade cap', () => {
+  const html = render(<TabPanel id="protocols" data={reportFixture} />);
+  assert.match(html, /<span class="pill warn"><span class="dot"><\/span>Offered/);
+  assert.match(html, /remove the C cap/);
+});

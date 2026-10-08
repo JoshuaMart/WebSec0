@@ -2,8 +2,14 @@
 
 import { splitWeaknesses } from './report-weaknesses.ts';
 import { EmailTab } from './EmailTab.tsx';
+import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { deriveHighlights, statusSev } from './report-highlights.ts';
+import {
+  deriveHighlights,
+  statusSev,
+  type Highlight,
+} from './report-highlights.ts';
+import { tlsGradeCap } from './report-grade.ts';
 import { certificateSCTSummary, sctSummary } from './report-scts.ts';
 import type {
   Severity,
@@ -74,6 +80,7 @@ export default function Report() {
   const [data, setData] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>('overview');
+  const [obsFilter, setObsFilter] = useState<ObservationFilter>('all');
 
   useEffect(() => {
     const syncTab = () => {
@@ -127,6 +134,16 @@ export default function Report() {
         <p>Two independent grades. Open a section for the evidence.</p>
       </div>
       <GradePanel data={data} />
+      <TriageStrip
+        data={data}
+        onSelect={(next, filter) => {
+          if (filter) setObsFilter(filter);
+          selectTab(next);
+          document
+            .getElementById('report-sections')
+            ?.scrollIntoView({ block: 'start' });
+        }}
+      />
       <Tabs active={tab} onChange={(next) => selectTab(next)} data={data} />
       <div
         class="report-panel"
@@ -146,6 +163,8 @@ export default function Report() {
           id={tab}
           data={data}
           onNavigate={(next) => selectTab(next, true)}
+          obsFilter={obsFilter}
+          onObsFilter={setObsFilter}
         />
       </div>
     </div>
@@ -292,6 +311,10 @@ export function GradePanel({ data }: { data: ScanResult }) {
   const tlsScore = data.tls?.scores.final ?? 0;
   const headersGrade = data.headers?.grade ?? '';
   const headersScore = data.headers?.score ?? 0;
+  const tlsCap = tlsGradeCap(data.tls);
+  const core = Object.entries(data.headers?.core ?? {});
+  const failed = core.filter(([, r]) => r.status === 'fail').length;
+  const reviewed = core.filter(([, r]) => r.status === 'warn').length;
   return (
     <div class="grade-panel grade-panel-two">
       <div class="grade-cell">
@@ -304,12 +327,10 @@ export function GradePanel({ data }: { data: ScanResult }) {
               ? `${tlsScore}/100 · ${prettyTrust(data.tls.chain_trust) || 'Trust not assessed'}`
               : 'TLS assessment unavailable'
           }
+          note={tlsCap && <span class="pill warn">{tlsCap}</span>}
         />
         {data.tls && (
-          <details class="grade-details">
-            <summary>
-              How this score breaks down <span aria-hidden="true">+</span>
-            </summary>
+          <div class="grade-breakdown">
             <div class="score-list">
               <ScoreBar
                 name="Certificate"
@@ -328,11 +349,7 @@ export function GradePanel({ data }: { data: ScanResult }) {
                 value={data.tls.scores.cipher_strength}
               />
             </div>
-            <p class="grade-explanation">
-              TLS score: {tlsScore}/100. Certificate trust and legacy
-              configurations can cap the grade.
-            </p>
-          </details>
+          </div>
         )}
       </div>
       <div class="grade-cell">
@@ -347,27 +364,104 @@ export function GradePanel({ data }: { data: ScanResult }) {
                 ? `${headersScore}/100 · via ${data.headers.probed_host}`
                 : `${headersScore}/100`
           }
+          note={
+            failed ? (
+              <span class="pill bad">
+                {failed} core {failed > 1 ? 'checks fail' : 'check fails'}
+              </span>
+            ) : reviewed ? (
+              <span class="pill warn">
+                {reviewed} core {reviewed > 1 ? 'checks' : 'check'} to review
+              </span>
+            ) : null
+          }
         />
-        {data.headers && (
-          <details class="grade-details">
-            <summary>
-              Core header checks <span aria-hidden="true">+</span>
-            </summary>
-            <div class="header-status-list">
-              {Object.entries(data.headers.core).map(([name, r]) => (
-                <div key={name}>
-                  <span>{prettyHeader(name)}</span>
-                  <SevPill level={statusSev(r.status)} />
-                </div>
-              ))}
-            </div>
-            <p class="grade-explanation">
-              The weighted core checks and additional header observations
-              determine this score.
-            </p>
-          </details>
+        {!!core.length && (
+          <ul class="grade-breakdown header-status-list">
+            {core.map(([name, r]) => {
+              const level = statusSev(r.status);
+              return (
+                <li key={name}>
+                  <span class="mono">{prettyHeader(name)}</span>
+                  <span class={`status-label ${level}`}>
+                    <span class={`sev ${level}`} />
+                    {sevLabel(level)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+type ObservationFilter = 'all' | Severity;
+
+const observationGroups: { level: Severity; label: string }[] = [
+  { level: 'bad', label: 'Needs attention' },
+  { level: 'warn', label: 'Review' },
+  { level: 'info', label: 'For context' },
+  { level: 'good', label: 'Working well' },
+];
+
+function hasAssessment(highlights: Highlight[]): boolean {
+  return highlights.some((h) => h.level !== 'info' || h.section);
+}
+
+function TriageStrip({
+  data,
+  onSelect,
+}: {
+  data: ScanResult;
+  onSelect: (tab: TabId, filter?: ObservationFilter) => void;
+}) {
+  const highlights = deriveHighlights(data);
+  if (!hasAssessment(highlights)) return null;
+  const count = (level: Severity) =>
+    highlights.filter((h) => h.level === level).length;
+  const outside = data.tls?.vulnerabilities
+    ? splitWeaknesses(data.tls.vulnerabilities).unassessed.length
+    : 0;
+  const cells: {
+    level: Severity | 'outside';
+    label: string;
+    count: number;
+    tab: TabId;
+  }[] = [
+    { level: 'bad', label: 'Need attention', count: count('bad'), tab: 'overview' },
+    { level: 'warn', label: 'To review', count: count('warn'), tab: 'overview' },
+    { level: 'good', label: 'Working well', count: count('good'), tab: 'overview' },
+  ];
+  if (outside)
+    cells.push({
+      level: 'outside',
+      label: 'Outside this scan',
+      count: outside,
+      tab: 'vulns',
+    });
+  return (
+    <div class="triage-strip" role="group" aria-label="Observations by priority">
+      {cells.map((cell) => (
+        <button
+          key={cell.level}
+          type="button"
+          class={`triage-cell ${cell.level}`}
+          onClick={() =>
+            onSelect(
+              cell.tab,
+              cell.level === 'outside' ? undefined : cell.level,
+            )
+          }
+        >
+          <b>{cell.count}</b>
+          <span>
+            <span class={`sev ${cell.level}`} />
+            {cell.label}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -377,11 +471,13 @@ function GradeCard({
   grade,
   score,
   sub,
+  note,
 }: {
   label: string;
   grade: string;
   score: number;
   sub: string;
+  note?: ComponentChildren;
 }) {
   return (
     <div class="grade-summary">
@@ -389,6 +485,7 @@ function GradeCard({
       <div>
         <h3 class="grade-label">{label}</h3>
         <div class="grade-sub">{sub || ''}</div>
+        {note && <div class="grade-note">{note}</div>}
       </div>
     </div>
   );
@@ -570,7 +667,12 @@ export function Tabs({
   ];
   if (data.email) tabs.push({ id: 'email', label: 'Email security' });
   return (
-    <div class="tabs" role="tablist" aria-label="Report sections">
+    <div
+      class="tabs"
+      id="report-sections"
+      role="tablist"
+      aria-label="Report sections"
+    >
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -608,14 +710,25 @@ export function TabPanel({
   id,
   data,
   onNavigate,
+  obsFilter,
+  onObsFilter,
 }: {
   id: TabId;
   data: ScanResult;
   onNavigate?: (id: TabId) => void;
+  obsFilter?: ObservationFilter;
+  onObsFilter?: (filter: ObservationFilter) => void;
 }) {
   switch (id) {
     case 'overview':
-      return <Overview data={data} onNavigate={onNavigate} />;
+      return (
+        <Overview
+          data={data}
+          onNavigate={onNavigate}
+          filter={obsFilter}
+          onFilter={onObsFilter}
+        />
+      );
     case 'certificate':
       return (
         <div class="section">
@@ -680,77 +793,131 @@ export function TabPanel({
 function Overview({
   data,
   onNavigate,
+  filter: controlledFilter,
+  onFilter,
 }: {
   data: ScanResult;
   onNavigate?: (id: TabId) => void;
+  filter?: ObservationFilter;
+  onFilter?: (filter: ObservationFilter) => void;
 }) {
+  const [localFilter, setLocalFilter] = useState<ObservationFilter>('all');
+  const filter = controlledFilter ?? localFilter;
+  const setFilter = onFilter ?? setLocalFilter;
   const tls = data.tls;
-  const headers = data.headers;
   const offeredProtos = (tls?.protocols ?? [])
     .filter((p) => p.offered)
     .map((p) => p.name);
   const leaf = tls?.certificate_chain?.[0];
-  const highlights = deriveHighlights(data);
+  const highlights = deriveHighlights(data).map((h, i) => ({
+    ...h,
+    number: String(i + 1).padStart(2, '0'),
+  }));
+  const groups = observationGroups
+    .map((group) => ({
+      ...group,
+      items: highlights.filter((h) => h.level === group.level),
+    }))
+    .filter((group) => group.items.length);
+  const visibleGroups = groups.filter(
+    (group) => filter === 'all' || group.level === filter,
+  );
+  const shownGroups = visibleGroups.length ? visibleGroups : groups;
+  const activeFilter = visibleGroups.length ? filter : 'all';
   return (
     <div class="section">
       <div class="overview-grid">
         <div class="card findings-card">
           <div class="card-head">
             <h3>Key observations</h3>
-            <span class="sub">{highlights.length} selected</span>
-          </div>
-          <ol class="finding-list">
-            {highlights.map((h, i) => (
-              <li key={i} class={`finding-item ${h.level}`}>
-                <span class="finding-number" aria-hidden="true">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <div>
-                  <span class={`finding-label ${h.level}`}>
-                    {h.section === 'custom'
-                      ? 'Informational'
-                      : h.level === 'bad'
-                        ? 'Needs attention'
-                        : h.level === 'warn'
-                          ? 'Review'
-                          : h.level === 'good'
-                            ? 'Working well'
-                            : 'For context'}
-                  </span>
-                  <h3>{h.title}</h3>
-                  <p>{h.body}</p>
-                  {h.section && (
-                    <a
-                      class="evidence-link"
-                      href={`#${h.section}`}
-                      onClick={(event) => {
-                        if (
-                          onNavigate &&
-                          !event.metaKey &&
-                          !event.ctrlKey &&
-                          !event.shiftKey &&
-                          !event.altKey
-                        ) {
-                          event.preventDefault();
-                          onNavigate(h.section!);
-                        }
-                      }}
+            {groups.length > 1 && (
+              <div
+                class="filters"
+                role="group"
+                aria-label="Filter observations"
+              >
+                {[{ level: 'all' as const, label: 'All' }, ...groups].map(
+                  (item) => (
+                    <button
+                      key={item.level}
+                      type="button"
+                      class={'chip' + (activeFilter === item.level ? ' on' : '')}
+                      aria-pressed={activeFilter === item.level}
+                      onClick={() => setFilter(item.level)}
                     >
-                      View{' '}
-                      {h.section === 'vulns'
-                        ? 'weaknesses'
-                        : h.section === 'custom'
-                          ? 'other checks'
-                          : h.section}{' '}
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
+                      {item.label}
+                      <span class="ct">
+                        {item.level === 'all'
+                          ? highlights.length
+                          : highlights.filter((h) => h.level === item.level)
+                              .length}
+                      </span>
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
+          </div>
+          {shownGroups.map((group) => (
+            <section
+              key={group.level}
+              class="finding-group"
+              aria-label={group.label}
+            >
+              <div class="finding-group-label">
+                <span>
+                  <span class={`sev ${group.level}`} />
+                  {group.label}
+                </span>
+                <span>{group.items.length}</span>
+              </div>
+              <ol class="finding-list">
+                {group.items.map((h) => (
+                  <li key={h.number} class={`finding-item ${h.level}`}>
+                    <span class="finding-number" aria-hidden="true">
+                      {h.number}
+                    </span>
+                    <div>
+                      {h.section === 'custom' && (
+                        <span class="finding-label info">Informational</span>
+                      )}
+                      <h3>{h.title}</h3>
+                      <p>{h.body}</p>
+                      {h.section && (
+                        <a
+                          class="evidence-link"
+                          href={`#${h.section}`}
+                          onClick={(event) => {
+                            if (
+                              onNavigate &&
+                              !event.metaKey &&
+                              !event.ctrlKey &&
+                              !event.shiftKey &&
+                              !event.altKey
+                            ) {
+                              event.preventDefault();
+                              onNavigate(h.section!);
+                            }
+                          }}
+                        >
+                          View{' '}
+                          {h.section === 'vulns'
+                            ? 'weaknesses'
+                            : h.section === 'custom'
+                              ? 'other checks'
+                              : h.section}{' '}
+                          <span aria-hidden="true">↗</span>
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ))}
         </div>
         <div class="overview-aside">
+          {leaf && <CertificateValidityCard cert={leaf} />}
           <div class="card">
             <div class="card-head">
               <h3>Connection snapshot</h3>
@@ -781,26 +948,6 @@ function Overview({
                 </div>
                 <div class="k">Session resumption</div>
                 <div class="v">{tls?.session_resumption || '—'}</div>
-                {leaf && (
-                  <>
-                    <div class="k">Certificate</div>
-                    <div class="v">
-                      {leaf.key_alg} · {leaf.sig_alg}
-                    </div>
-                    <div class="k">Expires in</div>
-                    <div class="v">
-                      {leaf.days_left} days · {leaf.not_after.slice(0, 10)}
-                    </div>
-                  </>
-                )}
-                {headers && (
-                  <>
-                    <div class="k">Headers score</div>
-                    <div class="v">
-                      {headers.score}/100 ({headers.grade})
-                    </div>
-                  </>
-                )}
               </div>
             </div>
           </div>
@@ -815,6 +962,46 @@ function Overview({
               Explore the check catalog <span aria-hidden="true">↗</span>
             </a>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CertificateValidityCard({ cert }: { cert: Certificate }) {
+  const start = Date.parse(cert.not_before);
+  const end = Date.parse(cert.not_after);
+  const totalDays = (end - start) / 86_400_000;
+  const remaining =
+    totalDays > 0
+      ? Math.max(0, Math.min(1, cert.days_left / totalDays))
+      : 0;
+  const level =
+    cert.days_left < 0 ? 'bad' : cert.days_left < 30 ? 'warn' : 'good';
+  return (
+    <div class="card validity-card">
+      <div class="card-head">
+        <h3>Certificate</h3>
+        <span class={`pill ${level}`}>
+          <span class="dot" />
+          {cert.days_left < 0 ? 'Expired' : `${cert.days_left} days left`}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="validity-identity">
+          <span class="mono">{cert.cn || '(no CN)'}</span>
+          <span class="mono muted">{cert.key_alg}</span>
+        </div>
+        <div
+          class={`bar ${level}`}
+          role="img"
+          aria-label={`${Math.round(remaining * 100)}% of the validity period remaining`}
+        >
+          <span style={{ width: `${remaining * 100}%` }} />
+        </div>
+        <div class="validity-dates mono">
+          <span>{cert.not_before.slice(0, 10)}</span>
+          <span>expires {cert.not_after.slice(0, 10)}</span>
         </div>
       </div>
     </div>
@@ -992,56 +1179,77 @@ function SCTSource({
 function ProtocolsTab({ protocols }: { protocols: ProtocolSupport[] }) {
   if (!protocols.length)
     return <EmptyCard message="No protocols enumerated." />;
-  const offered = protocols.filter((p) => p.offered).length;
+  const offered = protocols.filter((p) => p.offered);
   const indeterminate = protocols.filter((p) => p.probe === 'aborted').length;
-  const disabled = protocols.length - offered - indeterminate;
+  const disabled = protocols.length - offered.length - indeterminate;
+  const ordered = [...protocols].sort(
+    (a, b) => protocolOrder(a.name) - protocolOrder(b.name),
+  );
+  const names = new Set(offered.map((p) => p.name));
+  const notice =
+    names.has('SSL 2.0') || names.has('SSL 3.0')
+      ? {
+          level: 'bad',
+          text: 'SSL is offered. Disable SSL 2.0 and SSL 3.0 to remove the F cap on the TLS grade.',
+        }
+      : names.has('TLS 1.0') || names.has('TLS 1.1')
+        ? {
+            level: 'warn',
+            text: 'TLS 1.0 or 1.1 is offered. Disable both to remove the C cap on the TLS grade.',
+          }
+        : null;
   return (
     <div class="card">
       <div class="card-head">
         <h3>Protocol support</h3>
         <span class="sub">
-          {offered} offered
+          {offered.length} offered
           {indeterminate > 0 ? ` · ${indeterminate} indeterminate` : ''}
           {' · '}
           {disabled} disabled
         </span>
       </div>
-      <div class="card-body flush">
-        <div class="proto-list">
-          {protocols.map((p) => (
-            <div key={p.name} class="proto-row">
-              <div class="proto-name">
-                <b>{p.name}</b>
-                <span>
-                  {p.name.startsWith('SSL')
-                    ? 'Obsolete'
-                    : ['TLS 1.0', 'TLS 1.1'].includes(p.name)
-                      ? 'Deprecated'
-                      : 'Modern TLS'}
-                </span>
-              </div>
-              {p.probe === 'aborted' ? (
-                <span class="pill info" style={{ borderStyle: 'dashed' }}>
-                  <span class="dot" />
-                  Indeterminate
-                </span>
-              ) : p.offered ? (
-                <span class="pill good">
-                  <span class="dot" />
-                  Offered
-                </span>
-              ) : (
-                <span class="pill">
-                  <span class="dot" style={{ background: 'var(--muted-2)' }} />
-                  Disabled
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <ul class="proto-grid">
+        {ordered.map((p) => (
+          <li key={p.name} class="proto-cell">
+            <b>{p.name}</b>
+            <span>
+              {p.name.startsWith('SSL')
+                ? 'Obsolete'
+                : ['TLS 1.0', 'TLS 1.1'].includes(p.name)
+                  ? 'Deprecated'
+                  : 'Modern TLS'}
+            </span>
+            {p.probe === 'aborted' ? (
+              <span class="pill info" style={{ borderStyle: 'dashed' }}>
+                <span class="dot" />
+                Indeterminate
+              </span>
+            ) : p.offered ? (
+              <span
+                class={`pill ${p.name.startsWith('SSL') ? 'bad' : ['TLS 1.0', 'TLS 1.1'].includes(p.name) ? 'warn' : 'good'}`}
+              >
+                <span class="dot" />
+                Offered
+              </span>
+            ) : (
+              <span class="pill">
+                <span class="dot" style={{ background: 'var(--muted-2)' }} />
+                Disabled
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {notice && <p class={`proto-notice ${notice.level}`}>{notice.text}</p>}
     </div>
   );
+}
+
+// protocolOrder lists protocols from oldest to newest; unknown names go last.
+function protocolOrder(name: string): number {
+  const index = ['SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.1', 'TLS 1.2', 'TLS 1.3'].indexOf(name);
+  return index === -1 ? 99 : index;
 }
 
 function CiphersTab({
