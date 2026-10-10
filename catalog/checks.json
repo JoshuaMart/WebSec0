@@ -342,11 +342,11 @@
       "category": "headers.core",
       "title": "Strict-Transport-Security",
       "severity_when_fail": "warn",
-      "score_impact": "20/100 of the Headers score; required for A+",
+      "score_impact": "20/100 of the Headers score; required for TLS A+",
       "remediation": {
-        "summary": "Emit HSTS with at least one year of max-age, includeSubDomains, and preload to be eligible for the HSTS preload list.",
+        "summary": "Emit HSTS on HTTPS responses with at least one year of max-age and includeSubDomains. Add preload only if you intend to submit the domain to the HSTS preload list.",
         "example_stack": "nginx",
-        "example_snippet": "add_header Strict-Transport-Security \"max-age=63072000; includeSubDomains; preload\" always;"
+        "example_snippet": "add_header Strict-Transport-Security \"max-age=63072000; includeSubDomains\" always;"
       }
     },
     {

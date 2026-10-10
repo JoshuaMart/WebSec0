@@ -29,12 +29,12 @@ func strongTLS13() *scan.TLSReport {
 	}
 }
 
-func preloadHeaders() *scan.HeadersReport {
+func strongHSTSHeaders() *scan.HeadersReport {
 	return &scan.HeadersReport{
 		Core: map[string]scan.HeaderResult{
 			"strict-transport-security": {
 				Present: true,
-				Value:   "max-age=63072000; includeSubDomains; preload",
+				Value:   "max-age=63072000; includeSubDomains",
 			},
 		},
 	}
@@ -42,7 +42,7 @@ func preloadHeaders() *scan.HeadersReport {
 
 func TestTLSFinal_HandshakeSCTsInformational(t *testing.T) {
 	report := strongTLS13()
-	headers := preloadHeaders()
+	headers := strongHSTSHeaders()
 	wantScores, wantGrade := TLSFinal(report, headers)
 	for name, scts := range map[string]*scan.SCTSummary{
 		"absent":   {LogIDs: []string{}},
@@ -61,7 +61,7 @@ func TestTLSFinal_HandshakeSCTsInformational(t *testing.T) {
 
 func TestTLSFinal_CertificateSCTsInformational(t *testing.T) {
 	report := strongTLS13()
-	headers := preloadHeaders()
+	headers := strongHSTSHeaders()
 	wantScores, wantGrade := TLSFinal(report, headers)
 	for name, scts := range map[string]*scan.CertificateSCTs{
 		"absent":    {SCTSummary: scan.SCTSummary{LogIDs: []string{}}},
@@ -163,26 +163,26 @@ func TestCipherStrengthScore(t *testing.T) {
 	}
 }
 
-func TestTLSFinal_HappyPath_APlusRequiresPreload(t *testing.T) {
+func TestTLSFinal_HappyPath_APlusRequiresStrongHSTS(t *testing.T) {
 	r := strongTLS13()
-	scores, gradeNoPreload := TLSFinal(r, nil)
-	if gradeNoPreload != scan.GradeA {
-		t.Errorf("without HSTS preload: got %s, want A", gradeNoPreload)
+	scores, gradeNoHSTS := TLSFinal(r, nil)
+	if gradeNoHSTS != scan.GradeA {
+		t.Errorf("without HSTS: got %s, want A", gradeNoHSTS)
 	}
 	if scores.Final < 95 {
-		t.Errorf("Final: got %d, want ≥95 (would map to A+ if preload-eligible)", scores.Final)
+		t.Errorf("Final: got %d, want ≥95 (would map to A+ with strong HSTS)", scores.Final)
 	}
 
-	_, gradeWithPreload := TLSFinal(r, preloadHeaders())
-	if gradeWithPreload != scan.GradeAPlus {
-		t.Errorf("with HSTS preload: got %s, want A+", gradeWithPreload)
+	_, gradeWithHSTS := TLSFinal(r, strongHSTSHeaders())
+	if gradeWithHSTS != scan.GradeAPlus {
+		t.Errorf("with strong HSTS: got %s, want A+", gradeWithHSTS)
 	}
 }
 
 func TestTLSFinal_FloorSSLv3(t *testing.T) {
 	r := strongTLS13()
 	r.Protocols = append(r.Protocols, scan.ProtocolSupport{Name: "SSL 3.0", Offered: true})
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeF {
 		t.Errorf("SSLv3 offered: got %s, want F", grade)
 	}
@@ -191,7 +191,7 @@ func TestTLSFinal_FloorSSLv3(t *testing.T) {
 func TestTLSFinal_FloorSSLv2(t *testing.T) {
 	r := strongTLS13()
 	r.Protocols = append(r.Protocols, scan.ProtocolSupport{Name: "SSL 2.0", Offered: true})
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeF {
 		t.Errorf("SSLv2 offered: got %s, want F", grade)
 	}
@@ -200,7 +200,7 @@ func TestTLSFinal_FloorSSLv2(t *testing.T) {
 func TestTLSFinal_FloorTLS10(t *testing.T) {
 	r := strongTLS13()
 	r.Protocols = append(r.Protocols, scan.ProtocolSupport{Name: "TLS 1.0", Offered: true})
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeC {
 		t.Errorf("TLS 1.0 offered: got %s, want C", grade)
 	}
@@ -209,7 +209,7 @@ func TestTLSFinal_FloorTLS10(t *testing.T) {
 func TestTLSFinal_FloorChainUntrusted(t *testing.T) {
 	r := strongTLS13()
 	r.ChainTrust = scan.ChainTrustUntrusted
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeT {
 		t.Errorf("untrusted chain: got %s, want T", grade)
 	}
@@ -218,7 +218,7 @@ func TestTLSFinal_FloorChainUntrusted(t *testing.T) {
 func TestTLSFinal_FloorChainExpired(t *testing.T) {
 	r := strongTLS13()
 	r.ChainTrust = scan.ChainTrustExpired
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeT {
 		t.Errorf("expired chain: got %s, want T", grade)
 	}
@@ -227,7 +227,7 @@ func TestTLSFinal_FloorChainExpired(t *testing.T) {
 func TestTLSFinal_FloorChainSelfSigned(t *testing.T) {
 	r := strongTLS13()
 	r.ChainTrust = scan.ChainTrustSelfSigned
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeT {
 		t.Errorf("self-signed: got %s, want T", grade)
 	}
@@ -238,7 +238,7 @@ func TestTLSFinal_FloorRC4(t *testing.T) {
 	r.Ciphers = []scan.Cipher{
 		{Name: "TLS_RSA_WITH_RC4_128_SHA", Strength: 128, PFS: false},
 	}
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeF {
 		t.Errorf("RC4: got %s, want F", grade)
 	}
@@ -249,7 +249,7 @@ func TestTLSFinal_Floor3DES(t *testing.T) {
 	r.Ciphers = []scan.Cipher{
 		{Name: "TLS_RSA_WITH_3DES_EDE_CBC_SHA", Strength: 168, PFS: false},
 	}
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeC {
 		t.Errorf("3DES (also no PFS): got %s, want C (worst of 3DES floor and no-PFS floor)", grade)
 	}
@@ -260,7 +260,7 @@ func TestTLSFinal_FloorNoPFS(t *testing.T) {
 	r.Ciphers = []scan.Cipher{
 		{Name: "TLS_RSA_WITH_AES_256_CBC_SHA", Strength: 256, PFS: false},
 	}
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeC {
 		t.Errorf("no PFS: got %s, want C", grade)
 	}
@@ -271,7 +271,7 @@ func TestTLSFinal_FloorAnonCipher(t *testing.T) {
 	r.Ciphers = append(r.Ciphers, scan.Cipher{
 		Name: "TLS_DH_anon_WITH_AES_128_CBC_SHA", Strength: 128, PFS: true,
 	})
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeF {
 		t.Errorf("anonymous cipher: got %s, want F", grade)
 	}
@@ -282,13 +282,13 @@ func TestTLSFinal_FloorExportCipher(t *testing.T) {
 	r.Ciphers = append(r.Ciphers, scan.Cipher{
 		Name: "TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5", Strength: 40,
 	})
-	_, grade := TLSFinal(r, preloadHeaders())
+	_, grade := TLSFinal(r, strongHSTSHeaders())
 	if grade != scan.GradeF {
 		t.Errorf("export cipher: got %s, want F", grade)
 	}
 }
 
-func TestHSTSPreloadEligible(t *testing.T) {
+func TestHSTSStrong(t *testing.T) {
 	cases := []struct {
 		name string
 		hdr  *scan.HeadersReport
@@ -304,16 +304,19 @@ func TestHSTSPreloadEligible(t *testing.T) {
 		}}, false},
 		{"no preload directive", &scan.HeadersReport{Core: map[string]scan.HeaderResult{
 			"strict-transport-security": {Present: true, Value: "max-age=63072000; includeSubDomains"},
-		}}, false},
+		}}, true},
+		{"exactly one year", &scan.HeadersReport{Core: map[string]scan.HeaderResult{
+			"strict-transport-security": {Present: true, Value: "max-age=31536000; includeSubDomains"},
+		}}, true},
 		{"no includeSubDomains", &scan.HeadersReport{Core: map[string]scan.HeaderResult{
 			"strict-transport-security": {Present: true, Value: "max-age=63072000; preload"},
 		}}, false},
-		{"valid", &scan.HeadersReport{Core: map[string]scan.HeaderResult{
+		{"with preload", &scan.HeadersReport{Core: map[string]scan.HeaderResult{
 			"strict-transport-security": {Present: true, Value: "max-age=63072000; includeSubDomains; preload"},
 		}}, true},
 	}
 	for _, c := range cases {
-		if got := hstsPreloadEligible(c.hdr); got != c.want {
+		if got := hstsStrong(c.hdr); got != c.want {
 			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
 		}
 	}

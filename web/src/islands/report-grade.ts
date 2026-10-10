@@ -59,7 +59,7 @@ export function tlsGradeCap(tls?: TLSReport): string {
       names.length > 0 && !(tls.ciphers ?? []).some((c) => c.pfs),
       'no forward secrecy',
     ],
-    ['A', true, 'HSTS not preload-eligible'],
+    ['A', true, 'HSTS missing or weak'],
   ];
   const match = reasons.find(([grade, applies]) => applies && grade === tls.grade);
   return match ? `Capped at ${tls.grade} · ${match[2]}` : '';

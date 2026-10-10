@@ -20,17 +20,17 @@ scoring engine. Integer averages truncate, as does the final weighted score:
 
 | Profile | Certificate | Protocol | Key exchange | Cipher | Final | Grade |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `modern_preload` | 100 | 97 | 90 | 100 | 96 | A+ |
+| `modern_hsts` | 100 | 97 | 90 | 100 | 96 | A+ |
 | `modern_no_hsts` | 100 | 97 | 90 | 100 | 96 | A |
 | `legacy_weak` | 64 | 57 | 40 | 90 | 62 | F |
 | `untrusted_legacy` | 64 | 57 | 40 | 90 | 62 | T |
 | `partial_blocked` | 100 | 100 | 90 | 100 | 97 | A |
 
-- **Modern with preload directives:** ECDSA with 365 days remaining gives
+- **Modern with strong HSTS:** ECDSA with 365 days remaining gives
   100. TLS 1.2/1.3 gives `trunc((95 + 100) / 2) = 97`. PFS gives 90;
   256-bit ciphers give 100. The weighted result is `trunc(96.966…) = 96`.
-  The trusted chain and HSTS directives allow A+. This does not assert
-  actual membership in a browser preload list.
+  The trusted chain and HSTS (one year, `includeSubDomains`, no `preload`)
+  allow A+.
 - **Modern without HSTS:** identical TLS observations and numeric scores.
   The header was checked and is absent, so the A+ gate caps the grade at A.
 - **Legacy with weak ciphers:** RSA with 20 days remaining gives
