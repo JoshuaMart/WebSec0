@@ -14,7 +14,7 @@ import (
 
 func TestTLSReferenceFixtures(t *testing.T) {
 	for _, name := range []string{
-		"modern_preload",
+		"modern_hsts",
 		"modern_no_hsts",
 		"legacy_weak",
 		"untrusted_legacy",

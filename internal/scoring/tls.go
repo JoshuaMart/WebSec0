@@ -8,9 +8,9 @@ import (
 )
 
 // TLSFinal combines the four sub-scores via the formula, applies
-// trust/protocol/cipher floors and finally enforces the HSTS-preload
+// trust/protocol/cipher floors and finally enforces the strong-HSTS
 // requirement for A+. A nil HeadersReport caps the grade at A even when
-// the score would otherwise reach A+ (preload eligibility is unknown).
+// the score would otherwise reach A+ (HSTS is unknown).
 //
 //	final = (cert × 0.30) + (((proto + kx + cipher) / 3) × 0.70)
 func TLSFinal(t *scan.TLSReport, h *scan.HeadersReport) (scan.TLSScores, scan.Grade) {
@@ -40,7 +40,7 @@ func TLSFinal(t *scan.TLSReport, h *scan.HeadersReport) (scan.TLSScores, scan.Gr
 	grade = Worst(grade, protocolFloor(t.Protocols))
 	grade = Worst(grade, cipherFloor(t.Ciphers))
 
-	if grade == scan.GradeAPlus && !hstsPreloadEligible(h) {
+	if grade == scan.GradeAPlus && !hstsStrong(h) {
 		grade = scan.GradeA
 	}
 	return scores, grade
@@ -106,10 +106,11 @@ func cipherFloor(ciphers []scan.Cipher) scan.Grade {
 	return scan.GradeAPlus
 }
 
-// hstsPreloadEligible returns true when HSTS is configured strongly enough
-// to be admissible to the HSTS preload list (max-age ≥ 1y, includeSubDomains
-// and preload directives present).
-func hstsPreloadEligible(h *scan.HeadersReport) bool {
+// hstsStrong returns true when HSTS has max-age ≥ 1y and includeSubDomains,
+// the same bar as a passing HSTS header. The preload directive is not
+// required: hstspreload.org no longer recommends preloading, and the
+// directive is read as a request to be listed.
+func hstsStrong(h *scan.HeadersReport) bool {
 	if h == nil {
 		return false
 	}
@@ -118,5 +119,5 @@ func hstsPreloadEligible(h *scan.HeadersReport) bool {
 		return false
 	}
 	p := headers.ParseHSTS(r.Value)
-	return p.MaxAge >= 31536000 && p.IncludeSubDomains && p.Preload
+	return p.MaxAge >= headers.MinHSTSMaxAge && p.IncludeSubDomains
 }

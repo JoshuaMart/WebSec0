@@ -60,10 +60,10 @@ Grade caps (the worst applicable grade wins):
 | TLS 1.0 or 1.1 offered                       | **C**     |
 
 A+ gate: a final score of ≥ 95 is only awarded A+ when the *Headers*
-report carries an HSTS line with `max-age ≥ 31536000` (one year),
-`includeSubDomains`, and `preload`. Otherwise the grade is capped at A.
-A scan with no Headers report (e.g. the HTTPS endpoint failed) cannot
-earn A+. These directives do not prove membership in a browser preload list.
+report carries an HSTS line with `max-age ≥ 31536000` (one year) and
+`includeSubDomains`. Otherwise the grade is capped at A. `preload` is not
+required and does not change either grade. A scan with no Headers report
+(e.g. the HTTPS endpoint failed) cannot earn A+.
 
 ## Headers grading
 
