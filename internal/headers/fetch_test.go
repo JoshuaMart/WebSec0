@@ -99,6 +99,26 @@ func TestFetch_CapturesMultipleSetCookie(t *testing.T) {
 	}
 }
 
+// An application and its proxy each adding X-Frame-Options is the common
+// source of conflicting values; browsers then block every frame.
+func TestProbe_ConflictingXFOLines_Warn(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Add("X-Frame-Options", "SAMEORIGIN")
+		w.Header().Add("X-Frame-Options", "DENY")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	report, _, err := Probe(context.Background(), makeTarget(t, srv), Options{FollowRedirects: true, MaxRedirects: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := report.Core["x-frame-options"]
+	if got.Status != scan.StatusWarn || got.Value != "SAMEORIGIN, DENY" {
+		t.Errorf("got status %s value %q, want warn with both values", got.Status, got.Value)
+	}
+}
+
 // When safehttp.AllowRedirect rejects an off-host 3xx, Fetch should still
 // surface the 3xx headers (HSTS, Server, …) and report the Location so the
 // orchestrator can decide whether to retry on a sibling host.
