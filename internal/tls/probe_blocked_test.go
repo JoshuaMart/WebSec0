@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"net/netip"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -163,16 +164,13 @@ func TestProbe_BannedMidScan(t *testing.T) {
 		Ciphers:    report.Ciphers,
 		ScanStatus: report.ScanStatus,
 	})
-	var blocked *scan.VulnerabilityFinding
-	for i := range vulns {
-		if vulns[i].ID == "vuln.scan_blocked" {
-			blocked = &vulns[i]
-			break
-		}
-	}
-	if blocked == nil {
+	idx := slices.IndexFunc(vulns, func(v scan.VulnerabilityFinding) bool {
+		return v.ID == "vuln.scan_blocked"
+	})
+	if idx < 0 {
 		t.Fatal("vuln.scan_blocked missing from DeriveWeaknesses output")
 	}
+	blocked := vulns[idx]
 	if blocked.State != "Partial" {
 		t.Errorf("vuln.scan_blocked state = %q, want Partial", blocked.State)
 	}
