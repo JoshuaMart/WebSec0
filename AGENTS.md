@@ -83,6 +83,8 @@ make bundle-size       # run after the frontend build; 80 KB gzip limit
   [policy.go](internal/safehttp/policy.go) for the complete policy.
 - Preserve redirect checks. An apex/www follow-up must be re-resolved through
   the same policy by the orchestrator; it must not bypass the IP gate.
+  AIA issuer fetches follow the same rule: the orchestrator supplies the
+  fetcher, restricted to default HTTP/HTTPS ports and without redirects.
 
 ## Frontend and generated files
 

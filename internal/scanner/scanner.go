@@ -212,7 +212,7 @@ func (s *Scanner) runProbes(ctx context.Context, target *safehttp.Target) *scan.
 	)
 
 	probeTLS := func() {
-		tlsReport = tlsprobe.Probe(ctx, target)
+		tlsReport = tlsprobe.Probe(ctx, target, tlsprobe.Options{FetchIssuer: s.fetchIssuer})
 		if tlsReport == nil {
 			return
 		}

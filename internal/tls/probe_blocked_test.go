@@ -117,7 +117,7 @@ func TestProbe_BannedMidScan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	report := Probe(context.Background(), tgt)
+	report := Probe(context.Background(), tgt, Options{})
 
 	if report.ScanStatus != scan.TLSScanStatusPartialBlocked {
 		t.Fatalf("expected ScanStatus=partial_blocked, got %q", report.ScanStatus)
@@ -195,7 +195,7 @@ func TestProbe_HealthyScanStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	report := Probe(context.Background(), tgt)
+	report := Probe(context.Background(), tgt, Options{})
 
 	if report.ScanStatus != scan.TLSScanStatusComplete {
 		t.Errorf("ScanStatus = %q, want complete", report.ScanStatus)

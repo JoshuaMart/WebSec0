@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"go/version"
 	"math/big"
 	"os"
@@ -83,26 +84,86 @@ func testRootSelection(t *testing.T, mode string) {
 	x509.SetFallbackRoots(pool)
 
 	fallbackTrust, systemTrust := scan.ChainTrustTrusted, scan.ChainTrustUntrusted
+	fallbackIncomplete := scan.ChainTrustIncomplete
 	if mode == "system_priority" {
 		fallbackTrust, systemTrust = systemTrust, fallbackTrust
+		fallbackIncomplete = scan.ChainTrustUntrusted
+	}
+	serve := func(body []byte) IssuerFetcher {
+		return func(_ context.Context, rawURL string) ([]byte, error) {
+			if rawURL != testIssuerURL {
+				t.Errorf("fetched %q, want %q", rawURL, testIssuerURL)
+			}
+			return body, nil
+		}
+	}
+	intermediatePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: intermediate.Raw})
+	unavailable := func(context.Context, string) ([]byte, error) { return nil, errors.New("unavailable") }
+	unexpected := func(context.Context, string) ([]byte, error) {
+		t.Error("unexpected issuer fetch")
+		return nil, errors.New("unexpected")
+	}
+	// A chain that validates on its own needs no AIA lookup.
+	trustedNoFetch := IssuerFetcher(unexpected)
+	if mode == "system_priority" {
+		trustedNoFetch = unavailable
 	}
 	for _, tc := range []struct {
 		name  string
 		chain []*x509.Certificate
 		host  string
+		fetch IssuerFetcher
 		want  scan.ChainTrust
 	}{
-		{"fallback_chain", []*x509.Certificate{leaf, intermediate}, "service.example.test", fallbackTrust},
-		{"system_chain", []*x509.Certificate{systemLeaf}, "service.example.test", systemTrust},
-		{"missing_intermediate", []*x509.Certificate{leaf}, "service.example.test", scan.ChainTrustUntrusted},
-		{"empty_chain", nil, "service.example.test", scan.ChainTrustNoChain},
-		{"self_signed", []*x509.Certificate{selfSigned}, "service.example.test", scan.ChainTrustSelfSigned},
-		{"expired", []*x509.Certificate{expired, intermediate}, "service.example.test", scan.ChainTrustExpired},
-		{"wrong_hostname", []*x509.Certificate{leaf, intermediate}, "other.example.test", scan.ChainTrustHostnameMismatch},
+		{"fallback_chain", []*x509.Certificate{leaf, intermediate}, "service.example.test", nil, fallbackTrust},
+		{"system_chain", []*x509.Certificate{systemLeaf}, "service.example.test", nil, systemTrust},
+		{"missing_intermediate", []*x509.Certificate{leaf}, "service.example.test", nil, scan.ChainTrustUntrusted},
+		{"empty_chain", nil, "service.example.test", nil, scan.ChainTrustNoChain},
+		{"self_signed", []*x509.Certificate{selfSigned}, "service.example.test", nil, scan.ChainTrustSelfSigned},
+		{"expired", []*x509.Certificate{expired, intermediate}, "service.example.test", nil, scan.ChainTrustExpired},
+		{"wrong_hostname", []*x509.Certificate{leaf, intermediate}, "other.example.test", nil, scan.ChainTrustHostnameMismatch},
+		{"aia_der", []*x509.Certificate{leaf}, "service.example.test", serve(intermediate.Raw), fallbackIncomplete},
+		{"aia_pem", []*x509.Certificate{leaf}, "service.example.test", serve(intermediatePEM), fallbackIncomplete},
+		{"aia_root_served", []*x509.Certificate{leaf, fallbackRoot}, "service.example.test", serve(intermediate.Raw), fallbackIncomplete},
+		{"aia_wrong_issuer", []*x509.Certificate{leaf}, "service.example.test", serve(systemRoot.Raw), scan.ChainTrustUntrusted},
+		{"aia_unavailable", []*x509.Certificate{leaf}, "service.example.test", unavailable, scan.ChainTrustUntrusted},
+		{"complete_chain_no_fetch", []*x509.Certificate{leaf, intermediate}, "service.example.test", trustedNoFetch, fallbackTrust},
+		{"self_signed_no_fetch", []*x509.Certificate{selfSigned}, "service.example.test", unexpected, scan.ChainTrustSelfSigned},
+		{"wrong_hostname_no_fetch", []*x509.Certificate{leaf}, "other.example.test", unexpected, scan.ChainTrustHostnameMismatch},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := validateChain(tc.chain, tc.host); got != tc.want {
+			if got := validateChain(t.Context(), tc.chain, tc.host, tc.fetch); got != tc.want {
 				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+const testIssuerURL = "http://ca.example.test/intermediate.crt"
+
+// The platform verifier may fetch issuers itself; served intermediates and
+// trust anchors must not count as missing.
+func TestNeedsUnservedIntermediate(t *testing.T) {
+	root, rootKey := rootTestCertificate(t, nil, nil, "Root CA", true, false)
+	intermediate, intermediateKey := rootTestCertificate(t, root, rootKey, "Intermediate CA", true, false)
+	leaf, _ := rootTestCertificate(t, intermediate, intermediateKey, "service.example.test", false, false)
+	full := []*x509.Certificate{leaf, intermediate, root}
+	for _, tc := range []struct {
+		name     string
+		verified [][]*x509.Certificate
+		served   []*x509.Certificate
+		want     bool
+	}{
+		{"served_intermediate", [][]*x509.Certificate{full}, []*x509.Certificate{leaf, intermediate}, false},
+		{"missing_intermediate", [][]*x509.Certificate{full}, []*x509.Certificate{leaf}, true},
+		{"root_instead_of_intermediate", [][]*x509.Certificate{full}, []*x509.Certificate{leaf, root}, true},
+		{"one_complete_path", [][]*x509.Certificate{full, {leaf, root}}, []*x509.Certificate{leaf}, false},
+		{"leaf_issued_by_root", [][]*x509.Certificate{{leaf, root}}, []*x509.Certificate{leaf}, false},
+		{"no_paths", nil, []*x509.Certificate{leaf}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := needsUnservedIntermediate(tc.verified, tc.served); got != tc.want {
+				t.Errorf("got %v, want %v", got, tc.want)
 			}
 		})
 	}
@@ -124,6 +185,7 @@ func rootTestCertificate(t *testing.T, parent *x509.Certificate, signer ed25519.
 		template.KeyUsage |= x509.KeyUsageCertSign
 	} else {
 		template.DNSNames = []string{name}
+		template.IssuingCertificateURL = []string{testIssuerURL}
 		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
 	}
 	if expired {

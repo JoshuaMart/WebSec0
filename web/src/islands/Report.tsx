@@ -277,6 +277,13 @@ function TrustPill({ trust }: { trust?: string }) {
         Trusted
       </span>
     );
+  if (trust === 'incomplete')
+    return (
+      <span class="pill warn">
+        <span class="dot" />
+        Incomplete chain
+      </span>
+    );
   if (trust === 'expired')
     return (
       <span class="pill bad">
@@ -557,6 +564,7 @@ function gradeColorVar(grade: string): string {
 function prettyTrust(trust?: string): string {
   if (!trust || trust === 'no_chain') return 'Trust not assessed';
   if (trust === 'trusted') return 'Browser-trusted';
+  if (trust === 'incomplete') return 'incomplete chain';
   return trust.replace(/_/g, ' ');
 }
 

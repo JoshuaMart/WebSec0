@@ -181,7 +181,7 @@ func TestProbeCertificateSCTs(t *testing.T) {
 				srv.TLS = &stdtls.Config{Certificates: []stdtls.Certificate{cert}, MinVersion: version, MaxVersion: version}
 				srv.StartTLS()
 				defer srv.Close()
-				report := Probe(context.Background(), makeTargetForServer(t, srv))
+				report := Probe(context.Background(), makeTargetForServer(t, srv), Options{})
 				if !reflect.DeepEqual(report.CertificateSCTs, &tc.want) {
 					t.Fatalf("certificate SCTs: got %+v, want %+v", report.CertificateSCTs, tc.want)
 				}

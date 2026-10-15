@@ -47,6 +47,31 @@ test('certificate trust failure retains its failure color', () => {
   assert.match(html, /expired/);
 });
 
+test('an incomplete chain is a B cap, not a trust failure', () => {
+  const html = render(
+    <GradePanel
+      data={{
+        ...metadata,
+        tls: {
+          grade: 'B',
+          chain_trust: 'incomplete',
+          scores: {
+            final: 96,
+            certificate: 100,
+            protocol_support: 100,
+            key_exchange: 90,
+            cipher_strength: 90,
+          },
+        } as ScanResult['tls'],
+      }}
+    />,
+  );
+  assert.match(html, /Grade B/);
+  assert.match(html, /incomplete chain/);
+  assert.match(html, /Capped at B · certificate chain is incomplete/);
+  assert.doesNotMatch(html, /untrusted/);
+});
+
 test('only the active report tab is in the sequential keyboard order', () => {
   const html = render(
     <Tabs active="headers" onChange={() => {}} data={metadata} />,

@@ -151,8 +151,11 @@ type ChainTrust string
 
 // ChainTrust values.
 const (
-	ChainTrustUnknown          ChainTrust = ""
-	ChainTrustTrusted          ChainTrust = "trusted"
+	ChainTrustUnknown ChainTrust = ""
+	ChainTrustTrusted ChainTrust = "trusted"
+	// ChainTrustIncomplete means the chain validates only with an
+	// intermediate the server did not send.
+	ChainTrustIncomplete       ChainTrust = "incomplete"
 	ChainTrustNoChain          ChainTrust = "no_chain"
 	ChainTrustSelfSigned       ChainTrust = "self_signed"
 	ChainTrustExpired          ChainTrust = "expired"

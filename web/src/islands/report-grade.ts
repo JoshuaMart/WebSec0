@@ -59,6 +59,7 @@ export function tlsGradeCap(tls?: TLSReport): string {
       names.length > 0 && !(tls.ciphers ?? []).some((c) => c.pfs),
       'no forward secrecy',
     ],
+    ['B', tls.chain_trust === 'incomplete', 'certificate chain is incomplete'],
     ['A', true, 'HSTS missing or weak'],
   ];
   const match = reasons.find(([grade, applies]) => applies && grade === tls.grade);

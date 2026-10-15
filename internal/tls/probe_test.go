@@ -37,7 +37,7 @@ func TestProbe_TLS12Only(t *testing.T) {
 	defer srv.Close()
 
 	tgt := makeTargetForServer(t, srv)
-	report := Probe(context.Background(), tgt)
+	report := Probe(context.Background(), tgt, Options{})
 
 	offered := map[string]bool{}
 	for _, p := range report.Protocols {
@@ -72,7 +72,7 @@ func TestProbe_TLS13_NegotiatedCipherCaptured(t *testing.T) {
 	defer srv.Close()
 
 	tgt := makeTargetForServer(t, srv)
-	report := Probe(context.Background(), tgt)
+	report := Probe(context.Background(), tgt, Options{})
 
 	var tls13Ciphers []scan.Cipher
 	for _, c := range report.Ciphers {
@@ -92,7 +92,7 @@ func TestProbe_ChainNotTrustedForHttptest(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer srv.Close()
 	tgt := makeTargetForServer(t, srv)
-	report := Probe(context.Background(), tgt)
+	report := Probe(context.Background(), tgt, Options{})
 
 	if report.ChainTrust == scan.ChainTrustTrusted {
 		t.Errorf("httptest cert must not validate against system roots, got %s", report.ChainTrust)
