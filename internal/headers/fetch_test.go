@@ -119,6 +119,26 @@ func TestProbe_ConflictingXFOLines_Warn(t *testing.T) {
 	}
 }
 
+// A proxy adding Referrer-Policy after the application's own: browsers apply
+// the last line, so a weak upstream value followed by a strict one passes.
+func TestProbe_ReferrerPolicyLastLineWins(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Add("Referrer-Policy", "no-referrer-when-downgrade")
+		w.Header().Add("Referrer-Policy", "strict-origin-when-cross-origin")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	report, _, err := Probe(context.Background(), makeTarget(t, srv), Options{FollowRedirects: true, MaxRedirects: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := report.Core["referrer-policy"]
+	if got.Status != scan.StatusPass || got.Value != "no-referrer-when-downgrade, strict-origin-when-cross-origin" {
+		t.Errorf("got status %s value %q, want pass with both values", got.Status, got.Value)
+	}
+}
+
 // When safehttp.AllowRedirect rejects an off-host 3xx, Fetch should still
 // surface the 3xx headers (HSTS, Server, …) and report the Location so the
 // orchestrator can decide whether to retry on a sibling host.

@@ -109,18 +109,42 @@ func TestEvalXCTO(t *testing.T) {
 	}
 }
 
+// Browsers apply the last recognised value, whether values come as separate
+// header lines or as a comma-separated list, and skip unknown ones.
 func TestEvalReferrerPolicy(t *testing.T) {
-	if evalReferrerPolicy("").Status != scan.StatusFail {
-		t.Error("absent should fail")
+	cases := []struct {
+		name   string
+		lines  []string
+		status scan.Status
+		value  string
+	}{
+		{"absent", nil, scan.StatusFail, ""},
+		{"blank header is absent", []string{" "}, scan.StatusFail, ""},
+		{"strict policy", []string{"strict-origin-when-cross-origin"}, scan.StatusPass, "strict-origin-when-cross-origin"},
+		{"no-referrer-when-downgrade", []string{"no-referrer-when-downgrade"}, scan.StatusWarn, "no-referrer-when-downgrade"},
+		{"unsafe-url in any case", []string{"Unsafe-URL"}, scan.StatusWarn, "Unsafe-URL"},
+		{"origin passes", []string{"origin"}, scan.StatusPass, "origin"},
+		{"fallback list, strict last", []string{"no-referrer, strict-origin-when-cross-origin"}, scan.StatusPass, "no-referrer, strict-origin-when-cross-origin"},
+		{"list with unsafe-url last", []string{"no-referrer, unsafe-url"}, scan.StatusWarn, "no-referrer, unsafe-url"},
+		{"two lines, unsafe-url last", []string{"strict-origin-when-cross-origin", "unsafe-url"}, scan.StatusWarn, "strict-origin-when-cross-origin, unsafe-url"},
+		{"two lines, strict last", []string{"no-referrer-when-downgrade", "strict-origin-when-cross-origin"}, scan.StatusPass, "no-referrer-when-downgrade, strict-origin-when-cross-origin"},
+		{"unknown value last is skipped", []string{"unsafe-url, made-up-policy"}, scan.StatusWarn, "unsafe-url, made-up-policy"},
+		{"trailing comma is skipped", []string{"unsafe-url,"}, scan.StatusWarn, "unsafe-url,"},
+		{"unknown value alone", []string{"made-up-policy"}, scan.StatusFail, "made-up-policy"},
+		{"quoted value is unknown", []string{`"no-referrer"`}, scan.StatusFail, `"no-referrer"`},
 	}
-	if evalReferrerPolicy("strict-origin-when-cross-origin").Status != scan.StatusPass {
-		t.Error("strict policy should pass")
-	}
-	if evalReferrerPolicy("no-referrer-when-downgrade").Status != scan.StatusWarn {
-		t.Error("permissive policy should warn")
-	}
-	if evalReferrerPolicy("unsafe-url").Status != scan.StatusWarn {
-		t.Error("unsafe-url should warn")
+	for _, c := range cases {
+		h := http.Header{}
+		for _, v := range c.lines {
+			h.Add("Referrer-Policy", v)
+		}
+		got := evalReferrerPolicy(h)
+		if got.Status != c.status {
+			t.Errorf("%s: got %s, want %s", c.name, got.Status, c.status)
+		}
+		if got.Value != c.value || got.Present != (c.value != "") {
+			t.Errorf("%s: got present=%v value=%q, want value %q", c.name, got.Present, got.Value, c.value)
+		}
 	}
 }
 
