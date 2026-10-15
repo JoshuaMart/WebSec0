@@ -28,7 +28,7 @@ func EvaluateCore(h http.Header) map[string]scan.HeaderResult {
 		"content-security-policy":   evalCSP(h.Get("Content-Security-Policy")),
 		"x-frame-options":           evalXFO(h),
 		"x-content-type-options":    evalXCTO(h.Get("X-Content-Type-Options")),
-		"referrer-policy":           evalReferrerPolicy(h.Get("Referrer-Policy")),
+		"referrer-policy":           evalReferrerPolicy(h),
 		"permissions-policy":        evalPermissionsPolicy(h.Get("Permissions-Policy")),
 	}
 }
@@ -122,21 +122,48 @@ func evalXCTO(v string) scan.HeaderResult {
 	return scan.HeaderResult{Present: true, Value: v, Status: scan.StatusWarn}
 }
 
+// referrerPolicies lists the values defined by the Referrer Policy spec.
+var referrerPolicies = map[string]bool{
+	"no-referrer":                     true,
+	"no-referrer-when-downgrade":      true,
+	"same-origin":                     true,
+	"origin":                          true,
+	"strict-origin":                   true,
+	"origin-when-cross-origin":        true,
+	"strict-origin-when-cross-origin": true,
+	"unsafe-url":                      true,
+}
+
 // permissiveReferrer lists Referrer-Policy values that leak too much.
 var permissiveReferrer = map[string]bool{
-	"":                           true,
 	"unsafe-url":                 true,
 	"no-referrer-when-downgrade": true,
 }
 
-func evalReferrerPolicy(v string) scan.HeaderResult {
-	if v == "" {
+// evalReferrerPolicy grades the policy browsers apply: the last recognised
+// value across all header lines and comma-separated lists (Referrer Policy
+// §8.1). Unknown values are skipped, as browsers do; a header with no
+// recognised value leaves the browser default in place and fails like a
+// missing one.
+func evalReferrerPolicy(h http.Header) scan.HeaderResult {
+	raw := strings.Join(h.Values("Referrer-Policy"), ", ")
+	if strings.TrimSpace(raw) == "" {
 		return scan.HeaderResult{Present: false, Status: scan.StatusFail}
 	}
-	if permissiveReferrer[strings.ToLower(strings.TrimSpace(v))] {
-		return scan.HeaderResult{Present: true, Value: v, Status: scan.StatusWarn}
+	policy := ""
+	for _, v := range strings.Split(raw, ",") {
+		if v = strings.ToLower(strings.Trim(v, " \t")); referrerPolicies[v] {
+			policy = v
+		}
 	}
-	return scan.HeaderResult{Present: true, Value: v, Status: scan.StatusPass}
+	res := scan.HeaderResult{Present: true, Value: raw, Status: scan.StatusPass}
+	switch {
+	case policy == "":
+		res.Status = scan.StatusFail
+	case permissiveReferrer[policy]:
+		res.Status = scan.StatusWarn
+	}
+	return res
 }
 
 func evalPermissionsPolicy(v string) scan.HeaderResult {
