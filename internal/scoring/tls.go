@@ -53,6 +53,10 @@ func trustFloor(trust scan.ChainTrust) scan.Grade {
 		scan.ChainTrustHostnameMismatch,
 		scan.ChainTrustUntrusted:
 		return scan.GradeT
+	case scan.ChainTrustIncomplete:
+		// Browsers usually repair a missing intermediate, but stricter TLS
+		// clients reject the chain.
+		return scan.GradeB
 	}
 	return scan.GradeAPlus
 }

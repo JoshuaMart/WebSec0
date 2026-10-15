@@ -178,6 +178,14 @@ function trustAndOcspHighlights(tls?: TLSReport): Highlight[] {
     });
   }
 
+  if (tls.chain_trust === 'incomplete') {
+    out.push({
+      title: 'Certificate chain is incomplete',
+      body: 'The server omits an intermediate certificate. Browsers usually repair the chain, but curl, OpenSSL and many API clients reject it. Serve the full chain; the grade is capped at B.',
+      level: 'warn',
+    });
+  }
+
   if (tls.chain_trust === 'no_chain') {
     out.push({
       title: 'Certificate trust not assessed',

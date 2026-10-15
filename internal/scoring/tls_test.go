@@ -233,6 +233,24 @@ func TestTLSFinal_FloorChainSelfSigned(t *testing.T) {
 	}
 }
 
+func TestTLSFinal_FloorChainIncomplete(t *testing.T) {
+	r := strongTLS13()
+	r.ChainTrust = scan.ChainTrustIncomplete
+	scores, grade := TLSFinal(r, strongHSTSHeaders())
+	if grade != scan.GradeB {
+		t.Errorf("incomplete chain: got %s, want B", grade)
+	}
+	if scores.Final < TLSThresholds.APlus {
+		t.Fatalf("fixture must score A+ to exercise the cap, got %d", scores.Final)
+	}
+
+	// The cap never lifts a lower grade.
+	r.Protocols = append(r.Protocols, scan.ProtocolSupport{Name: "TLS 1.0", Offered: true})
+	if _, grade := TLSFinal(r, strongHSTSHeaders()); grade != scan.GradeC {
+		t.Errorf("incomplete chain with TLS 1.0: got %s, want C", grade)
+	}
+}
+
 func TestTLSFinal_FloorRC4(t *testing.T) {
 	r := strongTLS13()
 	r.Ciphers = []scan.Cipher{

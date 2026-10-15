@@ -65,3 +65,9 @@ test('incomplete custom responses are shown as not assessed', () => {
   assert.match(result[0].title, /not assessed/);
   assert.match(result[0].body, /Incomplete response/);
 });
+
+test('an incomplete chain warns without claiming a trust failure', () => {
+  const titles = (chain_trust: string) => deriveHighlights(report({ tls: { ...tls(complete), chain_trust } })).map((h) => [h.title, h.level]);
+  assert.deepEqual(titles('incomplete').filter(([t]) => t.startsWith('Certificate')), [['Certificate chain is incomplete', 'warn']]);
+  assert.deepEqual(titles('untrusted').filter(([t]) => t.startsWith('Certificate')), [['Certificate chain does not validate', 'bad']]);
+});

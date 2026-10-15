@@ -26,7 +26,9 @@ alphabet, best to worst: `A+ A B C D E F T`.
 `T` is reserved for certificate-trust failures (expired, self-signed,
 hostname mismatch, untrusted chain). It is ranked below `F` because the
 certificate could not be trusted. Other observations remain useful; `T` does
-not invalidate the report itself.
+not invalidate the report itself. An incomplete chain, where the server omits
+an intermediate that its certificate's AIA URL supplies, is not a trust
+failure: it caps the grade at B.
 
 ## TLS grading
 
@@ -53,6 +55,7 @@ Grade caps (the worst applicable grade wins):
 | Observation                                  | Grade cap |
 |----------------------------------------------|-----------|
 | Expired, self-signed, mismatched or untrusted chain                      | **T**     |
+| Chain validates only with a fetched intermediate (`incomplete`)          | **B**     |
 | SSL 2.0 or 3.0 offered                       | **F**     |
 | RC4 / anonymous / export cipher offered      | **F**     |
 | 3DES cipher offered                          | **C**     |
@@ -114,10 +117,16 @@ not recoverable), TLS A+ is unreachable even at a perfect score.
 - `tls.cipher_preference`: `"server"` | `"client"` | `""`.
 - `tls.certificate_chain`: leaf-to-root certs with `step`, `cn`, `issuer`,
   `not_before`, `not_after`, `days_left`, `key_alg`, `sig_alg`, `san[]`.
-- `tls.chain_trust`: `trusted` | `expired` | `self_signed` |
+- `tls.chain_trust`: `trusted` | `incomplete` | `expired` | `self_signed` |
   `hostname_mismatch` | `untrusted` | `no_chain` | `""`. The four explicit
   trust failures cap the grade at T; `no_chain` and empty values mean the
   chain was unavailable or trust was not established, not trusted.
+  `incomplete` means the leaf validates only after adding an intermediate the
+  server did not send. WebSec0 fetches at most two issuers from the
+  certificate's AIA caIssuers URLs (HTTP/HTTPS on default ports, DER or PEM,
+  through the scan's network policy). Browsers usually repair such chains,
+  while OpenSSL, curl and many API clients reject them. A chain the fetch
+  cannot complete remains `untrusted`.
   The shipped binary prefers system trust and falls back to an embedded
   Mozilla/NSS root bundle only when system trust is unavailable. It does not
   retry rejected chains against that bundle when a system store is available;
@@ -191,7 +200,7 @@ report. Unknown IDs do not invalidate the original finding.
 | `tls.vulnerabilities[]`, `custom[]`, `email.spf`, `email.dmarc` | Match the supplied `id` exactly. |
 | `headers.core` | Prefix `headers.` and replace hyphens in the header name with underscores; verify the ID exists. |
 | Protocol rows | Map the name explicitly: `SSL 2.0` → `tls.protocol.sslv2`, `SSL 3.0` → `tls.protocol.sslv3`, `TLS 1.0` … `TLS 1.3` → `tls.protocol.tls10` … `tls.protocol.tls13`. |
-| Chain trust failures | Match `tls.chain.expired`, `tls.chain.self_signed`, `tls.chain.hostname_mismatch` or `tls.chain.untrusted` to the observed failure. |
+| Chain trust outcomes | Match `tls.chain.incomplete`, `tls.chain.expired`, `tls.chain.self_signed`, `tls.chain.hostname_mismatch` or `tls.chain.untrusted` to the observed `chain_trust`. |
 | Cipher and additional-header observations | Match the observed condition to a relevant catalog entry; there is no universal ID conversion. |
 
 Protocol, cipher and header rows have no `id` field. A catalog entry's existence

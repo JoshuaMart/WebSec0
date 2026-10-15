@@ -12,6 +12,13 @@ import (
 	"github.com/JoshuaMart/websec0/internal/scan"
 )
 
+// Options configures Probe.
+type Options struct {
+	// FetchIssuer, when set, lets chain validation fetch intermediates the
+	// server omitted, so an incomplete chain is not reported as untrusted.
+	FetchIssuer IssuerFetcher
+}
+
 // Probe runs the full modern-TLS probe against target and returns a
 // partially-populated TLSReport. The Grade and Scores fields are left
 // zero — they are filled in by the scoring engine in Phase 6.
@@ -24,10 +31,10 @@ import (
 // CipherPreference and SessionResumption — both TLS 1.2+ features — are
 // skipped once the detector trips, because each adds an extra handshake on
 // what we already know to be a dead path.
-func Probe(ctx context.Context, target *safehttp.Target) *scan.TLSReport {
+func Probe(ctx context.Context, target *safehttp.Target, opts Options) *scan.TLSReport {
 	// extractChain runs first because the certificate is informative even
 	// when downstream enumeration ends up partial.
-	cert := extractChain(ctx, target)
+	cert := extractChain(ctx, target, opts.FetchIssuer)
 
 	bd := newBanDetector()
 	// extractChain just completed a handshake against the same host. If it

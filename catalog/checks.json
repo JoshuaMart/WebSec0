@@ -86,6 +86,18 @@
       }
     },
     {
+      "id": "tls.chain.incomplete",
+      "category": "tls.chain",
+      "title": "Certificate chain is incomplete",
+      "severity_when_fail": "warn",
+      "score_impact": "Caps TLS grade at B",
+      "remediation": {
+        "summary": "Serve the leaf certificate followed by every intermediate up to, but not including, the root. Browsers often repair a missing intermediate, but curl, OpenSSL, language runtimes and many API clients reject the chain.",
+        "example_stack": "nginx",
+        "example_snippet": "# fullchain.pem = leaf certificate followed by its intermediate(s)\nssl_certificate     /etc/ssl/example.com/fullchain.pem;\nssl_certificate_key /etc/ssl/example.com/privkey.pem;"
+      }
+    },
+    {
       "id": "tls.chain.expired",
       "category": "tls.chain",
       "title": "Certificate expired",

@@ -105,7 +105,7 @@ func TestProbeHandshakeSCTs(t *testing.T) {
 				srv.TLS = &stdtls.Config{Certificates: []stdtls.Certificate{serverCert}, MinVersion: version, MaxVersion: version}
 				srv.StartTLS()
 				defer srv.Close()
-				report := Probe(context.Background(), makeTargetForServer(t, srv))
+				report := Probe(context.Background(), makeTargetForServer(t, srv), Options{})
 				if !reflect.DeepEqual(report.HandshakeSCTs, want) {
 					t.Fatalf("got %+v, want %+v", report.HandshakeSCTs, want)
 				}
@@ -120,7 +120,7 @@ func TestHandshakeSCTsUnavailable(t *testing.T) {
 	defer srv.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	report := Probe(ctx, makeTargetForServer(t, srv))
+	report := Probe(ctx, makeTargetForServer(t, srv), Options{})
 	if report.HandshakeSCTs != nil {
 		t.Fatalf("failed handshake must not report absent SCTs: %+v", report.HandshakeSCTs)
 	}

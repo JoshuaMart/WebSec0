@@ -121,8 +121,10 @@ is documented. The settings you are most likely to change:
 | `frontend.csp_extra_sources` | empty | Allow external scripts loaded by `head_inject` |
 
 Certificates are validated against the system trust store, with an embedded
-Mozilla root bundle as a fallback when none is available. Nothing is
-downloaded at runtime.
+Mozilla root bundle as a fallback when none is available. Root stores are never
+downloaded. When a server omits an intermediate certificate, WebSec0 fetches it
+from the certificate's AIA URL under the same network policy as scans, then
+reports the chain as incomplete (TLS grade capped at B).
 
 ## Running a public instance
 
