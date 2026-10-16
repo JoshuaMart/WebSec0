@@ -94,18 +94,38 @@ func TestEvalXFO(t *testing.T) {
 	}
 }
 
+// Cases follow what Chrome 152 applied to a script served as text/plain:
+// only the first value of the header counts.
 func TestEvalXCTO(t *testing.T) {
-	if evalXCTO("").Status != scan.StatusFail {
-		t.Error("absent should fail")
+	cases := []struct {
+		name   string
+		lines  []string
+		status scan.Status
+	}{
+		{"absent", nil, scan.StatusFail},
+		{"blank header is absent", []string{" "}, scan.StatusFail},
+		{"nosniff", []string{"nosniff"}, scan.StatusPass},
+		{"any case", []string{"NoSniff"}, scan.StatusPass},
+		{"nosniff first in a list", []string{"nosniff, foo"}, scan.StatusPass},
+		{"nosniff twice in one line", []string{"nosniff, nosniff"}, scan.StatusPass},
+		{"nosniff twice in two lines", []string{"nosniff", "nosniff"}, scan.StatusPass},
+		{"nosniff second in a list", []string{"foo, nosniff"}, scan.StatusFail},
+		{"nosniff in a second line", []string{"foo", "nosniff"}, scan.StatusFail},
+		{"quoted value", []string{`"nosniff"`}, scan.StatusFail},
+		{"other value", []string{"garbage"}, scan.StatusFail},
 	}
-	if evalXCTO("nosniff").Status != scan.StatusPass {
-		t.Error("nosniff should pass")
-	}
-	if evalXCTO("NOSNIFF").Status != scan.StatusPass {
-		t.Error("case-insensitive nosniff")
-	}
-	if evalXCTO("garbage").Status != scan.StatusWarn {
-		t.Error("garbage value should warn")
+	for _, c := range cases {
+		h := http.Header{}
+		for _, v := range c.lines {
+			h.Add("X-Content-Type-Options", v)
+		}
+		got := evalXCTO(h)
+		if got.Status != c.status {
+			t.Errorf("%s: got %s, want %s", c.name, got.Status, c.status)
+		}
+		if wantPresent := len(c.lines) > 0 && c.lines[0] != " "; got.Present != wantPresent {
+			t.Errorf("%s: got present=%v, want %v", c.name, got.Present, wantPresent)
+		}
 	}
 }
 

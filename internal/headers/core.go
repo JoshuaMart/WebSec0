@@ -27,7 +27,7 @@ func EvaluateCore(h http.Header) map[string]scan.HeaderResult {
 		"strict-transport-security": evalHSTS(h.Get("Strict-Transport-Security")),
 		"content-security-policy":   evalCSP(h.Get("Content-Security-Policy")),
 		"x-frame-options":           evalXFO(h),
-		"x-content-type-options":    evalXCTO(h.Get("X-Content-Type-Options")),
+		"x-content-type-options":    evalXCTO(h),
 		"referrer-policy":           evalReferrerPolicy(h),
 		"permissions-policy":        evalPermissionsPolicy(h),
 	}
@@ -112,14 +112,21 @@ func hasFrameAncestors(h http.Header) bool {
 	return false
 }
 
-func evalXCTO(v string) scan.HeaderResult {
-	if v == "" {
+// evalXCTO follows the Fetch standard's "determine nosniff": browsers split
+// every X-Content-Type-Options line on commas and apply nosniff only when the
+// first value is nosniff, in any case. Any other first value is ignored by
+// browsers, so it fails like a missing header.
+func evalXCTO(h http.Header) scan.HeaderResult {
+	raw := strings.Join(h.Values("X-Content-Type-Options"), ", ")
+	if strings.TrimSpace(raw) == "" {
 		return scan.HeaderResult{Present: false, Status: scan.StatusFail}
 	}
-	if strings.EqualFold(strings.TrimSpace(v), "nosniff") {
-		return scan.HeaderResult{Present: true, Value: v, Status: scan.StatusPass}
+	res := scan.HeaderResult{Present: true, Value: raw, Status: scan.StatusFail}
+	first, _, _ := strings.Cut(raw, ",")
+	if strings.EqualFold(strings.Trim(first, " \t"), "nosniff") {
+		res.Status = scan.StatusPass
 	}
-	return scan.HeaderResult{Present: true, Value: v, Status: scan.StatusWarn}
+	return res
 }
 
 // referrerPolicies lists the values defined by the Referrer Policy spec.
