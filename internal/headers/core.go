@@ -29,7 +29,7 @@ func EvaluateCore(h http.Header) map[string]scan.HeaderResult {
 		"x-frame-options":           evalXFO(h),
 		"x-content-type-options":    evalXCTO(h.Get("X-Content-Type-Options")),
 		"referrer-policy":           evalReferrerPolicy(h),
-		"permissions-policy":        evalPermissionsPolicy(h.Get("Permissions-Policy")),
+		"permissions-policy":        evalPermissionsPolicy(h),
 	}
 }
 
@@ -166,9 +166,43 @@ func evalReferrerPolicy(h http.Header) scan.HeaderResult {
 	return res
 }
 
-func evalPermissionsPolicy(v string) scan.HeaderResult {
-	if v == "" {
+// sensitiveFeatures are the Permissions-Policy features behind a permission
+// prompt or hardware access. Their default allowlist is already self, so only
+// disabling one with () protects against scripts running in the page itself.
+var sensitiveFeatures = []string{
+	"camera", "microphone", "geolocation", "payment", "usb",
+	"serial", "hid", "bluetooth", "midi", "display-capture",
+}
+
+// evalPermissionsPolicy grades the policy browsers apply. A value that does
+// not parse as a Structured Field dictionary is ignored by browsers and fails
+// like a missing header. A valid policy passes when it disables at least one
+// sensitive feature and opens none of them to every origin with *; otherwise
+// it warns.
+func evalPermissionsPolicy(h http.Header) scan.HeaderResult {
+	raw := strings.Join(h.Values("Permissions-Policy"), ", ")
+	if strings.TrimSpace(raw) == "" {
 		return scan.HeaderResult{Present: false, Status: scan.StatusFail}
 	}
-	return scan.HeaderResult{Present: true, Value: v, Status: scan.StatusPass}
+	res := scan.HeaderResult{Present: true, Value: raw, Status: scan.StatusFail}
+	policy, ok := ParsePermissionsPolicy(raw)
+	if !ok {
+		return res
+	}
+	disabled, openToAll := false, false
+	for _, f := range sensitiveFeatures {
+		a, set := policy[f]
+		switch {
+		case !set:
+		case a.All:
+			openToAll = true
+		case a.Disabled():
+			disabled = true
+		}
+	}
+	res.Status = scan.StatusWarn
+	if disabled && !openToAll {
+		res.Status = scan.StatusPass
+	}
+	return res
 }

@@ -148,12 +148,47 @@ func TestEvalReferrerPolicy(t *testing.T) {
 	}
 }
 
+// Statuses follow what Chrome 152 applied for each header: a syntax error
+// drops the whole header, and the last definition of a feature wins.
 func TestEvalPermissionsPolicy(t *testing.T) {
-	if evalPermissionsPolicy("").Status != scan.StatusFail {
-		t.Error("absent should fail")
+	cases := []struct {
+		name   string
+		lines  []string
+		status scan.Status
+	}{
+		{"absent", nil, scan.StatusFail},
+		{"blank header is absent", []string{" "}, scan.StatusFail},
+		{"sensitive features disabled", []string{"camera=(), microphone=(), geolocation=()"}, scan.StatusPass},
+		{"one sensitive feature disabled", []string{"geolocation=()"}, scan.StatusPass},
+		{"camera kept for self, usb disabled", []string{"camera=(self), microphone=(self), usb=()"}, scan.StatusPass},
+		{"delegated to one origin", []string{`camera=(self "https://meet.example"), microphone=(self "https://meet.example"), geolocation=()`}, scan.StatusPass},
+		{"with parameters", []string{"camera=();report-to=main, microphone=()"}, scan.StatusPass},
+		{"none token disables", []string{"camera=none"}, scan.StatusPass},
+		{"upper-case name drops the header", []string{"Camera=(), microphone=()"}, scan.StatusFail},
+		{"spaces around = drop the header", []string{"camera = (), microphone=()"}, scan.StatusFail},
+		{"quoted self drops the header", []string{"camera=('self'), microphone=()"}, scan.StatusFail},
+		{"trailing comma drops the header", []string{"camera=(), microphone=(),"}, scan.StatusFail},
+		{"Feature-Policy syntax drops the header", []string{"camera 'none'; microphone 'none'"}, scan.StatusFail},
+		{"bare origin is ignored, nothing disabled", []string{"camera=(self https://video.example)"}, scan.StatusWarn},
+		{"no sensitive feature", []string{"fullscreen=(self)"}, scan.StatusWarn},
+		{"obsolete feature only", []string{"interest-cohort=()"}, scan.StatusWarn},
+		{"sensitive feature open to all", []string{"camera=*, microphone=()"}, scan.StatusWarn},
+		{"star inside a list", []string{"camera=(self *), microphone=()"}, scan.StatusWarn},
+		{"second line reopens the feature", []string{"camera=()", "camera=*"}, scan.StatusWarn},
+		{"second line disables", []string{"geolocation=(self), interest-cohort=()", "camera=(), microphone=(), geolocation=()"}, scan.StatusPass},
 	}
-	if evalPermissionsPolicy("geolocation=(), camera=()").Status != scan.StatusPass {
-		t.Error("any value should pass")
+	for _, c := range cases {
+		h := http.Header{}
+		for _, v := range c.lines {
+			h.Add("Permissions-Policy", v)
+		}
+		got := evalPermissionsPolicy(h)
+		if got.Status != c.status {
+			t.Errorf("%s: got %s, want %s", c.name, got.Status, c.status)
+		}
+		if wantPresent := c.status != scan.StatusFail || (len(c.lines) > 0 && c.lines[0] != " "); got.Present != wantPresent {
+			t.Errorf("%s: got present=%v, want %v", c.name, got.Present, wantPresent)
+		}
 	}
 }
 
