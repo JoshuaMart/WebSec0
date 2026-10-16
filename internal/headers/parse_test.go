@@ -1,6 +1,9 @@
 package headers
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseHSTS(t *testing.T) {
 	cases := []struct {
@@ -110,5 +113,89 @@ func TestIsACAOWildcard(t *testing.T) {
 	}
 	if IsACAOWildcard("https://example.com") {
 		t.Error("non-wildcard misclassified")
+	}
+}
+
+func TestParsePermissionsPolicy(t *testing.T) {
+	got, ok := ParsePermissionsPolicy(`camera=(), microphone=(self "https://a.example" "https://b.example"), geolocation=self, fullscreen=*, usb=(self *), midi=none, camera=(self)`)
+	if !ok {
+		t.Fatal("valid policy should parse")
+	}
+	want := map[string]PermissionsAllowlist{
+		"camera":      {Self: true}, // last definition wins
+		"microphone":  {Self: true, Origins: []string{"https://a.example", "https://b.example"}},
+		"geolocation": {Self: true},
+		"fullscreen":  {All: true},
+		"usb":         {All: true, Self: true},
+		"midi":        {},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d features, want %d: %+v", len(got), len(want), got)
+	}
+	for f, w := range want {
+		g := got[f]
+		if g.All != w.All || g.Self != w.Self || strings.Join(g.Origins, " ") != strings.Join(w.Origins, " ") {
+			t.Errorf("%s: got %+v, want %+v", f, g, w)
+		}
+	}
+	if !got["midi"].Disabled() || got["camera"].Disabled() {
+		t.Error("Disabled() should be true for midi=none only")
+	}
+}
+
+// Dictionary grammar from RFC 9651 §3.2 and §4.2, including bare item types a
+// permissions policy never uses: they must parse, not break the header.
+func TestParseSFDictionary(t *testing.T) {
+	valid := []string{
+		"",
+		"a",
+		"a, b=?0",
+		"a=1, b=-2, c=3.141, d=-0.5",
+		`a="x \"quoted\" \\ y"`,
+		"a=tok/en:x, b=*star",
+		"a=:aGVsbG8=:",
+		"a=@1659578233",
+		`a=%"caf%c3%a9"`,
+		"a=(1 2 tok);p=1;q, b=()",
+		"a=( 1  2 )",
+		"a=1;p, b=2\t,\tc=3",
+		"  a=1  ",
+		"a=999999999999999",
+		"a=1.123",
+	}
+	for _, v := range valid {
+		if _, ok := parseSFDictionary(v); !ok {
+			t.Errorf("%q should parse", v)
+		}
+	}
+	invalid := []string{
+		"A=1",
+		"1a=1",
+		"a=1,",
+		"a=1,,b=2",
+		"a=1 b=2",
+		"a =1",
+		"a= 1",
+		"a=1.",
+		"a=1.1234",
+		"a=1234567890123.1",
+		"a=1234567890123456",
+		`a="unterminated`,
+		`a="bad \x escape"`,
+		"a=(1",
+		"a=(1)x",
+		"a=(1,2)",
+		"a=?2",
+		"a=:not base64!:",
+		"a=@1.5",
+		`a=%"CAF%C3%A9"`,
+		"a='self'",
+		"a=1;P=2",
+		"a=é",
+	}
+	for _, v := range invalid {
+		if _, ok := parseSFDictionary(v); ok {
+			t.Errorf("%q should not parse", v)
+		}
 	}
 }
