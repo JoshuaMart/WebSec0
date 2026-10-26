@@ -14,12 +14,6 @@
     "astro": "^7.4.0",
     "preact": "^11.0.1"
   },
-  "pnpm": {
-    "overrides": {
-      "esbuild": ">=0.28.1",
-      "devalue@<5.9.3": "^5.9.3"
-    }
-  },
   "devDependencies": {
     "preact-render-to-string": "6.8.1",
     "tsx": "^4.23.15"
