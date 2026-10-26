@@ -12,7 +12,7 @@
   "dependencies": {
     "@astrojs/preact": "^6.1.1",
     "astro": "^7.4.2",
-    "preact": "^10.29.8"
+    "preact": "^11.0.1"
   },
   "devDependencies": {
     "preact-render-to-string": "6.8.1",
