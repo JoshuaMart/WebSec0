@@ -1,0 +1,5 @@
+# pnpm settings for the frontend. Overrides live here rather than in
+# package.json so every pnpm version (including Dependabot's) applies them.
+overrides:
+  esbuild: '>=0.28.1'
+  devalue@<5.9.3: ^5.9.3

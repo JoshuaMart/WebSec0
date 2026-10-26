@@ -18,6 +18,7 @@ BUNDLE_BUDGET_BYTES ?= 81920  # 80 KB gzip
 # FRONTEND_STAMP is the sentinel: Make rebuilds it iff a source is newer.
 FRONTEND_SRCS  := $(shell find web/src web/public -type f 2>/dev/null) \
                   web/astro.config.mjs web/package.json web/pnpm-lock.yaml \
+                  web/pnpm-workspace.yaml \
                   web/tsconfig.json
 FRONTEND_STAMP := internal/frontend/dist/index.html
 
