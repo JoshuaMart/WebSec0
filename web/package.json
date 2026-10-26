@@ -10,8 +10,8 @@
     "test": "node --import tsx --test tests/*.test.ts tests/*.test.tsx"
   },
   "dependencies": {
-    "@astrojs/preact": "^6.1.0",
-    "astro": "^7.4.0",
+    "@astrojs/preact": "^6.1.1",
+    "astro": "^7.4.2",
     "preact": "^10.29.8"
   },
   "pnpm": {
