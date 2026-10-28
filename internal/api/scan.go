@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/JoshuaMart/websec0/internal/safehttp"
@@ -17,13 +18,22 @@ type scanRequest struct {
 	Fresh         bool   `json:"fresh"`
 }
 
+// maxScanRequestBytes caps the POST /api/v1/scan body; a valid request is
+// a few hundred bytes at most.
+const maxScanRequestBytes = 4 << 10
+
 // scanPostHandler runs a scan and returns the full result.
-func scanPostHandler(s ScanService, perHost *safehttp.Limiter) http.HandlerFunc {
+func scanPostHandler(s ScanService, policy safehttp.InputPolicy, perHost *safehttp.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req scanRequest
-		dec := json.NewDecoder(r.Body)
+		dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxScanRequestBytes))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&req); err != nil {
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				writeError(w, http.StatusRequestEntityTooLarge, "body_too_large", "request body exceeds 4 KiB")
+				return
+			}
 			writeError(w, http.StatusBadRequest, "invalid_json", err.Error())
 			return
 		}
@@ -32,7 +42,18 @@ func scanPostHandler(s ScanService, perHost *safehttp.Limiter) http.HandlerFunc 
 			writeError(w, http.StatusBadRequest, "invalid_host", "host is required")
 			return
 		}
-		if !perHost.Allow(req.Host) {
+		// Key the per-host bucket on the canonical FQDN so rejected input
+		// never allocates a bucket and case or port variants share one.
+		if req.Port > 0 {
+			policy.DefaultPort = req.Port
+		}
+		v, err := safehttp.ValidateInput(req.Host, policy)
+		if err != nil {
+			status, code, msg := mapError(err)
+			writeError(w, status, code, msg)
+			return
+		}
+		if !perHost.Allow(v.Host) {
 			writeError(w, http.StatusTooManyRequests, "rate_limited", "per-host rate limit exceeded")
 			return
 		}

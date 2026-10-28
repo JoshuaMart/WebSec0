@@ -52,8 +52,14 @@ func NewRouter(d Deps) *chi.Mux {
 	ipLimiter := safehttp.NewLimiter(d.Config.History.RateLimit.PerIP.Count, d.Config.History.RateLimit.PerIP.Period)
 	hostLimiter := safehttp.NewLimiter(d.Config.History.RateLimit.PerHost.Count, d.Config.History.RateLimit.PerHost.Period)
 
+	inputPolicy := safehttp.InputPolicy{
+		AllowedSchemes:   d.Config.Security.AllowedSchemes,
+		AllowCustomPorts: d.Config.Security.AllowCustomPorts,
+		DefaultPort:      443,
+	}
+
 	r.Route("/api/v1", func(r chi.Router) {
-		r.With(perIPRateLimit(ipLimiter)).Post("/scan", scanPostHandler(d.Scanner, hostLimiter))
+		r.With(perIPRateLimit(ipLimiter)).Post("/scan", scanPostHandler(d.Scanner, inputPolicy, hostLimiter))
 		r.Get("/scan/{id}", scanGetHandler(d.Scanner))
 		r.Get("/checks", checksHandler())
 		r.Get("/history", historyHandler(d.Scanner))

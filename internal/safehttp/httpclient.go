@@ -19,6 +19,10 @@ type ClientOpts struct {
 	Timeout         time.Duration
 	DialTimeout     time.Duration
 
+	// DisableKeepAlives forces a fresh TCP+TLS connection per request
+	// (and HTTP/1.1), for probes that observe the handshake itself.
+	DisableKeepAlives bool
+
 	// TLSConfig overrides the default. Default behaviour is
 	// InsecureSkipVerify=true with SNI set to Target.Host — appropriate for
 	// the header and custom-check probes, which must succeed even against
@@ -55,7 +59,8 @@ func NewClient(opts ClientOpts) *http.Client {
 		TLSClientConfig:       tlsCfg,
 		TLSHandshakeTimeout:   5 * time.Second,
 		ResponseHeaderTimeout: 5 * time.Second,
-		ForceAttemptHTTP2:     true,
+		ForceAttemptHTTP2:     !opts.DisableKeepAlives,
+		DisableKeepAlives:     opts.DisableKeepAlives,
 		MaxIdleConns:          2,
 		IdleConnTimeout:       30 * time.Second,
 		DisableCompression:    false,

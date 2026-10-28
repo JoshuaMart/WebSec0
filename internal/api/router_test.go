@@ -287,3 +287,61 @@ func TestRouter_SetsSecurityHeaders(t *testing.T) {
 		}
 	}
 }
+
+func TestScanPost_RejectsOversizedBody(t *testing.T) {
+	srv := newTestServer(t, &fakeScanner{})
+	resp := postScan(t, srv, `{"host":"`+strings.Repeat("a", 8<<10)+`.com"}`)
+	if resp.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Errorf("status: got %d, want 413", resp.StatusCode)
+	}
+	if code := readErrorCode(t, resp); code != "body_too_large" {
+		t.Errorf("code: got %s, want body_too_large", code)
+	}
+}
+
+func TestScanPost_InvalidHostSkipsScannerAndHostBucket(t *testing.T) {
+	called := false
+	fs := &fakeScanner{runFunc: func(context.Context, scanner.Request) (*scan.Result, error) {
+		called = true
+		return &scan.Result{ID: "stub"}, nil
+	}}
+	srv := newTestServer(t, fs)
+	resp := postScan(t, srv, `{"host":"not a host"}`)
+	if code := readErrorCode(t, resp); code != "invalid_host" {
+		t.Errorf("code: got %s, want invalid_host", code)
+	}
+	if called {
+		t.Error("scanner must not run for an invalid host")
+	}
+}
+
+func TestScanPost_HostBucketIsCanonical(t *testing.T) {
+	srv := newTestServer(t, &fakeScanner{})
+	first := postScan(t, srv, `{"host":"Example.COM"}`)
+	_ = first.Body.Close()
+	if first.StatusCode != http.StatusOK {
+		t.Fatalf("first: got %d, want 200", first.StatusCode)
+	}
+	// Default per-host limit is 1/minute: a case variant shares the bucket.
+	resp := postScan(t, srv, `{"host":"https://example.com/"}`)
+	if code := readErrorCode(t, resp); code != "rate_limited" {
+		t.Errorf("code: got %s, want rate_limited", code)
+	}
+}
+
+func TestClientIP_GroupsIPv6By64(t *testing.T) {
+	cases := map[string]string{
+		"203.0.113.7:1234":              "203.0.113.7",
+		"[::ffff:203.0.113.7]:1234":     "203.0.113.7",
+		"[2001:db8:1:2:aaaa::1]:443":    "2001:db8:1:2::/64",
+		"[2001:db8:1:2:bbbb::9%en0]:80": "2001:db8:1:2::/64",
+		"not-an-addr":                   "not-an-addr",
+	}
+	for in, want := range cases {
+		r := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+		r.RemoteAddr = in
+		if got := clientIP(r); got != want {
+			t.Errorf("clientIP(%q): got %q, want %q", in, got, want)
+		}
+	}
+}
