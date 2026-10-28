@@ -4,7 +4,6 @@ import (
 	"context"
 	stdtls "crypto/tls"
 	"io"
-	"net"
 	"net/http"
 	"time"
 
@@ -15,34 +14,32 @@ import (
 // sessionResumptionTimeout caps the two-handshake probe.
 const sessionResumptionTimeout = 8 * time.Second
 
-// detectSessionResumption issues two GET requests through a transport that
-// disables connection keep-alive but shares a ClientSessionCache. The
+// sessionResumptionBodyCap bounds each drained response body; only the TLS
+// state matters, the body is read just long enough for tickets to arrive.
+const sessionResumptionBodyCap = 64 << 10
+
+// detectSessionResumption issues two GET requests through a safehttp client
+// that disables connection keep-alive but shares a ClientSessionCache. The
 // second response's ConnectionState.DidResume tells us whether the
 // server-issued ticket (or session ID) was honoured. We deliberately use
 // http.Client rather than raw tls.Conn so the NewSessionTicket post-
 // handshake message (TLS 1.3) has a chance to flow before we close.
+// Redirects are not followed: the 3xx response carries the TLS state.
 func detectSessionResumption(ctx context.Context, target *safehttp.Target) scan.SessionResumption {
-	cache := stdtls.NewLRUClientSessionCache(4)
-	dialer := safehttp.PinnedDialer(target, 5*time.Second)
-
-	transport := &http.Transport{
-		DialContext: func(c context.Context, network, _ string) (net.Conn, error) {
-			return dialer.DialContext(c, network, target.Address())
-		},
-		TLSClientConfig: &stdtls.Config{
+	client := safehttp.NewClient(safehttp.ClientOpts{
+		Target:            target,
+		MaxBodyBytes:      sessionResumptionBodyCap,
+		Timeout:           sessionResumptionTimeout,
+		DisableKeepAlives: true,
+		TLSConfig: &stdtls.Config{
 			ServerName:         target.Host,
 			InsecureSkipVerify: true, //nolint:gosec // chain validation is performed separately.
 			MinVersion:         stdtls.VersionTLS12,
 			MaxVersion:         stdtls.VersionTLS13,
-			ClientSessionCache: cache,
+			ClientSessionCache: stdtls.NewLRUClientSessionCache(4),
 		},
-		DisableKeepAlives:     true,
-		TLSHandshakeTimeout:   5 * time.Second,
-		ResponseHeaderTimeout: 5 * time.Second,
-	}
-	defer transport.CloseIdleConnections()
-
-	client := &http.Client{Transport: transport, Timeout: sessionResumptionTimeout}
+	})
+	defer client.CloseIdleConnections()
 
 	// First request — primes the ClientSessionCache.
 	if !sendAndDrain(ctx, client, target) {
