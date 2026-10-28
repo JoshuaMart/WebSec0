@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/JoshuaMart/websec0/internal/logsafe"
@@ -70,10 +71,21 @@ func perIPRateLimit(l *safehttp.Limiter) func(http.Handler) http.Handler {
 	}
 }
 
-// clientIP returns the IP portion of r.RemoteAddr, stripping the port.
+// clientIP returns the rate-limit key for r.RemoteAddr: the IPv4 address,
+// or the /64 prefix for IPv6, since a single client usually controls a
+// whole /64 and could otherwise rotate addresses to get fresh buckets.
 func clientIP(r *http.Request) string {
-	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return ip
+	host := r.RemoteAddr
+	if h, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		host = h
 	}
-	return r.RemoteAddr
+	addr, err := netip.ParseAddr(host)
+	if err != nil {
+		return host
+	}
+	addr = addr.Unmap()
+	if addr.Is6() {
+		return netip.PrefixFrom(addr.WithZone(""), 64).Masked().String()
+	}
+	return addr.String()
 }

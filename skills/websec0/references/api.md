@@ -48,12 +48,14 @@ Errors:
 | 403  | `custom_port_blocked`    | non-standard port refused by policy                 |
 | 403  | `private_target_blocked` | resolved IP is loopback/private/link-local          |
 | 408  | `scan_timeout`           | scan exceeded its deadline                          |
+| 413  | `body_too_large`         | request body larger than 4 KiB                      |
 | 429  | `rate_limited`           | per-IP or per-host budget exhausted                 |
 | 502  | `no_allowed_ip`          | DNS returned zero usable IPs (all blocked or empty) |
 | 500  | `internal_error`         | unexpected                                          |
 
 Rate limits (defaults): 10 requests/hour per client IP, 1 request/min
-per target host. Both must pass; deployment settings can differ.
+per target host. Both must pass; deployment settings can differ. IPv6
+clients share one per-IP budget per /64 prefix.
 On `rate_limited`, stop immediate retries and report the limit. A timeout or
 server error is not evidence of an insecure target. Do not retry by changing
 the target, instance or network policy. A `404` for a cached report means it
