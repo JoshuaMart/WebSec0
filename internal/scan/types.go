@@ -133,6 +133,9 @@ const (
 	OCSPStatusRevoked    OCSPStatus = "revoked"
 	OCSPStatusUnknownRev OCSPStatus = "unknown_to_responder"
 	OCSPStatusParseError OCSPStatus = "parse_error"
+	// OCSPStatusResponderError is a stapled non-successful response
+	// (tryLater, internalError, …), which carries no certificate status.
+	OCSPStatusResponderError OCSPStatus = "responder_error"
 )
 
 // SessionResumption reports whether a second TLS handshake resumes the

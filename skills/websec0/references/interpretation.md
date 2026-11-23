@@ -132,7 +132,11 @@ not recoverable), TLS A+ is unreachable even at a perfect score.
   retry rejected chains against that bundle when a system store is available;
   trust outcomes may therefore differ across OSes.
 - `tls.ocsp_stapling` (bool) and `tls.ocsp_status` (`good` | `revoked`
-  | `unknown_to_responder` | `parse_error` | `""`).
+  | `unknown_to_responder` | `responder_error` | `parse_error` | `""`).
+  `responder_error` means the server stapled a non-successful OCSP response
+  such as `tryLater`, which carries no certificate status; Apache does this
+  when its responder is unreachable. `parse_error` means the staple is
+  malformed or its signature does not verify against the served issuer.
 - `tls.session_resumption`: `supported` | `not_supported` | `""`.
 - `tls.handshake_scts`: `{count, log_ids, unparsed_count}`, from the TLS
   extension only. Omitted if the certificate handshake was unavailable (or
