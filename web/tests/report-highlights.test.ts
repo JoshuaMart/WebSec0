@@ -71,3 +71,22 @@ test('an incomplete chain warns without claiming a trust failure', () => {
   assert.deepEqual(titles('incomplete').filter(([t]) => t.startsWith('Certificate')), [['Certificate chain is incomplete', 'warn']]);
   assert.deepEqual(titles('untrusted').filter(([t]) => t.startsWith('Certificate')), [['Certificate chain does not validate', 'bad']]);
 });
+
+test('OCSP highlights depend on whether the leaf lists an OCSP responder', () => {
+  const ocsp = (parts: Partial<TLSReport>) => deriveHighlights(report({ tls: { ...tls(complete), ...parts } }))
+    .filter((h) => /OCSP/.test(h.title));
+
+  const noURL = ocsp({ ocsp_responder: false });
+  assert.deepEqual(noURL.map((h) => [h.title, h.level]), [['No OCSP responder in certificate', 'info']]);
+  assert.equal(noURL[0].body, 'The certificate lists no OCSP URL, so OCSP stapling does not apply.');
+
+  const notStapled = ocsp({ ocsp_responder: true });
+  assert.deepEqual(notStapled.map((h) => [h.title, h.level]), [['OCSP stapling not observed', 'info']]);
+  assert.match(notStapled[0].body, /Clients that check OCSP must query the CA themselves/);
+  assert.doesNotMatch(notStapled[0].body, /fall back/);
+
+  assert.deepEqual(ocsp({}), [], 'unknown responder (no leaf or older report) adds no OCSP highlight');
+  assert.deepEqual(ocsp({ ocsp_stapling: true, ocsp_status: 'good', ocsp_responder: true }).map((h) => h.level), ['good']);
+  assert.deepEqual(ocsp({ ocsp_stapling: true, ocsp_status: 'responder_error', ocsp_responder: true }), []);
+  assert.equal(deriveHighlights(report({ tls: tls(complete) })).some((h) => h.title === 'OCSP stapling not enabled'), false);
+});

@@ -2,13 +2,18 @@ package tls
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	stdtls "crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -181,5 +186,83 @@ func TestParseOCSPStatus_NonSuccessfulResponse(t *testing.T) {
 		if got := parseOCSPStatus(raw, []*x509.Certificate{p.leaf, p.ca}); got != scan.OCSPStatusResponderError {
 			t.Errorf("%s: got %q, want responder_error", name, got)
 		}
+	}
+}
+
+func TestLeafHasOCSPResponder(t *testing.T) {
+	if got := leafHasOCSPResponder(nil); got != nil {
+		t.Errorf("no leaf: got %v, want nil", *got)
+	}
+	with := newOCSPPKI(t, "http://ocsp.example.test")
+	without := newOCSPPKI(t)
+	for _, tc := range []struct {
+		name  string
+		chain []*x509.Certificate
+		want  bool
+	}{
+		{"with OCSP URL", []*x509.Certificate{with.leaf, with.ca}, true},
+		{"without OCSP URL", []*x509.Certificate{without.leaf, without.ca}, false},
+		{"only the issuer lists a URL", []*x509.Certificate{without.leaf, with.leaf}, false},
+	} {
+		got := leafHasOCSPResponder(tc.chain)
+		if got == nil || *got != tc.want {
+			t.Errorf("%s: got %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestProbeOCSPResponderAndStaple(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		ocspURLs   []string
+		staple     bool
+		wantStatus scan.OCSPStatus
+		wantJSON   string
+	}{
+		{"no OCSP URL", nil, false, scan.OCSPStatusUnknown, `false`},
+		{"OCSP URL, not stapled", []string{"http://ocsp.example.test"}, false, scan.OCSPStatusUnknown, `true`},
+		{"OCSP URL, stapled with issuer embedded", []string{"http://ocsp.example.test"}, true, scan.OCSPStatusGood, `true`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newOCSPPKI(t, tc.ocspURLs...)
+			cert := stdtls.Certificate{Certificate: [][]byte{p.leaf.Raw, p.ca.Raw}, PrivateKey: p.leafKey}
+			if tc.staple {
+				cert.OCSPStaple = p.response(t, ocsp.Good, p.ca, p.ca, p.caKey)
+			}
+			srv := httptest.NewUnstartedServer(http.NotFoundHandler())
+			srv.TLS = &stdtls.Config{Certificates: []stdtls.Certificate{cert}, MinVersion: stdtls.VersionTLS12}
+			srv.StartTLS()
+			defer srv.Close()
+
+			report := Probe(context.Background(), makeTargetForServer(t, srv), Options{})
+			if report.OCSPStapling != tc.staple || report.OCSPStatus != tc.wantStatus {
+				t.Fatalf("stapling=%v status=%q, want %v %q", report.OCSPStapling, report.OCSPStatus, tc.staple, tc.wantStatus)
+			}
+			raw, err := json.Marshal(report)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(raw, &fields); err != nil {
+				t.Fatal(err)
+			}
+			if got := string(fields["ocsp_responder"]); got != tc.wantJSON {
+				t.Errorf("ocsp_responder: got %s, want %s", got, tc.wantJSON)
+			}
+		})
+	}
+}
+
+func TestOCSPResponderOmittedWithoutLeaf(t *testing.T) {
+	raw, err := json.Marshal(scan.TLSReport{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := fields["ocsp_responder"]; ok {
+		t.Errorf("ocsp_responder present without a leaf: %s", raw)
 	}
 }

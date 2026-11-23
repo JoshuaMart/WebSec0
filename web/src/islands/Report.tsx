@@ -755,7 +755,9 @@ export function TabPanel({
                   <dd>
                     {data.tls.ocsp_stapling
                       ? `Stapled · ${data.tls.ocsp_status || 'Status unknown'}`
-                      : 'Not observed'}
+                      : data.tls.ocsp_responder === false
+                        ? 'Not applicable (no OCSP URL)'
+                        : 'Not observed'}
                   </dd>
                 </div>
                 <div>
@@ -952,7 +954,9 @@ function Overview({
                     ? 'Not assessed'
                     : tls.ocsp_stapling
                       ? `yes (${tls.ocsp_status || 'unknown'})`
-                      : 'no'}
+                      : tls.ocsp_responder === false
+                        ? 'not applicable (no OCSP URL)'
+                        : 'no'}
                 </div>
                 <div class="k">Session resumption</div>
                 <div class="v">{tls?.session_resumption || '—'}</div>

@@ -137,6 +137,11 @@ not recoverable), TLS A+ is unreachable even at a perfect score.
   such as `tryLater`, which carries no certificate status; Apache does this
   when its responder is unreachable. `parse_error` means the staple is
   malformed or its signature does not verify against the served issuer.
+- `tls.ocsp_responder` (bool): whether the leaf certificate lists an OCSP
+  responder URL (AIA `id-ad-ocsp`). `false` means stapling does not apply:
+  there is no responder to staple from, as with Let's Encrypt certificates
+  issued since May 2025. Omitted when no leaf was captured or in older
+  reports; that means unknown, not absent. Informational only, like stapling.
 - `tls.session_resumption`: `supported` | `not_supported` | `""`.
 - `tls.handshake_scts`: `{count, log_ids, unparsed_count}`, from the TLS
   extension only. Omitted if the certificate handshake was unavailable (or
