@@ -71,6 +71,8 @@ export type TLSReport = {
   chain_trust: string;
   ocsp_stapling: boolean;
   ocsp_status?: string;
+  /** Leaf lists an OCSP URL. Absent: no leaf captured, or an older report. */
+  ocsp_responder?: boolean;
   handshake_scts?: SCTSummary;
   certificate_scts?: CertificateSCTs;
   session_resumption?: string;

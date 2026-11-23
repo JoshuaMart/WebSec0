@@ -117,3 +117,20 @@ test('each SCT source remains visible when the other observation is unavailable'
   assert.match(source(handshakeOnly, 'Leaf certificate'), /unavailable/);
   assert.deepEqual(logIDs(source(handshakeOnly, 'TLS handshake')), [handshakeID]);
 });
+
+test('OCSP stapling rows say not applicable when the leaf has no OCSP URL', () => {
+  const row = (html: string) => html.match(/<dt>OCSP stapling<\/dt>\s*<dd>([^<]*)<\/dd>/)?.[1];
+  const overviewRow = (tls: TLSReport) => render(<TabPanel id="overview" data={{
+    id: 'fixture', host: 'example.test', port: 443, resolved_ip: '',
+    scanned_at: '2026-01-01T00:00:00Z', duration_ms: 0, tls,
+  }} />).match(/<div class="k">OCSP stapling<\/div>\s*<div class="v">([^<]*)<\/div>/)?.[1];
+
+  assert.equal(row(renderCertificateTab({ ...tlsReport(), ocsp_responder: false })), 'Not applicable (no OCSP URL)');
+  assert.equal(row(renderCertificateTab({ ...tlsReport(), ocsp_responder: true })), 'Not observed');
+  assert.equal(row(renderCertificateTab(tlsReport())), 'Not observed');
+  assert.equal(row(renderCertificateTab({ ...tlsReport(), ocsp_stapling: true, ocsp_status: 'good', ocsp_responder: true })), 'Stapled · good');
+
+  assert.equal(overviewRow({ ...tlsReport(), ocsp_responder: false }), 'not applicable (no OCSP URL)');
+  assert.equal(overviewRow({ ...tlsReport(), ocsp_responder: true }), 'no');
+  assert.equal(overviewRow({ ...tlsReport(), ocsp_stapling: true, ocsp_status: 'good' }), 'yes (good)');
+});

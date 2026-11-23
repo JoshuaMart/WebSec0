@@ -21,6 +21,7 @@ type certificateInfo struct {
 	trust           scan.ChainTrust
 	stapled         bool
 	ocspStatus      scan.OCSPStatus
+	ocspResponder   *bool
 	handshakeSCTs   *scan.SCTSummary
 	certificateSCTs *scan.CertificateSCTs
 }
@@ -50,9 +51,20 @@ func extractChain(ctx context.Context, target *safehttp.Target, fetch IssuerFetc
 		trust:           validateChain(ctx, state.PeerCertificates, target.Host, fetch),
 		stapled:         len(state.OCSPResponse) > 0,
 		ocspStatus:      parseOCSPStatus(state.OCSPResponse, state.PeerCertificates),
+		ocspResponder:   leafHasOCSPResponder(state.PeerCertificates),
 		handshakeSCTs:   summarizeSCTs(state.SignedCertificateTimestamps),
 		certificateSCTs: extractCertificateSCTs(state.PeerCertificates),
 	}
+}
+
+// leafHasOCSPResponder reports whether the leaf lists an OCSP URL. It returns
+// nil without a leaf, so a failed capture is not read as "no responder".
+func leafHasOCSPResponder(certs []*x509.Certificate) *bool {
+	if len(certs) == 0 {
+		return nil
+	}
+	has := len(certs[0].OCSPServer) > 0
+	return &has
 }
 
 func mapChain(certs []*x509.Certificate) []scan.Certificate {

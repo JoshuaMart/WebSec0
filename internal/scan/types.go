@@ -85,6 +85,7 @@ type TLSReport struct {
 	ChainTrust        ChainTrust             `json:"chain_trust"`
 	OCSPStapling      bool                   `json:"ocsp_stapling"`
 	OCSPStatus        OCSPStatus             `json:"ocsp_status,omitempty"`
+	OCSPResponder     *bool                  `json:"ocsp_responder,omitempty"` // Leaf lists an OCSP URL (AIA id-ad-ocsp); nil when no leaf was captured.
 	HandshakeSCTs     *SCTSummary            `json:"handshake_scts,omitempty"`
 	CertificateSCTs   *CertificateSCTs       `json:"certificate_scts,omitempty"`
 	SessionResumption SessionResumption      `json:"session_resumption,omitempty"`
@@ -133,6 +134,9 @@ const (
 	OCSPStatusRevoked    OCSPStatus = "revoked"
 	OCSPStatusUnknownRev OCSPStatus = "unknown_to_responder"
 	OCSPStatusParseError OCSPStatus = "parse_error"
+	// OCSPStatusResponderError is a stapled non-successful response
+	// (tryLater, internalError, …), which carries no certificate status.
+	OCSPStatusResponderError OCSPStatus = "responder_error"
 )
 
 // SessionResumption reports whether a second TLS handshake resumes the

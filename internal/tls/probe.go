@@ -85,6 +85,7 @@ func Probe(ctx context.Context, target *safehttp.Target, opts Options) *scan.TLS
 		ChainTrust:        cert.trust,
 		OCSPStapling:      cert.stapled,
 		OCSPStatus:        cert.ocspStatus,
+		OCSPResponder:     cert.ocspResponder,
 		HandshakeSCTs:     cert.handshakeSCTs,
 		CertificateSCTs:   cert.certificateSCTs,
 		SessionResumption: resumption,

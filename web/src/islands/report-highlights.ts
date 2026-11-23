@@ -206,10 +206,16 @@ function trustAndOcspHighlights(tls?: TLSReport): Highlight[] {
       body: 'Browsers will reject this certificate. Reissue and redeploy immediately.',
       level: 'bad',
     });
-  } else if (tls.ocsp_stapling === false) {
+  } else if (!tls.ocsp_stapling && tls.ocsp_responder === true) {
     out.push({
-      title: 'OCSP stapling not enabled',
-      body: 'Clients fall back to querying the CA themselves — adds a privacy and latency cost.',
+      title: 'OCSP stapling not observed',
+      body: 'The certificate lists an OCSP responder, but the server did not staple a response. Clients that check OCSP must query the CA themselves.',
+      level: 'info',
+    });
+  } else if (!tls.ocsp_stapling && tls.ocsp_responder === false) {
+    out.push({
+      title: 'No OCSP responder in certificate',
+      body: 'The certificate lists no OCSP URL, so OCSP stapling does not apply.',
       level: 'info',
     });
   }
