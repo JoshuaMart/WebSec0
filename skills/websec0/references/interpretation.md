@@ -39,7 +39,7 @@ each in `[0, 100]`:
 |--------------------|------------------------------------------------------------------|
 | `certificate`      | Leaf key algorithm (ECDSA/Ed25519 > RSA > DSA) and days-to-expiry|
 | `protocol_support` | Worst and best offered protocol scores, averaged                        |
-| `key_exchange`     | 90 if any cipher offers PFS, else 40; 0 if none enumerated                     |
+| `key_exchange`     | 100 if every cipher offers PFS, 90 if some do, 40 if none; 0 if none enumerated |
 | `cipher_strength`  | Worst and best scores derived from offered cipher strengths, averaged |
 
 The final score is a weighted aggregate, truncated to an integer:

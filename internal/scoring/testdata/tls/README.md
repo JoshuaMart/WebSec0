@@ -20,15 +20,16 @@ scoring engine. Integer averages truncate, as does the final weighted score:
 
 | Profile | Certificate | Protocol | Key exchange | Cipher | Final | Grade |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `modern_hsts` | 100 | 97 | 90 | 100 | 96 | A+ |
-| `modern_no_hsts` | 100 | 97 | 90 | 100 | 96 | A |
+| `modern_hsts` | 100 | 97 | 100 | 100 | 99 | A+ |
+| `modern_no_hsts` | 100 | 97 | 100 | 100 | 99 | A |
 | `legacy_weak` | 64 | 57 | 40 | 90 | 62 | F |
 | `untrusted_legacy` | 64 | 57 | 40 | 90 | 62 | T |
-| `partial_blocked` | 100 | 100 | 90 | 100 | 97 | A |
+| `partial_blocked` | 100 | 100 | 100 | 100 | 100 | A |
 
 - **Modern with strong HSTS:** ECDSA with 365 days remaining gives
-  100. TLS 1.2/1.3 gives `trunc((95 + 100) / 2) = 97`. PFS gives 90;
-  256-bit ciphers give 100. The weighted result is `trunc(96.966…) = 96`.
+  100. TLS 1.2/1.3 gives `trunc((95 + 100) / 2) = 97`. Every suite has
+  PFS, which gives 100; 256-bit ciphers give 100. The weighted result is
+  `trunc(30 + 0.70 × 297 / 3) = trunc(99.3) = 99`.
   The trusted chain and HSTS (one year, `includeSubDomains`, no `preload`)
   allow A+.
 - **Modern without HSTS:** identical TLS observations and numeric scores.
@@ -45,8 +46,8 @@ scoring engine. Integer averages truncate, as does the final weighted score:
   takes precedence over F and yields T.
 - **Partial scan:** only TLS 1.3 and its 256-bit PFS cipher were observed.
   The aborted protocol rows do not count as offered, giving protocol 100,
-  key exchange 90 and cipher 100. With certificate 100, the final result is
-  `trunc(30 + 203 / 3) = 97`. The headers report is unavailable, so A+
+  key exchange 100 and cipher 100. With certificate 100, the final result is
+  `trunc(30 + 0.70 × 300 / 3) = 100`. The headers report is unavailable, so A+
   is capped at A. This records the current policy of scoring available
   observations: A does not imply that the untested protocols are disabled
   or that the scan was complete.

@@ -80,9 +80,9 @@
     "scores": {
       "certificate": 100,
       "protocol_support": 97,
-      "key_exchange": 90,
+      "key_exchange": 100,
       "cipher_strength": 100,
-      "final": 96
+      "final": 99
     },
     "grade": "A+"
   }
