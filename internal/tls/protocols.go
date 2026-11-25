@@ -55,7 +55,7 @@ func probeVersion(ctx context.Context, target *safehttp.Target, name string, ver
 
 	var ciphers []scan.Cipher
 	if version == stdtls.VersionTLS13 {
-		ciphers = captureTLS13Cipher(ctx, target, bd)
+		ciphers = tls13Ciphers(ctx, target, bd)
 	} else {
 		ciphers = enumerateLegacyCiphers(ctx, target, version, name, bd)
 	}

@@ -54,9 +54,9 @@
     "scores": {
       "certificate": 100,
       "protocol_support": 100,
-      "key_exchange": 90,
+      "key_exchange": 100,
       "cipher_strength": 100,
-      "final": 97
+      "final": 100
     },
     "grade": "A"
   }

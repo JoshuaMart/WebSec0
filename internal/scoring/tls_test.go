@@ -130,16 +130,20 @@ func TestProtocolSupportScore(t *testing.T) {
 }
 
 func TestKeyExchangeScore(t *testing.T) {
-	if KeyExchangeScore(&scan.TLSReport{}) != 0 {
-		t.Error("no ciphers: want 0")
+	cases := []struct {
+		name    string
+		ciphers []scan.Cipher
+		want    int
+	}{
+		{"no ciphers", nil, 0},
+		{"every suite PFS", []scan.Cipher{{PFS: true}, {PFS: true}}, 100},
+		{"PFS and static RSA", []scan.Cipher{{PFS: true}, {PFS: false}}, 90},
+		{"no PFS", []scan.Cipher{{PFS: false}}, 40},
 	}
-	r := &scan.TLSReport{Ciphers: []scan.Cipher{{PFS: true}}}
-	if KeyExchangeScore(r) != 90 {
-		t.Errorf("PFS cipher: want 90")
-	}
-	r = &scan.TLSReport{Ciphers: []scan.Cipher{{PFS: false}}}
-	if KeyExchangeScore(r) != 40 {
-		t.Errorf("non-PFS cipher: want 40")
+	for _, c := range cases {
+		if got := KeyExchangeScore(&scan.TLSReport{Ciphers: c.ciphers}); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
 	}
 }
 

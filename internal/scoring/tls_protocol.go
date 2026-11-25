@@ -2,8 +2,10 @@ package scoring
 
 import "github.com/JoshuaMart/websec0/internal/scan"
 
-// protocolWeight maps each supported protocol to its SSL Labs per-protocol
-// score. The values mirror the public methodology.
+// protocolWeight maps each supported protocol to its score. The scale is
+// WebSec0's own: SSL Labs scores TLS 1.0, 1.1 and 1.2 at 90, 95 and 100,
+// while WebSec0 keeps TLS 1.3 above TLS 1.2 and scores the deprecated
+// versions lower. Only the (best + worst) / 2 rule follows SSL Labs.
 var protocolWeight = map[string]int{
 	"SSL 2.0": 0,
 	"SSL 3.0": 20,
@@ -14,7 +16,7 @@ var protocolWeight = map[string]int{
 }
 
 // ProtocolSupportScore is (best + worst) / 2 across the protocols the
-// server actually offers, per SSL Labs methodology.
+// server actually offers, as in the SSL Labs rating guide.
 func ProtocolSupportScore(t *scan.TLSReport) int {
 	if len(t.Protocols) == 0 {
 		return 0

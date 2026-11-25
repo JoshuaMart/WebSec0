@@ -22,7 +22,7 @@ func allKnownSuites() []*stdtls.CipherSuite {
 // given TLS version, attempts a single-cipher handshake for each, and
 // records the ones the server accepts. Only applicable to TLS 1.0–1.2;
 // TLS 1.3 cipher suites are not configurable via crypto/tls and are
-// captured by captureTLS13Cipher.
+// enumerated with hand-built ClientHellos in tls13ciphers.go.
 //
 // Every handshake outcome is fed to bd; the loop aborts as soon as the
 // detector flips, so a ban that hits mid-enumeration returns whatever was
@@ -54,8 +54,8 @@ func enumerateLegacyCiphers(ctx context.Context, target *safehttp.Target, versio
 }
 
 // captureTLS13Cipher records the single cipher the server negotiates when
-// only TLS 1.3 is offered. Full TLS 1.3 cipher enumeration would require
-// forging raw ClientHellos and is deferred to a future iteration. The
+// only TLS 1.3 is offered. It is the fallback for enumerateTLS13Ciphers
+// when the hand-built ClientHellos get no ServerHello. The
 // handshake outcome is fed to bd so a TLS 1.3 attempt that times out can
 // arm the ban detector for downstream versions.
 func captureTLS13Cipher(ctx context.Context, target *safehttp.Target, bd *banDetector) []scan.Cipher {

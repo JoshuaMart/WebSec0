@@ -62,7 +62,7 @@ func TestProbe_TLS12Only(t *testing.T) {
 	}
 }
 
-func TestProbe_TLS13_NegotiatedCipherCaptured(t *testing.T) {
+func TestProbe_TLS13_AllSuitesEnumerated(t *testing.T) {
 	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	srv.TLS = &stdtls.Config{
 		MinVersion: stdtls.VersionTLS13,
@@ -80,11 +80,14 @@ func TestProbe_TLS13_NegotiatedCipherCaptured(t *testing.T) {
 			tls13Ciphers = append(tls13Ciphers, c)
 		}
 	}
-	if len(tls13Ciphers) != 1 {
-		t.Fatalf("expected exactly one TLS 1.3 cipher captured, got %d", len(tls13Ciphers))
+	// crypto/tls servers accept every TLS 1.3 suite it implements.
+	if want := len(tls13Suites()); len(tls13Ciphers) != want {
+		t.Fatalf("expected %d TLS 1.3 ciphers, got %d: %+v", want, len(tls13Ciphers), tls13Ciphers)
 	}
-	if !tls13Ciphers[0].AEAD || !tls13Ciphers[0].PFS {
-		t.Errorf("TLS 1.3 cipher should be AEAD + PFS, got %+v", tls13Ciphers[0])
+	for _, c := range tls13Ciphers {
+		if !c.AEAD || !c.PFS {
+			t.Errorf("TLS 1.3 cipher should be AEAD + PFS, got %+v", c)
+		}
 	}
 }
 
